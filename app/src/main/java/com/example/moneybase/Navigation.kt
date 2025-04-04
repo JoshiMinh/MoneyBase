@@ -28,7 +28,6 @@ fun Navigation(navController: NavHostController) {
         items.forEach { screen ->
             NavigationBarItem(
                 icon = { Icon(screen.icon, contentDescription = screen.label) },
-                label = { Text(screen.label) },
                 selected = currentRoute == screen.route,
                 onClick = {
                     if (currentRoute != screen.route) {

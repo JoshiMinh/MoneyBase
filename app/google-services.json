@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "312882874353",
+    "project_id": "moneybase-56d12",
+    "storage_bucket": "moneybase-56d12.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:312882874353:android:c3a52b00cff0322d09a650",
+        "android_client_info": {
+          "package_name": "com.example.moneybase"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC0uMyrl4KJXJTgh5S6zeJo-I0kKwW-HNo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
