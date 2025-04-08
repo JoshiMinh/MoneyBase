@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "284259483635",
+    "project_id": "moneybase-bc047",
+    "storage_bucket": "moneybase-bc047.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:284259483635:android:dcbb41da3b4f7a7c715c86",
+        "android_client_info": {
+          "package_name": "com.thebase.moneybase"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlSvIofvMWvZ8L1bzYY8jMQCbEoP5YLjo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
