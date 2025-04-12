@@ -1,23 +1,16 @@
 package com.thebase.moneybase.data
 
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 
+@Entity(tableName = "categories")
 data class Category(
-    var id: String = "",
-    val name: String = "",
-    val icon: ImageVector,
-    val color: String = "",
-    val isDefault: Boolean = false,
-    val userId: String = "",
+    @PrimaryKey var id: String = "",
+    var name: String = "",
+    var iconName: String = "",
+    var color: String = "",
+    var isDefault: Boolean = false,
+    var userId: String = "",
     var isSynced: Boolean = false,
-    val isDeleted: Boolean = false
-) {
-    fun toMap() = mapOf(
-        "name" to name,
-        "color" to color,
-        "isDefault" to isDefault,
-        "userId" to userId,
-        "isSynced" to isSynced,
-        "isDeleted" to isDeleted
-    )
-}
+    var isDeleted: Boolean = false
+)

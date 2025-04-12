@@ -1,7 +1,8 @@
 package com.thebase.moneybase.data
 
 data class Currency(
-    val code: String, // e.g. "USD", "JPY", "EUR"
-    val symbol: String, // e.g. "$", "¥", "€"
-    val name: String // e.g. "US Dollar", "Japanese Yen"
+    var code: String = "USD",
+    var symbol: String = "$",
+    var name: String = "US Dollar",
+    var usdValue: Double = 1.0
 )

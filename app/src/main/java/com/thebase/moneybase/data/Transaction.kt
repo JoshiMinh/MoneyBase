@@ -1,30 +1,21 @@
 package com.thebase.moneybase.data
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import java.time.Instant
 
+@Entity(tableName = "transactions")
 data class Transaction(
-    var id: String = "",
-    val description: String = "",
-    val date: String = "",
-    val amount: Double = 0.0,
-    val currencyCode: String = "USD",
-    val isIncome: Boolean = false,
-    val categoryId: String = "",
-    val userId: String = "",
+    @PrimaryKey var id: String = "",
+    var walletId: String = "",
+    var description: String = "",
+    var date: String = "",
+    var amount: Double = 0.0,
+    var currencyCode: String = "USD",
+    var isIncome: Boolean = false,
+    var categoryId: String = "",
+    var userId: String = "",
     var isSynced: Boolean = false,
-    val createdAt: Instant = Instant.now(),
-    val updatedAt: Instant = Instant.now()
-) {
-    fun toMap() = mapOf(
-        "description" to description,
-        "date" to date,
-        "amount" to amount,
-        "currencyCode" to currencyCode,
-        "isIncome" to isIncome,
-        "categoryId" to categoryId,
-        "userId" to userId,
-        "isSynced" to isSynced,
-        "createdAt" to createdAt,
-        "updatedAt" to updatedAt
-    )
-}
+    var createdAt: Instant = Instant.now(),
+    var updatedAt: Instant = Instant.now()
+)

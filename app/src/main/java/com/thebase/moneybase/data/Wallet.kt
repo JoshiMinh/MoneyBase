@@ -1,30 +1,21 @@
 package com.thebase.moneybase.data
 
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 
+@Entity(tableName = "wallets")
 data class Wallet(
-    var id: String = "",
-    val name: String,
-    val type: WalletType,
-    val currencyCode: String,
-    val balance: Double,
-    val userId: String = "",
-    val isSynced: Boolean = false,
-    val isDeleted: Boolean = false,
-    val icon: ImageVector,
-    val color: String
+    @PrimaryKey var id: String = "",
+    var name: String = "",
+    var type: WalletType = WalletType.OTHER,
+    var currencyCode: String = "USD",
+    var balance: Double = 0.0,
+    var userId: String = "",
+    var isSynced: Boolean = false,
+    var isDeleted: Boolean = false,
+    var iconName: String = "",
+    var color: String = "",
+    var isDefault: Boolean = false
 ) {
-    enum class WalletType {
-        PHYSICAL, BANK_ACCOUNT, CRYPTO, INVESTMENT, OTHER
-    }
-
-    fun toMap() = mapOf(
-        "name" to name,
-        "type" to type.name,
-        "currencyCode" to currencyCode,
-        "balance" to balance,
-        "userId" to userId,
-        "isSynced" to isSynced,
-        "isDeleted" to isDeleted
-    )
+    enum class WalletType { PHYSICAL, BANK_ACCOUNT, CRYPTO, INVESTMENT, OTHER }
 }
