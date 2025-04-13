@@ -7,10 +7,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-// Alias the items for grid and list to avoid conflicts:
-import androidx.compose.foundation.lazy.grid.items as lazyGridItems
 import androidx.compose.foundation.lazy.items as lazyListItems
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -25,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
+import com.thebase.moneybase.functionalities.category.CategorySelector
 import com.thebase.moneybase.database.AppDatabase
 import com.thebase.moneybase.data.Category
 import com.thebase.moneybase.data.Wallet
@@ -42,13 +39,11 @@ import java.util.*
 @Composable
 fun AddScreen(onBack: () -> Unit = {}) {
     val context = LocalContext.current
-    // Use getInstance with a hardcoded userId ("0123") – change as needed.
     val db = remember { AppDatabase.getInstance(context, "0123") }
     val categoryDao = db.categoryDao()
     val walletDao = db.walletDao()
     val transactionDao = db.transactionDao()
 
-    // State variables
     val formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy")
     var date by remember { mutableStateOf(LocalDate.now().format(formatter)) }
     var showDatePicker by remember { mutableStateOf(false) }
@@ -58,15 +53,27 @@ fun AddScreen(onBack: () -> Unit = {}) {
     var selectedWalletId by remember { mutableStateOf<String?>(null) }
     var isIncome by remember { mutableStateOf(false) }
 
-    // Load categories and wallets from the database.
     var categories by remember { mutableStateOf(emptyList<Category>()) }
     var wallets by remember { mutableStateOf(emptyList<Wallet>()) }
+
     LaunchedEffect(Unit) {
         categories = categoryDao.getCategoriesByUser("0123")
         wallets = walletDao.getWalletsByUser("0123")
+        val transactions = transactionDao.getTop5Transactions("0123")
+        if (transactions.isNotEmpty()) {
+            val latest = transactions.first()
+            selectedCategoryId = latest.categoryId
+            selectedWalletId = latest.walletId
+        } else {
+            if (categories.isNotEmpty() && selectedCategoryId == null) {
+                selectedCategoryId = categories.first().id
+            }
+            if (wallets.isNotEmpty() && selectedWalletId == null) {
+                selectedWalletId = wallets.first().id
+            }
+        }
     }
 
-    // Date Picker
     if (showDatePicker) {
         val calendar = Calendar.getInstance()
         DatePickerDialog(
@@ -86,37 +93,42 @@ fun AddScreen(onBack: () -> Unit = {}) {
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // Income/Expense Toggle
         IncomeExpenseToggle(isIncome) { isIncome = it }
-
-        // Date Picker Field
         DateField(date) { showDatePicker = true }
-
-        // Note Field
         NoteField(note) { note = it }
-
-        // Amount Field (raw input, no formatting while typing)
         AmountField(rawAmount, isIncome) { rawAmount = it }
 
-        // Category Selection
-        CategoryGrid(
-            categories = categories,
-            selectedCategoryId = selectedCategoryId
-        ) { selectedCategoryId = it }
+        var showCategorySheet by remember { mutableStateOf(false) }
 
-        // Wallet Selection (fixed width for consistency)
+        val selectedCategory = categories.find { it.id == selectedCategoryId }
+
+        CategoryField(selectedCategory) {
+            showCategorySheet = true
+        }
+
+        if (showCategorySheet && categories.isNotEmpty()) {
+            CategorySelector(
+                categories = categories,
+                onCategorySelected = {
+                    selectedCategoryId = it.id
+                    showCategorySheet = false
+                },
+                onDismiss = { showCategorySheet = false }
+            )
+        }
+
         WalletCarousel(
             wallets = wallets,
-            selectedWalletId = selectedWalletId
-        ) { selectedWalletId = it }
+            selectedWalletId = selectedWalletId,
+            onSelect = { selectedWalletId = it },
+            onAddWallet = { /* TODO: Implement add wallet functionality */ }
+        )
 
-        // Submit Button
         SubmitButton(
             isValid = selectedCategoryId != null && selectedWalletId != null && rawAmount.isNotEmpty()
         ) {
             val amount = rawAmount.toDoubleOrNull() ?: 0.0
             val selectedWallet = wallets.first { it.id == selectedWalletId }
-
             val transaction = Transaction(
                 id = UUID.randomUUID().toString(),
                 walletId = selectedWalletId!!,
@@ -130,19 +142,14 @@ fun AddScreen(onBack: () -> Unit = {}) {
                 createdAt = Instant.now(),
                 updatedAt = Instant.now()
             )
-
             CoroutineScope(Dispatchers.IO).launch {
                 transactionDao.insert(transaction)
-                // Update wallet balance
                 val updatedWallet = selectedWallet.copy(
                     balance = if (isIncome) selectedWallet.balance + amount
                     else selectedWallet.balance - amount
                 )
                 walletDao.update(updatedWallet)
-                // Switch to Main thread to invoke onBack callback
-                withContext(Dispatchers.Main) {
-                    onBack()
-                }
+                withContext(Dispatchers.Main) { onBack() }
             }
         }
     }
@@ -202,6 +209,7 @@ private fun DateField(date: String, onShowPicker: () -> Unit) {
         value = date,
         onValueChange = {},
         modifier = Modifier.fillMaxWidth(),
+        readOnly = true,
         placeholder = { Text("Select date") },
         leadingIcon = {
             Icon(
@@ -234,7 +242,6 @@ private fun AmountField(rawAmount: String, isIncome: Boolean, onAmountChange: (S
     OutlinedTextField(
         value = rawAmount,
         onValueChange = { newValue ->
-            // Accept only digits and a possible decimal point
             onAmountChange(newValue.filter { it.isDigit() || it == '.' })
         },
         modifier = Modifier.fillMaxWidth(),
@@ -253,56 +260,6 @@ private fun AmountField(rawAmount: String, isIncome: Boolean, onAmountChange: (S
 }
 
 @Composable
-private fun CategoryGrid(
-    categories: List<Category>,
-    selectedCategoryId: String?,
-    onSelect: (String) -> Unit
-) {
-    Text("Category", style = MaterialTheme.typography.labelLarge)
-    Spacer(modifier = Modifier.height(8.dp))
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(3),
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        lazyGridItems(categories) { category ->
-            CategoryItem(
-                category = category,
-                isSelected = selectedCategoryId == category.id,
-                onSelect = { onSelect(category.id) }
-            )
-        }
-    }
-    Spacer(modifier = Modifier.height(24.dp))
-}
-
-@Composable
-private fun WalletCarousel(
-    wallets: List<Wallet>,
-    selectedWalletId: String?,
-    onSelect: (String) -> Unit
-) {
-    Text("Wallet", style = MaterialTheme.typography.labelLarge)
-    Spacer(modifier = Modifier.height(8.dp))
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        lazyListItems(wallets) { wallet ->
-            // Set a fixed width for each wallet item (e.g., 150dp)
-            WalletItem(
-                wallet = wallet,
-                isSelected = selectedWalletId == wallet.id,
-                onSelect = { onSelect(wallet.id) },
-                modifier = Modifier.width(150.dp)
-            )
-        }
-    }
-    Spacer(modifier = Modifier.height(32.dp))
-}
-
-@Composable
 private fun SubmitButton(isValid: Boolean, onSubmit: () -> Unit) {
     Button(
         onClick = onSubmit,
@@ -317,11 +274,86 @@ private fun SubmitButton(isValid: Boolean, onSubmit: () -> Unit) {
 }
 
 @Composable
+private fun CategoryField(selectedCategory: Category?, onClick: () -> Unit) {
+    Text("Category", style = MaterialTheme.typography.labelLarge)
+    OutlinedButton(
+        onClick = onClick,
+        border = BorderStroke(2.dp, selectedCategory?.let { Color(it.color.toColorInt()) }
+            ?: MaterialTheme.colorScheme.outline),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (selectedCategory != null) {
+                Icon(
+                    imageVector = getIcon(selectedCategory.iconName),
+                    contentDescription = selectedCategory.name,
+                    tint = Color(selectedCategory.color.toColorInt()),
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+            Text(
+                selectedCategory?.name ?: "Select Category",
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
+    }
+    Spacer(modifier = Modifier.height(24.dp))
+}
+
+@Composable
+private fun WalletCarousel(
+    wallets: List<Wallet>,
+    selectedWalletId: String?,
+    onSelect: (String) -> Unit,
+    onAddWallet: () -> Unit
+) {
+    Text("Wallet", style = MaterialTheme.typography.labelLarge)
+    Spacer(modifier = Modifier.height(8.dp))
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        lazyListItems(wallets) { wallet ->
+            WalletItem(
+                wallet = wallet,
+                isSelected = selectedWalletId == wallet.id,
+                onSelect = { onSelect(wallet.id) },
+                modifier = Modifier
+                    .width(140.dp)
+                    .height(110.dp) // Fixed height for wallet items
+            )
+        }
+        item {
+            Box(
+                modifier = Modifier
+                    .width(150.dp)
+                    .height(150.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                IconButton(onClick = onAddWallet) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add wallet",
+                        tint = Color.Gray,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            }
+        }
+    }
+    Spacer(modifier = Modifier.height(32.dp))
+}
+
+@Composable
 private fun WalletItem(wallet: Wallet, isSelected: Boolean, onSelect: () -> Unit, modifier: Modifier = Modifier) {
     val borderColor = if (isSelected) Color(wallet.color.toColorInt())
     else MaterialTheme.colorScheme.outline
     val iconColor = Color(wallet.color.toColorInt())
-
     Card(
         modifier = modifier
             .border(2.dp, borderColor, RoundedCornerShape(12.dp))
@@ -329,8 +361,11 @@ private fun WalletItem(wallet: Wallet, isSelected: Boolean, onSelect: () -> Unit
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
             Icon(
                 imageVector = getIcon(wallet.iconName),
@@ -345,32 +380,6 @@ private fun WalletItem(wallet: Wallet, isSelected: Boolean, onSelect: () -> Unit
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-    }
-}
-
-@Composable
-private fun CategoryItem(category: Category, isSelected: Boolean, onSelect: () -> Unit) {
-    val borderColor = if (isSelected) Color(category.color.toColorInt())
-    else MaterialTheme.colorScheme.outline
-
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(if (isSelected) 2.dp else 1.dp, borderColor),
-        modifier = Modifier.clickable(onClick = onSelect)
-    ) {
-        Column(
-            modifier = Modifier.padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                imageVector = getIcon(category.iconName),
-                contentDescription = category.name,
-                tint = Color(category.color.toColorInt()),
-                modifier = Modifier.size(32.dp)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(category.name, style = MaterialTheme.typography.labelSmall)
         }
     }
 }
