@@ -13,8 +13,8 @@ data class Wallet(
     var userId: String = "",
     var isSynced: Boolean = false,
     var isDeleted: Boolean = false,
-    var iconName: String = "",
-    var color: String = "",
+    var iconName: String = "account_balance_wallet", // Default icon
+    var color: String = "#6200EE", // Default color
     var isDefault: Boolean = false
 ) {
     enum class WalletType { PHYSICAL, BANK_ACCOUNT, CRYPTO, INVESTMENT, OTHER }

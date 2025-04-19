@@ -1,17 +1,26 @@
 package com.thebase.moneybase.screens
 
 import android.app.DatePickerDialog
+import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items as lazyListItems
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,13 +30,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
-import com.thebase.moneybase.functionalities.category.CategorySelector
-import com.thebase.moneybase.database.AppDatabase
+import com.thebase.moneybase.functionalities.wallet.WalletAgent
 import com.thebase.moneybase.data.Category
-import com.thebase.moneybase.data.Wallet
 import com.thebase.moneybase.data.Transaction
+import com.thebase.moneybase.data.Wallet
 import com.thebase.moneybase.data.Icon.getIcon
-import kotlinx.coroutines.CoroutineScope
+import com.thebase.moneybase.database.AppDatabase
+import com.thebase.moneybase.functionalities.category.CategorySelector
+import com.thebase.moneybase.functionalities.wallet.AddWallet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -36,6 +46,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddScreen(onBack: () -> Unit = {}) {
     val context = LocalContext.current
@@ -43,115 +54,160 @@ fun AddScreen(onBack: () -> Unit = {}) {
     val categoryDao = db.categoryDao()
     val walletDao = db.walletDao()
     val transactionDao = db.transactionDao()
-
     val formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy")
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
     var date by remember { mutableStateOf(LocalDate.now().format(formatter)) }
-    var showDatePicker by remember { mutableStateOf(false) }
     var note by remember { mutableStateOf("") }
     var rawAmount by remember { mutableStateOf("") }
     var selectedCategoryId by remember { mutableStateOf<String?>(null) }
     var selectedWalletId by remember { mutableStateOf<String?>(null) }
     var isIncome by remember { mutableStateOf(false) }
-
     var categories by remember { mutableStateOf(emptyList<Category>()) }
     var wallets by remember { mutableStateOf(emptyList<Wallet>()) }
+    var showWalletAgent by remember { mutableStateOf<Wallet?>(null) }
+    var showAddWalletDialog by remember { mutableStateOf(false) }
+    var showCategorySheet by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         categories = categoryDao.getCategoriesByUser("0123")
         wallets = walletDao.getWalletsByUser("0123")
-        val transactions = transactionDao.getTop5Transactions("0123")
-        if (transactions.isNotEmpty()) {
-            val latest = transactions.first()
-            selectedCategoryId = latest.categoryId
-            selectedWalletId = latest.walletId
-        } else {
-            if (categories.isNotEmpty() && selectedCategoryId == null) {
-                selectedCategoryId = categories.first().id
-            }
-            if (wallets.isNotEmpty() && selectedWalletId == null) {
-                selectedWalletId = wallets.first().id
-            }
+        transactionDao.getTop10Transactions("0123").firstOrNull()?.let {
+            selectedCategoryId = it.categoryId
+            selectedWalletId = it.walletId
+        } ?: run {
+            selectedCategoryId = categories.firstOrNull()?.id
+            selectedWalletId = wallets.firstOrNull()?.id
         }
     }
 
+
     if (showDatePicker) {
-        val calendar = Calendar.getInstance()
         DatePickerDialog(
             context,
-            { _, year, month, day ->
-                date = LocalDate.of(year, month + 1, day).format(formatter)
+            { _, y, m, d ->
+                date = LocalDate.of(y, m + 1, d).format(formatter)
                 showDatePicker = false
             },
-            calendar.get(Calendar.YEAR),
-            calendar.get(Calendar.MONTH),
-            calendar.get(Calendar.DAY_OF_MONTH)
+            Calendar.getInstance().apply { time = Date() }.run { get(Calendar.YEAR) },
+            Calendar.getInstance().get(Calendar.MONTH),
+            Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
         ).show()
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        IncomeExpenseToggle(isIncome) { isIncome = it }
-        DateField(date) { showDatePicker = true }
-        NoteField(note) { note = it }
-        AmountField(rawAmount, isIncome) { rawAmount = it }
-
-        var showCategorySheet by remember { mutableStateOf(false) }
-
-        val selectedCategory = categories.find { it.id == selectedCategoryId }
-
-        CategoryField(selectedCategory) {
-            showCategorySheet = true
-        }
-
-        if (showCategorySheet && categories.isNotEmpty()) {
-            CategorySelector(
-                categories = categories,
-                onCategorySelected = {
-                    selectedCategoryId = it.id
-                    showCategorySheet = false
-                },
-                onDismiss = { showCategorySheet = false }
-            )
-        }
-
-        WalletCarousel(
-            wallets = wallets,
-            selectedWalletId = selectedWalletId,
-            onSelect = { selectedWalletId = it },
-            onAddWallet = { /* TODO: Implement add wallet functionality */ }
-        )
-
-        SubmitButton(
-            isValid = selectedCategoryId != null && selectedWalletId != null && rawAmount.isNotEmpty()
+    Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp)
+                .padding(padding)
         ) {
-            val amount = rawAmount.toDoubleOrNull() ?: 0.0
-            val selectedWallet = wallets.first { it.id == selectedWalletId }
-            val transaction = Transaction(
-                id = UUID.randomUUID().toString(),
-                walletId = selectedWalletId!!,
-                description = note,
-                date = date,
-                amount = amount,
-                currencyCode = selectedWallet.currencyCode,
-                isIncome = isIncome,
-                categoryId = selectedCategoryId!!,
-                userId = "0123",
-                createdAt = Instant.now(),
-                updatedAt = Instant.now()
-            )
-            CoroutineScope(Dispatchers.IO).launch {
-                transactionDao.insert(transaction)
-                val updatedWallet = selectedWallet.copy(
-                    balance = if (isIncome) selectedWallet.balance + amount
-                    else selectedWallet.balance - amount
-                )
-                walletDao.update(updatedWallet)
-                withContext(Dispatchers.Main) { onBack() }
+            IncomeExpenseToggle(isIncome) { isIncome = it }
+            DateField(date) { showDatePicker = true }
+            NoteField(note) { note = it }
+            AmountField(rawAmount, isIncome) { rawAmount = it }
+            CategoryField(categories.find { it.id == selectedCategoryId }) { showCategorySheet = true }
+            WalletCarousel(wallets, selectedWalletId, { selectedWalletId = it }, { showAddWalletDialog = true }) { showWalletAgent = it }
+            Spacer(Modifier.height(24.dp))
+            SubmitButton(
+                isValid = selectedCategoryId != null && selectedWalletId != null && rawAmount.isNotBlank()
+            ) {
+                scope.launch {
+                    withContext(Dispatchers.IO) {
+                        val amount = rawAmount.toDoubleOrNull() ?: return@withContext
+                        val wallet = wallets.first { it.id == selectedWalletId }
+                        transactionDao.insert(Transaction(
+                            id = UUID.randomUUID().toString(),
+                            walletId = wallet.id,
+                            description = note,
+                            date = date,
+                            amount = amount,
+                            currencyCode = wallet.currencyCode,
+                            isIncome = isIncome,
+                            categoryId = selectedCategoryId!!,
+                            userId = "0123",
+                            createdAt = Instant.now(),
+                            updatedAt = Instant.now()
+                        ))
+                        walletDao.update(wallet.copy(
+                            balance = if (isIncome) wallet.balance + amount else wallet.balance - amount
+                        ))
+                        wallets = walletDao.getWalletsByUser("0123")
+                    }
+                    snackbarHostState.showSnackbar("Transaction added")
+                    onBack()
+                }
             }
         }
+    }
+
+    if (showCategorySheet) {
+        CategorySelector(
+            categories = categories,
+            onCategorySelected = {
+                selectedCategoryId = it.id
+                showCategorySheet = false
+            },
+            onDismiss = { showCategorySheet = false }
+        )
+    }
+    showWalletAgent?.let { wallet ->
+        WalletAgent(
+            wallet = wallet,
+            onEdit = {},
+            onRemove = {
+                scope.launch {
+                    withContext(Dispatchers.IO) {
+                        walletDao.delete(it)
+                        wallets = walletDao.getWalletsByUser("0123")
+                    }
+                    showWalletAgent = null
+                }
+            },
+            onChangeBalance = { w, newBalance ->
+                scope.launch {
+                    withContext(Dispatchers.IO) {
+                        walletDao.update(w.copy(balance = newBalance))
+                        wallets = walletDao.getWalletsByUser("0123")
+                    }
+                }
+            },
+            onDismiss = { showWalletAgent = null }
+        )
+    }
+    if (showAddWalletDialog) {
+        AddWallet(
+            onDismiss = { showAddWalletDialog = false },
+            onWalletAdded = {
+                scope.launch {
+                    withContext(Dispatchers.IO) {
+                        walletDao.insert(it)
+                        wallets = walletDao.getWalletsByUser("0123")
+                    }
+                }
+                showAddWalletDialog = false
+            }
+        )
+    }
+}
+
+
+@Composable
+private fun SubmitButton(isValid: Boolean, onSubmit: () -> Unit) {
+    Button(
+        onClick = onSubmit,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(50.dp),
+        shape = RoundedCornerShape(12.dp),
+        enabled = isValid
+    ) {
+        Text("Submit", style = MaterialTheme.typography.labelLarge)
     }
 }
 
@@ -176,8 +232,7 @@ private fun IncomeExpenseToggle(isIncome: Boolean, onToggle: (Boolean) -> Unit) 
             ) {
                 Text(
                     "Expense",
-                    color = if (!isIncome) MaterialTheme.colorScheme.onPrimary
-                    else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (!isIncome) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Box(
@@ -193,8 +248,7 @@ private fun IncomeExpenseToggle(isIncome: Boolean, onToggle: (Boolean) -> Unit) 
             ) {
                 Text(
                     "Income",
-                    color = if (isIncome) MaterialTheme.colorScheme.onPrimary
-                    else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (isIncome) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -241,9 +295,7 @@ private fun AmountField(rawAmount: String, isIncome: Boolean, onAmountChange: (S
     Text("Amount", style = MaterialTheme.typography.labelLarge)
     OutlinedTextField(
         value = rawAmount,
-        onValueChange = { newValue ->
-            onAmountChange(newValue.filter { it.isDigit() || it == '.' })
-        },
+        onValueChange = { newValue -> onAmountChange(newValue.filter { it.isDigit() || it == '.' }) },
         modifier = Modifier.fillMaxWidth(),
         placeholder = { Text("Enter amount") },
         leadingIcon = {
@@ -260,26 +312,11 @@ private fun AmountField(rawAmount: String, isIncome: Boolean, onAmountChange: (S
 }
 
 @Composable
-private fun SubmitButton(isValid: Boolean, onSubmit: () -> Unit) {
-    Button(
-        onClick = onSubmit,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(50.dp),
-        shape = RoundedCornerShape(12.dp),
-        enabled = isValid
-    ) {
-        Text("Submit", style = MaterialTheme.typography.labelLarge)
-    }
-}
-
-@Composable
 private fun CategoryField(selectedCategory: Category?, onClick: () -> Unit) {
     Text("Category", style = MaterialTheme.typography.labelLarge)
     OutlinedButton(
         onClick = onClick,
-        border = BorderStroke(2.dp, selectedCategory?.let { Color(it.color.toColorInt()) }
-            ?: MaterialTheme.colorScheme.outline),
+        border = BorderStroke(2.dp, selectedCategory?.let { Color(it.color.toColorInt()) } ?: MaterialTheme.colorScheme.outline),
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier
             .fillMaxWidth()
@@ -310,7 +347,8 @@ private fun WalletCarousel(
     wallets: List<Wallet>,
     selectedWalletId: String?,
     onSelect: (String) -> Unit,
-    onAddWallet: () -> Unit
+    onAddWallet: () -> Unit,
+    onLongPress: (Wallet) -> Unit
 ) {
     Text("Wallet", style = MaterialTheme.typography.labelLarge)
     Spacer(modifier = Modifier.height(8.dp))
@@ -318,28 +356,35 @@ private fun WalletCarousel(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        lazyListItems(wallets) { wallet ->
+        items(wallets) { wallet ->
             WalletItem(
                 wallet = wallet,
                 isSelected = selectedWalletId == wallet.id,
                 onSelect = { onSelect(wallet.id) },
+                onLongPress = onLongPress, // <- pass it normally, no wrapping needed
                 modifier = Modifier
                     .width(140.dp)
-                    .height(110.dp) // Fixed height for wallet items
+                    .height(110.dp)
             )
+
         }
         item {
-            Box(
+            Card(
                 modifier = Modifier
-                    .width(150.dp)
-                    .height(150.dp),
-                contentAlignment = Alignment.Center
+                    .width(140.dp)
+                    .height(110.dp)
+                    .clickable(onClick = onAddWallet),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                shape = RoundedCornerShape(12.dp)
             ) {
-                IconButton(onClick = onAddWallet) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = "Add wallet",
-                        tint = Color.Gray,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(32.dp)
                     )
                 }
@@ -349,15 +394,25 @@ private fun WalletCarousel(
     Spacer(modifier = Modifier.height(32.dp))
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun WalletItem(wallet: Wallet, isSelected: Boolean, onSelect: () -> Unit, modifier: Modifier = Modifier) {
-    val borderColor = if (isSelected) Color(wallet.color.toColorInt())
-    else MaterialTheme.colorScheme.outline
+private fun WalletItem(
+    wallet: Wallet,
+    isSelected: Boolean,
+    onSelect: () -> Unit,
+    onLongPress: (Wallet) -> Unit, // <- FIX: onLongPress expects Wallet now
+    modifier: Modifier = Modifier
+) {
+    val borderColor = if (isSelected) Color(wallet.color.toColorInt()) else MaterialTheme.colorScheme.outline
     val iconColor = Color(wallet.color.toColorInt())
+
     Card(
         modifier = modifier
             .border(2.dp, borderColor, RoundedCornerShape(12.dp))
-            .clickable(onClick = onSelect),
+            .combinedClickable(
+                onClick = onSelect,
+                onLongClick = { onLongPress(wallet) } // <- FIX: pass the wallet inside here
+            ),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(

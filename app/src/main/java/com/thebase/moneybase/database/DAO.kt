@@ -47,5 +47,5 @@ interface TransactionDao {
     suspend fun delete(transaction: Transaction)
 
     @Query("SELECT * FROM transactions WHERE userId = :userId ORDER BY createdAt DESC LIMIT 10")
-    suspend fun getTop5Transactions(userId: String): List<Transaction>
+    suspend fun getTop10Transactions(userId: String): List<Transaction>
 }
