@@ -1,46 +1,32 @@
 package com.thebase.moneybase.screens
 
-import android.app.DatePickerDialog
-import android.graphics.Color as AndroidColor
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.clickable
+import com.thebase.moneybase.functionalities.category.AddCategoryDialog
+import com.thebase.moneybase.functionalities.category.EditCategoryDialog
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
 import com.thebase.moneybase.functionalities.wallet.WalletAgent
-import com.thebase.moneybase.data.Category
-import com.thebase.moneybase.data.Transaction
-import com.thebase.moneybase.data.Wallet
+import com.thebase.moneybase.data.*
 import com.thebase.moneybase.data.Icon.getIcon
 import com.thebase.moneybase.database.AppDatabase
 import com.thebase.moneybase.functionalities.category.CategorySelector
 import com.thebase.moneybase.functionalities.wallet.AddWallet
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import java.time.Instant
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -69,7 +55,8 @@ fun AddScreen(onBack: () -> Unit = {}) {
     var showWalletAgent by remember { mutableStateOf<Wallet?>(null) }
     var showAddWalletDialog by remember { mutableStateOf(false) }
     var showCategorySheet by remember { mutableStateOf(false) }
-    var showDatePicker by remember { mutableStateOf(false) }
+    var showAddCategoryDialog by remember { mutableStateOf(false) }
+    var actionCategory by remember { mutableStateOf<Category?>(null) }
 
     LaunchedEffect(Unit) {
         categories = categoryDao.getCategoriesByUser("0123")
@@ -83,23 +70,7 @@ fun AddScreen(onBack: () -> Unit = {}) {
         }
     }
 
-
-    if (showDatePicker) {
-        DatePickerDialog(
-            context,
-            { _, y, m, d ->
-                date = LocalDate.of(y, m + 1, d).format(formatter)
-                showDatePicker = false
-            },
-            Calendar.getInstance().apply { time = Date() }.run { get(Calendar.YEAR) },
-            Calendar.getInstance().get(Calendar.MONTH),
-            Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
-        ).show()
-    }
-
-    Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
-    ) { padding ->
+    Scaffold(snackbarHost = { SnackbarHost(hostState = snackbarHostState) }) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -108,11 +79,13 @@ fun AddScreen(onBack: () -> Unit = {}) {
                 .padding(padding)
         ) {
             IncomeExpenseToggle(isIncome) { isIncome = it }
-            DateField(date) { showDatePicker = true }
+            DateField(date) { date = LocalDate.now().format(formatter) }
             NoteField(note) { note = it }
             AmountField(rawAmount, isIncome) { rawAmount = it }
             CategoryField(categories.find { it.id == selectedCategoryId }) { showCategorySheet = true }
-            WalletCarousel(wallets, selectedWalletId, { selectedWalletId = it }, { showAddWalletDialog = true }) { showWalletAgent = it }
+            WalletCarousel(wallets, selectedWalletId, { selectedWalletId = it }, { showAddWalletDialog = true }) {
+                showWalletAgent = it
+            }
             Spacer(Modifier.height(24.dp))
             SubmitButton(
                 isValid = selectedCategoryId != null && selectedWalletId != null && rawAmount.isNotBlank()
@@ -121,22 +94,22 @@ fun AddScreen(onBack: () -> Unit = {}) {
                     withContext(Dispatchers.IO) {
                         val amount = rawAmount.toDoubleOrNull() ?: return@withContext
                         val wallet = wallets.first { it.id == selectedWalletId }
-                        transactionDao.insert(Transaction(
-                            id = UUID.randomUUID().toString(),
-                            walletId = wallet.id,
-                            description = note,
-                            date = date,
-                            amount = amount,
-                            currencyCode = wallet.currencyCode,
-                            isIncome = isIncome,
-                            categoryId = selectedCategoryId!!,
-                            userId = "0123",
-                            createdAt = Instant.now(),
-                            updatedAt = Instant.now()
-                        ))
-                        walletDao.update(wallet.copy(
-                            balance = if (isIncome) wallet.balance + amount else wallet.balance - amount
-                        ))
+                        transactionDao.insert(
+                            Transaction(
+                                id = UUID.randomUUID().toString(),
+                                walletId = wallet.id,
+                                description = note,
+                                date = date,
+                                amount = amount,
+                                currencyCode = wallet.currencyCode,
+                                isIncome = isIncome,
+                                categoryId = selectedCategoryId!!,
+                                userId = "0123",
+                                createdAt = Instant.now(),
+                                updatedAt = Instant.now()
+                            )
+                        )
+                        walletDao.update(wallet.copy(balance = if (isIncome) wallet.balance + amount else wallet.balance - amount))
                         wallets = walletDao.getWalletsByUser("0123")
                     }
                     snackbarHostState.showSnackbar("Transaction added")
@@ -148,19 +121,59 @@ fun AddScreen(onBack: () -> Unit = {}) {
 
     if (showCategorySheet) {
         CategorySelector(
-            categories = categories,
-            onCategorySelected = {
-                selectedCategoryId = it.id
-                showCategorySheet = false
-            },
-            onDismiss = { showCategorySheet = false }
+            categories,
+            { selectedCategoryId = it.id; showCategorySheet = false },
+            { showCategorySheet = false },
+            { showCategorySheet = false; showAddCategoryDialog = true },
+            { actionCategory = it; showCategorySheet = false },
+            {
+                scope.launch {
+                    withContext(Dispatchers.IO) {
+                        categoryDao.delete(it)
+                        categories = categoryDao.getCategoriesByUser("0123")
+                    }
+                    showCategorySheet = false
+                }
+            }
         )
     }
-    showWalletAgent?.let { wallet ->
+
+    if (showAddCategoryDialog) {
+        AddCategoryDialog(
+            { showAddCategoryDialog = false },
+            {
+                scope.launch {
+                    withContext(Dispatchers.IO) {
+                        categoryDao.insert(it)
+                        categories = categoryDao.getCategoriesByUser("0123")
+                    }
+                    showAddCategoryDialog = false
+                }
+            }
+        )
+    }
+
+    actionCategory?.let {
+        EditCategoryDialog(
+            it,
+            { actionCategory = null },
+            {
+                scope.launch {
+                    withContext(Dispatchers.IO) {
+                        categoryDao.update(it)
+                        categories = categoryDao.getCategoriesByUser("0123")
+                    }
+                    actionCategory = null
+                }
+            }
+        )
+    }
+
+    showWalletAgent?.let {
         WalletAgent(
-            wallet = wallet,
-            onEdit = {},
-            onRemove = {
+            it,
+            {},
+            {
                 scope.launch {
                     withContext(Dispatchers.IO) {
                         walletDao.delete(it)
@@ -169,7 +182,7 @@ fun AddScreen(onBack: () -> Unit = {}) {
                     showWalletAgent = null
                 }
             },
-            onChangeBalance = { w, newBalance ->
+            { w, newBalance ->
                 scope.launch {
                     withContext(Dispatchers.IO) {
                         walletDao.update(w.copy(balance = newBalance))
@@ -177,13 +190,14 @@ fun AddScreen(onBack: () -> Unit = {}) {
                     }
                 }
             },
-            onDismiss = { showWalletAgent = null }
+            { showWalletAgent = null }
         )
     }
+
     if (showAddWalletDialog) {
         AddWallet(
-            onDismiss = { showAddWalletDialog = false },
-            onWalletAdded = {
+            { showAddWalletDialog = false },
+            {
                 scope.launch {
                     withContext(Dispatchers.IO) {
                         walletDao.insert(it)
@@ -195,7 +209,6 @@ fun AddScreen(onBack: () -> Unit = {}) {
         )
     }
 }
-
 
 @Composable
 private fun SubmitButton(isValid: Boolean, onSubmit: () -> Unit) {
@@ -223,8 +236,8 @@ private fun IncomeExpenseToggle(isIncome: Boolean, onToggle: (Boolean) -> Unit) 
                 modifier = Modifier
                     .weight(1f)
                     .background(
-                        color = if (!isIncome) MaterialTheme.colorScheme.primary else Color.Transparent,
-                        shape = RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
+                        if (!isIncome) MaterialTheme.colorScheme.primary else Color.Transparent,
+                        RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
                     )
                     .clickable { onToggle(false) }
                     .padding(vertical = 12.dp),
@@ -253,7 +266,7 @@ private fun IncomeExpenseToggle(isIncome: Boolean, onToggle: (Boolean) -> Unit) 
             }
         }
     }
-    Spacer(modifier = Modifier.height(24.dp))
+    Spacer(Modifier.height(24.dp))
 }
 
 @Composable
@@ -262,136 +275,112 @@ private fun DateField(date: String, onShowPicker: () -> Unit) {
     OutlinedTextField(
         value = date,
         onValueChange = {},
-        modifier = Modifier.fillMaxWidth(),
         readOnly = true,
+        modifier = Modifier.fillMaxWidth(),
         placeholder = { Text("Select date") },
         leadingIcon = {
             Icon(
-                imageVector = Icons.Default.DateRange,
-                contentDescription = "Date picker",
+                Icons.Default.DateRange,
+                contentDescription = null,
                 modifier = Modifier.clickable { onShowPicker() }
             )
         },
         shape = RoundedCornerShape(12.dp)
     )
-    Spacer(modifier = Modifier.height(16.dp))
+    Spacer(Modifier.height(16.dp))
 }
 
 @Composable
-private fun NoteField(note: String, onNoteChange: (String) -> Unit) {
+private fun NoteField(value: String, onValueChange: (String) -> Unit) {
     Text("Note", style = MaterialTheme.typography.labelLarge)
     OutlinedTextField(
-        value = note,
-        onValueChange = onNoteChange,
+        value = value,
+        onValueChange = onValueChange,
         modifier = Modifier.fillMaxWidth(),
         placeholder = { Text("Enter note") },
         shape = RoundedCornerShape(12.dp)
     )
-    Spacer(modifier = Modifier.height(16.dp))
+    Spacer(Modifier.height(16.dp))
 }
 
 @Composable
-private fun AmountField(rawAmount: String, isIncome: Boolean, onAmountChange: (String) -> Unit) {
+private fun AmountField(value: String, isIncome: Boolean, onValueChange: (String) -> Unit) {
     Text("Amount", style = MaterialTheme.typography.labelLarge)
     OutlinedTextField(
-        value = rawAmount,
-        onValueChange = { newValue -> onAmountChange(newValue.filter { it.isDigit() || it == '.' }) },
+        value = value,
+        onValueChange = { it.filter { ch -> ch.isDigit() || ch == '.' }.let(onValueChange) },
         modifier = Modifier.fillMaxWidth(),
         placeholder = { Text("Enter amount") },
         leadingIcon = {
             Icon(
                 Icons.Default.AttachMoney,
-                contentDescription = "Amount",
+                contentDescription = null,
                 tint = if (isIncome) Color(0xFF4CAF50) else Color(0xFFF44336)
             )
         },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         shape = RoundedCornerShape(12.dp)
     )
-    Spacer(modifier = Modifier.height(24.dp))
+    Spacer(Modifier.height(24.dp))
 }
 
 @Composable
-private fun CategoryField(selectedCategory: Category?, onClick: () -> Unit) {
+private fun CategoryField(selected: Category?, onClick: () -> Unit) {
     Text("Category", style = MaterialTheme.typography.labelLarge)
+    val border = selected?.color?.toColorInt()?.let { Color(it) }
+        ?: MaterialTheme.colorScheme.outline
     OutlinedButton(
         onClick = onClick,
-        border = BorderStroke(2.dp, selectedCategory?.let { Color(it.color.toColorInt()) } ?: MaterialTheme.colorScheme.outline),
+        border = BorderStroke(2.dp, border),
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier
             .fillMaxWidth()
             .height(56.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (selectedCategory != null) {
-                Icon(
-                    imageVector = getIcon(selectedCategory.iconName),
-                    contentDescription = selectedCategory.name,
-                    tint = Color(selectedCategory.color.toColorInt()),
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-            }
-            Text(
-                selectedCategory?.name ?: "Select Category",
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.bodyLarge
-            )
+        selected?.let {
+            Icon(getIcon(it.iconName), contentDescription = null, tint = Color(it.color.toColorInt()), modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
         }
+        Text(selected?.name ?: "Select Category", style = MaterialTheme.typography.bodyLarge)
     }
-    Spacer(modifier = Modifier.height(24.dp))
+    Spacer(Modifier.height(24.dp))
 }
 
 @Composable
 private fun WalletCarousel(
     wallets: List<Wallet>,
-    selectedWalletId: String?,
+    selectedId: String?,
     onSelect: (String) -> Unit,
-    onAddWallet: () -> Unit,
+    onAdd: () -> Unit,
     onLongPress: (Wallet) -> Unit
 ) {
     Text("Wallet", style = MaterialTheme.typography.labelLarge)
-    Spacer(modifier = Modifier.height(8.dp))
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        items(wallets) { wallet ->
+    Spacer(Modifier.height(8.dp))
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+        items(wallets) { w ->
             WalletItem(
-                wallet = wallet,
-                isSelected = selectedWalletId == wallet.id,
-                onSelect = { onSelect(wallet.id) },
-                onLongPress = onLongPress, // <- pass it normally, no wrapping needed
-                modifier = Modifier
-                    .width(140.dp)
-                    .height(110.dp)
+                wallet = w,
+                isSelected = w.id == selectedId,
+                onSelect = { onSelect(w.id) },
+                onLongPress = { onLongPress(w) },
+                modifier = Modifier.size(width = 140.dp, height = 110.dp)
             )
-
         }
         item {
             Card(
                 modifier = Modifier
-                    .width(140.dp)
-                    .height(110.dp)
-                    .clickable(onClick = onAddWallet),
+                    .size(width = 140.dp, height = 110.dp)
+                    .clickable(onClick = onAdd),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Add wallet",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(32.dp)
-                    )
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(32.dp))
                 }
             }
         }
     }
-    Spacer(modifier = Modifier.height(32.dp))
+    Spacer(Modifier.height(32.dp))
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -400,19 +389,14 @@ private fun WalletItem(
     wallet: Wallet,
     isSelected: Boolean,
     onSelect: () -> Unit,
-    onLongPress: (Wallet) -> Unit, // <- FIX: onLongPress expects Wallet now
+    onLongPress: (Wallet) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val borderColor = if (isSelected) Color(wallet.color.toColorInt()) else MaterialTheme.colorScheme.outline
-    val iconColor = Color(wallet.color.toColorInt())
-
+    val color = Color(wallet.color.toColorInt())
     Card(
         modifier = modifier
-            .border(2.dp, borderColor, RoundedCornerShape(12.dp))
-            .combinedClickable(
-                onClick = onSelect,
-                onLongClick = { onLongPress(wallet) } // <- FIX: pass the wallet inside here
-            ),
+            .border(2.dp, if (isSelected) color else MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
+            .combinedClickable(onClick = onSelect, onLongClick = { onLongPress(wallet) }),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(
@@ -422,13 +406,8 @@ private fun WalletItem(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Icon(
-                imageVector = getIcon(wallet.iconName),
-                contentDescription = wallet.name,
-                tint = iconColor,
-                modifier = Modifier.size(32.dp)
-            )
-            Spacer(modifier = Modifier.height(6.dp))
+            Icon(getIcon(wallet.iconName), contentDescription = null, tint = color, modifier = Modifier.size(32.dp))
+            Spacer(Modifier.height(6.dp))
             Text(wallet.name, style = MaterialTheme.typography.bodyLarge)
             Text(
                 "${wallet.currencyCode} ${"%.2f".format(wallet.balance)}",

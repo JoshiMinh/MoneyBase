@@ -29,7 +29,6 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun FinanceApp() {
     val navController = rememberNavController()
-    // Provide a default userId (modify as needed)
     val defaultUserId = "0123"
 
     Scaffold(
@@ -40,7 +39,6 @@ fun FinanceApp() {
             startDestination = "home",
             modifier = Modifier.padding(padding)
         ) {
-            // Pass the defaultUserId to HomeScreen for proper database initialization and seeding.
             composable("home") { HomeScreen(userId = defaultUserId) }
             composable("add") { AddScreen { navController.popBackStack() } }
             composable("settings") { SettingsScreen() }

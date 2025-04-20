@@ -1,17 +1,8 @@
 package com.thebase.moneybase.functionalities.wallet
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-// at the top of WalletAgent.kt
-import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -24,7 +15,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
 import com.thebase.moneybase.data.Wallet
@@ -38,18 +28,18 @@ fun WalletAgent(
     onChangeBalance: (Wallet, Double) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var showChangeBalanceDialog by remember { mutableStateOf(false) }
+    var showChangeBalance by remember { mutableStateOf(false) }
     var showRemoveConfirmation by remember { mutableStateOf(false) }
 
-    if (showChangeBalanceDialog) {
+    if (showChangeBalance) {
         ChangeBalanceDialog(
             wallet = wallet,
             onConfirm = { newBalance ->
                 onChangeBalance(wallet, newBalance)
-                showChangeBalanceDialog = false
+                showChangeBalance = false
                 onDismiss()
             },
-            onCancel = { showChangeBalanceDialog = false }
+            onCancel = { showChangeBalance = false }
         )
     }
 
@@ -68,26 +58,29 @@ fun WalletAgent(
                 ) { Text("Delete") }
             },
             dismissButton = {
-                TextButton(
-                    onClick = { showRemoveConfirmation = false }
-                ) { Text("Cancel") }
+                TextButton(onClick = { showRemoveConfirmation = false }) {
+                    Text("Cancel")
+                }
             }
         )
     }
-
 
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {},
         text = {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Manage Wallet: ${wallet.name}", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(16.dp))
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    "Manage Wallet: ${wallet.name}",
+                    style = MaterialTheme.typography.titleMedium
+                )
                 Button(
-                    onClick = { showChangeBalanceDialog = true },
+                    onClick = { showChangeBalance = true },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Change Balance") }
-                Spacer(Modifier.height(8.dp))
                 Button(
                     onClick = {
                         onEdit()
@@ -95,12 +88,9 @@ fun WalletAgent(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Edit") }
-                Spacer(Modifier.height(8.dp))
                 Button(
                     onClick = { showRemoveConfirmation = true },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    ),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Remove") }
             }
@@ -108,6 +98,7 @@ fun WalletAgent(
     )
 }
 
+@Suppress("UNCHECKED_CAST")
 @Composable
 fun ChangeBalanceDialog(
     wallet: Wallet,
@@ -115,21 +106,9 @@ fun ChangeBalanceDialog(
     onCancel: () -> Unit
 ) {
     var input by remember { mutableStateOf(wallet.balance.toString()) }
+
     AlertDialog(
         onDismissRequest = onCancel,
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    val newBalance = input.toDoubleOrNull()
-                    if (newBalance != null) onConfirm(newBalance)
-                }
-            ) {
-                Text("Confirm")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onCancel) { Text("Cancel") }
-        },
         title = { Text("Change Balance") },
         text = {
             OutlinedTextField(
@@ -138,6 +117,14 @@ fun ChangeBalanceDialog(
                 singleLine = true,
                 label = { Text("New Balance") }
             )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = (input.toDoubleOrNull()?.let(onConfirm) ?: {}) as () -> Unit
+            ) { Text("Confirm") }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancel) { Text("Cancel") }
         }
     )
 }
@@ -147,13 +134,12 @@ fun AddWallet(
     onDismiss: () -> Unit,
     onWalletAdded: (Wallet) -> Unit
 ) {
-    var walletName by remember { mutableStateOf("") }
-    var selectedType by remember { mutableStateOf(Wallet.WalletType.OTHER) }
-    var currencyCode by remember { mutableStateOf("USD") }
-    var initialBalance by remember { mutableStateOf("0.0") }
-    var selectedColor by remember { mutableStateOf("#6200EE") }
+    var name by remember { mutableStateOf("") }
+    var type by remember { mutableStateOf(Wallet.WalletType.OTHER) }
+    var currency by remember { mutableStateOf("USD") }
+    var balance by remember { mutableStateOf("0.0") }
+    var colorHex by remember { mutableStateOf("#6200EE") }
 
-    // your preset swatches
     val presetColors = listOf(
         "#F44336", "#E91E63", "#9C27B0", "#3F51B5",
         "#03A9F4", "#009688", "#4CAF50", "#FF9800", "#795548"
@@ -165,66 +151,67 @@ fun AddWallet(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
-                    value = walletName,
-                    onValueChange = { walletName = it },
+                    value = name,
+                    onValueChange = { name = it },
                     label = { Text("Wallet Name") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
-                    value = initialBalance,
-                    onValueChange = { initialBalance = it.filter { c -> c.isDigit() || c == '.' } },
+                    value = balance,
+                    onValueChange = { balance = it.filter { c -> c.isDigit() || c == '.' } },
                     label = { Text("Initial Balance") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
-                WalletTypeDropdown(
-                    selectedType = selectedType,
-                    onTypeSelected = { selectedType = it }
-                )
+                WalletTypeDropdown(type) { type = it }
                 OutlinedTextField(
-                    value = currencyCode,
-                    onValueChange = { currencyCode = it.take(3).uppercase() },
+                    value = currency,
+                    onValueChange = { currency = it.take(3).uppercase() },
                     label = { Text("Currency Code") },
                     modifier = Modifier.fillMaxWidth()
                 )
-
                 Text("Choose a color", style = MaterialTheme.typography.labelLarge)
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(horizontal = 8.dp),
-                    modifier = Modifier.fillMaxWidth().height(56.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
                 ) {
                     items(presetColors) { hex ->
                         val col = Color(hex.toColorInt())
                         Surface(
                             modifier = Modifier
                                 .size(40.dp)
-                                .clickable { selectedColor = hex },
+                                .clickable { colorHex = hex },
                             shape = CircleShape,
-                            tonalElevation = if (selectedColor == hex) 6.dp else 0.dp,
-                            border = if (selectedColor == hex)
+                            tonalElevation = if (colorHex == hex) 6.dp else 0.dp,
+                            border = if (colorHex == hex)
                                 BorderStroke(2.dp, MaterialTheme.colorScheme.onSurface)
                             else null,
                             color = col
-                        ) { /* the colored circle */ }
+                        ) {}
                     }
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                val wallet = Wallet(
-                    id = UUID.randomUUID().toString(),
-                    name = walletName,
-                    type = selectedType,
-                    currencyCode = currencyCode,
-                    balance = initialBalance.toDoubleOrNull() ?: 0.0,
-                    userId = "0123",
-                    iconName = "account_balance_wallet",
-                    color = selectedColor
-                )
-                onWalletAdded(wallet)
-            }) { Text("Create") }
+            TextButton(
+                onClick = {
+                    onWalletAdded(
+                        Wallet(
+                            id = UUID.randomUUID().toString(),
+                            name = name,
+                            type = type,
+                            currencyCode = currency,
+                            balance = balance.toDoubleOrNull() ?: 0.0,
+                            userId = "0123",
+                            iconName = "account_balance_wallet",
+                            color = colorHex
+                        )
+                    )
+                }
+            ) { Text("Create") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancel") }
@@ -232,37 +219,31 @@ fun AddWallet(
     )
 }
 
-
 @Composable
 private fun WalletTypeDropdown(
-    selectedType: Wallet.WalletType,
-    onTypeSelected: (Wallet.WalletType) -> Unit
+    selected: Wallet.WalletType,
+    onSelect: (Wallet.WalletType) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    Box(modifier = Modifier.fillMaxWidth()) {
+    Box(Modifier.fillMaxWidth()) {
         OutlinedTextField(
-            value = selectedType.name.replace("_", " "),
+            value = selected.name.replace("_", " "),
             onValueChange = {},
             readOnly = true,
             trailingIcon = {
-                Icon(Icons.Default.ArrowDropDown, null,
-                    Modifier.clickable { expanded = true })
+                Icon(Icons.Default.ArrowDropDown, null, Modifier.clickable { expanded = true })
             },
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { expanded = true }
         )
-
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             Wallet.WalletType.entries.forEach { type ->
                 DropdownMenuItem(
                     text = { Text(type.name.replace("_", " ")) },
                     onClick = {
-                        onTypeSelected(type)
+                        onSelect(type)
                         expanded = false
                     }
                 )
