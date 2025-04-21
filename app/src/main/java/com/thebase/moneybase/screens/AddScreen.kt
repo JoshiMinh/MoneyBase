@@ -140,8 +140,8 @@ fun AddScreen(onBack: () -> Unit = {}) {
 
     if (showAddCategoryDialog) {
         AddCategoryDialog(
-            { showAddCategoryDialog = false },
-            {
+            onDismiss = { showAddCategoryDialog = false },
+            onCategoryAdded = {
                 scope.launch {
                     withContext(Dispatchers.IO) {
                         categoryDao.insert(it)
@@ -149,18 +149,28 @@ fun AddScreen(onBack: () -> Unit = {}) {
                     }
                     showAddCategoryDialog = false
                 }
-            }
+            },
+            existingCategories = categories
         )
     }
 
-    actionCategory?.let {
+    actionCategory?.let { category ->
         EditCategoryDialog(
-            it,
-            { actionCategory = null },
-            {
+            category = category,
+            onDismiss = { actionCategory = null },
+            onCategoryUpdated = { updatedCategory ->
                 scope.launch {
                     withContext(Dispatchers.IO) {
-                        categoryDao.update(it)
+                        categoryDao.update(updatedCategory)
+                        categories = categoryDao.getCategoriesByUser("0123")
+                    }
+                    actionCategory = null
+                }
+            },
+            onCategoryDeleted = { deletedCategory ->
+                scope.launch {
+                    withContext(Dispatchers.IO) {
+                        categoryDao.delete(deletedCategory)
                         categories = categoryDao.getCategoriesByUser("0123")
                     }
                     actionCategory = null

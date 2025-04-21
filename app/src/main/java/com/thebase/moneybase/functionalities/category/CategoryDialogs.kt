@@ -1,55 +1,71 @@
 package com.thebase.moneybase.functionalities.category
 
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import com.thebase.moneybase.data.Category
-import java.util.UUID
+import com.thebase.moneybase.data.Icon
+import kotlinx.coroutines.launch
 
 private const val DEFAULT_ICON_NAME = "shopping_cart"
 private const val DEFAULT_COLOR = "#2196F3"
 
+private val presetColors = listOf(
+    "#F44336", "#E91E63", "#9C27B0", "#3F51B5",
+    "#03A9F4", "#009688", "#4CAF50", "#FF9800", "#795548"
+)
+
+private val iconNames = listOf(
+    "fastfood", "directions_car", "shopping_cart", "receipt",
+    "local_activity", "more_horiz", "account_balance_wallet",
+    "account_balance", "currency_bitcoin"
+)
+
 @Composable
 fun AddCategoryDialog(
     onDismiss: () -> Unit,
-    onCategoryAdded: (Category) -> Unit
+    onCategoryAdded: suspend (Category) -> Unit,
+    existingCategories: List<Category>
 ) {
     var name by rememberSaveable { mutableStateOf("") }
+    var selectedIcon by rememberSaveable { mutableStateOf(DEFAULT_ICON_NAME) }
+    var selectedColor by rememberSaveable { mutableStateOf(DEFAULT_COLOR) }
+    val scope = rememberCoroutineScope()
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(text = "New Category") },
-        text = {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text(text = "Name") },
-                singleLine = true
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                onCategoryAdded(
-                    Category(
-                        id = UUID.randomUUID().toString(),
-                        name = name,
-                        iconName = DEFAULT_ICON_NAME,
-                        color = DEFAULT_COLOR
-                    )
+    CategoryDialogContent(
+        name = name,
+        onNameChange = { name = it },
+        selectedIcon = selectedIcon,
+        onIconSelected = { selectedIcon = it },
+        selectedColor = selectedColor,
+        onColorSelected = { selectedColor = it },
+        onConfirm = {
+            scope.launch {
+                val baseId = name.trim().lowercase()
+                val existing = existingCategories.filter { it.id.startsWith(baseId) }
+                val newId = baseId + (existing.size + 1)
+                val category = Category(
+                    id = newId,
+                    name = name,
+                    iconName = selectedIcon,
+                    color = selectedColor,
+                    userId = "0123"
                 )
-                onDismiss()
-            }) {
-                Text(text = "Add")
+                onCategoryAdded(category)
             }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(text = "Cancel")
-            }
-        }
+        onDismiss = onDismiss,
+        showDelete = false
     )
 }
 
@@ -57,32 +73,117 @@ fun AddCategoryDialog(
 fun EditCategoryDialog(
     category: Category,
     onDismiss: () -> Unit,
-    onCategoryUpdated: (Category) -> Unit
+    onCategoryUpdated: suspend (Category) -> Unit,
+    onCategoryDeleted: suspend (Category) -> Unit
 ) {
     var name by rememberSaveable { mutableStateOf(category.name) }
+    var selectedIcon by rememberSaveable { mutableStateOf(category.iconName) }
+    var selectedColor by rememberSaveable { mutableStateOf(category.color) }
+    val scope = rememberCoroutineScope()
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(text = "Edit Category") },
-        text = {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text(text = "Name") },
-                singleLine = true
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                onCategoryUpdated(category.copy(name = name))
-                onDismiss()
-            }) {
-                Text(text = "Save")
+    CategoryDialogContent(
+        name = name,
+        onNameChange = { name = it },
+        selectedIcon = selectedIcon,
+        onIconSelected = { selectedIcon = it },
+        selectedColor = selectedColor,
+        onColorSelected = { selectedColor = it },
+        onConfirm = {
+            scope.launch {
+                val updatedCategory = category.copy(
+                    name = name,
+                    iconName = selectedIcon,
+                    color = selectedColor
+                )
+                onCategoryUpdated(updatedCategory)
             }
         },
+        onDismiss = onDismiss,
+        showDelete = true,
+        onDelete = {
+            scope.launch {
+                onCategoryDeleted(category)
+            }
+        }
+    )
+}
+
+@Composable
+private fun CategoryDialogContent(
+    name: String,
+    onNameChange: (String) -> Unit,
+    selectedIcon: String,
+    onIconSelected: (String) -> Unit,
+    selectedColor: String,
+    onColorSelected: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    showDelete: Boolean,
+    onDelete: (() -> Unit)? = null
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = "Category") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = onNameChange,
+                    label = { Text("Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Text("Choose an Icon", style = MaterialTheme.typography.labelLarge)
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(iconNames) { iconName ->
+                        val icon = Icon.getIcon(iconName)
+                        Surface(
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clickable { onIconSelected(iconName) },
+                            shape = CircleShape,
+                            color = if (selectedIcon == iconName) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else Color.Transparent,
+                            border = if (selectedIcon == iconName) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = iconName,
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Text("Choose a Color", style = MaterialTheme.typography.labelLarge)
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(presetColors) { hex ->
+                        val col = Color(android.graphics.Color.parseColor(hex))
+                        Surface(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clickable { onColorSelected(hex) },
+                            shape = CircleShape,
+                            color = col,
+                            border = if (selectedColor == hex) BorderStroke(2.dp, MaterialTheme.colorScheme.onSurface) else null
+                        ) {}
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text("Save") }
+        },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(text = "Cancel")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (showDelete && onDelete != null) {
+                    TextButton(onClick = onDelete) {
+                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+                TextButton(onClick = onDismiss) { Text("Cancel") }
             }
         }
     )
