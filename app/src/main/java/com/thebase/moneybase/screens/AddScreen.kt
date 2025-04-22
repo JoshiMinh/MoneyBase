@@ -192,14 +192,6 @@ fun AddScreen(onBack: () -> Unit = {}) {
                     showWalletAgent = null
                 }
             },
-            { w, newBalance ->
-                scope.launch {
-                    withContext(Dispatchers.IO) {
-                        walletDao.update(w.copy(balance = newBalance))
-                        wallets = walletDao.getWalletsByUser("0123")
-                    }
-                }
-            },
             { showWalletAgent = null }
         )
     }

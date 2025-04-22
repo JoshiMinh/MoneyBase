@@ -16,20 +16,10 @@ import androidx.compose.ui.unit.dp
 import com.thebase.moneybase.data.Category
 import com.thebase.moneybase.data.Icon
 import kotlinx.coroutines.launch
+import com.thebase.moneybase.data.ColorPalette
 
 private const val DEFAULT_ICON_NAME = "shopping_cart"
 private const val DEFAULT_COLOR = "#2196F3"
-
-private val presetColors = listOf(
-    "#F44336", "#E91E63", "#9C27B0", "#3F51B5",
-    "#03A9F4", "#009688", "#4CAF50", "#FF9800", "#795548"
-)
-
-private val iconNames = listOf(
-    "fastfood", "directions_car", "shopping_cart", "receipt",
-    "local_activity", "more_horiz", "account_balance_wallet",
-    "account_balance", "currency_bitcoin"
-)
 
 @Composable
 fun AddCategoryDialog(
@@ -136,7 +126,7 @@ private fun CategoryDialogContent(
 
                 Text("Choose an Icon", style = MaterialTheme.typography.labelLarge)
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(iconNames) { iconName ->
+                    items(Icon.iconMap.keys.toList()) { iconName ->
                         val icon = Icon.getIcon(iconName)
                         Surface(
                             modifier = Modifier
@@ -159,15 +149,15 @@ private fun CategoryDialogContent(
 
                 Text("Choose a Color", style = MaterialTheme.typography.labelLarge)
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(presetColors) { hex ->
-                        val col = Color(android.graphics.Color.parseColor(hex))
+                    items(ColorPalette.colorMap.keys.toList()) { colorName ->
+                        val color = ColorPalette.colorMap[colorName] ?: ColorPalette.defaultColor
                         Surface(
                             modifier = Modifier
                                 .size(40.dp)
-                                .clickable { onColorSelected(hex) },
+                                .clickable { onColorSelected(colorName) },
                             shape = CircleShape,
-                            color = col,
-                            border = if (selectedColor == hex) BorderStroke(2.dp, MaterialTheme.colorScheme.onSurface) else null
+                            color = color,
+                            border = if (selectedColor == colorName) BorderStroke(2.dp, MaterialTheme.colorScheme.onSurface) else null
                         ) {}
                     }
                 }

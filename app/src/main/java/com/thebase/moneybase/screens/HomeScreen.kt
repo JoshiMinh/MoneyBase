@@ -2,10 +2,12 @@ package com.thebase.moneybase.screens
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,24 +23,29 @@ import com.thebase.moneybase.data.Wallet
 import com.thebase.moneybase.data.Icon.getIcon
 import com.thebase.moneybase.database.AppDatabase
 import com.thebase.moneybase.database.CategorySpending
+import com.thebase.moneybase.functionalities.transaction.EditTransaction
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import kotlin.math.abs
 
 @Composable
 fun HomeScreen(userId: String) {
     val context = LocalContext.current
-    val db = AppDatabase.getInstance(context, userId)
-    var transactions by remember { mutableStateOf<List<Transaction>>(emptyList()) }
-    var categories by remember { mutableStateOf<List<Category>>(emptyList()) }
-    var wallets by remember { mutableStateOf<List<Wallet>>(emptyList()) }
-    var categorySpending by remember { mutableStateOf<List<CategorySpending>>(emptyList()) }
+    val db = remember(userId) { AppDatabase.getInstance(context, userId) }
+    var transactions by remember { mutableStateOf(emptyList<Transaction>()) }
+    var categories by remember { mutableStateOf(emptyList<Category>()) }
+    var wallets by remember { mutableStateOf(emptyList<Wallet>()) }
+    var categorySpending by remember { mutableStateOf(emptyList<CategorySpending>()) }
 
     LaunchedEffect(userId) {
-        transactions = db.transactionDao().getTop10Transactions(userId)
-        categories = db.categoryDao().getCategoriesByUser(userId)
-        wallets = db.walletDao().getWalletsByUser(userId)
-        val cutoff = Instant.now().minus(30, ChronoUnit.DAYS)
-        categorySpending = db.transactionDao().getSpendingByCategoryLast30Days(userId, cutoff)
+        with(db) {
+            transactions = transactionDao().getTop10Transactions(userId)
+            categories = categoryDao().getCategoriesByUser(userId)
+            wallets = walletDao().getWalletsByUser(userId)
+            val cutoff = Instant.now().minus(30, ChronoUnit.DAYS)
+            categorySpending = transactionDao()
+                .getSpendingByCategoryLast30Days(userId, cutoff)
+        }
     }
 
     Column(
@@ -46,49 +53,30 @@ fun HomeScreen(userId: String) {
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        Surface(
+        SpendingPieChart(
+            data = categorySpending,
+            categories = categories,
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(0.4f),
-            color = MaterialTheme.colorScheme.surfaceVariant
+                .height(240.dp)
+        )
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = "Transaction History",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(8.dp))
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                SpendingPieChart(categorySpending, categories)
-            }
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(0.6f),
-            color = MaterialTheme.colorScheme.surfaceVariant
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = "Transaction History",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+            items(transactions) { tx ->
+                TransactionItem(
+                    transaction = tx,
+                    category = categories.firstOrNull { it.id == tx.categoryId },
+                    wallet = wallets.firstOrNull { it.id == tx.walletId }
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                LazyColumn {
-                    items(transactions) { tx ->
-                        TransactionItem(
-                            transaction = tx,
-                            getCategory = { id -> categories.find { it.id == id } },
-                            getWallet = { id -> wallets.find { it.id == id } }
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-                }
             }
         }
     }
@@ -96,37 +84,43 @@ fun HomeScreen(userId: String) {
 
 @Composable
 private fun SpendingPieChart(
-    categorySpending: List<CategorySpending>,
-    categories: List<Category>
+    data: List<CategorySpending>,
+    categories: List<Category>,
+    modifier: Modifier = Modifier
 ) {
-    val total = categorySpending.sumOf { it.totalAmount }
-    if (total == 0.0) {
-        Text(text = "No expenses in last 30 days")
+    val totalAmount = remember(data) { data.sumOf { it.totalAmount } }
+    if (totalAmount <= 0.0) {
+        Box(modifier = modifier, contentAlignment = Alignment.Center) {
+            Text("No expenses in the last 30 days")
+        }
         return
     }
-    val entries = categorySpending.mapNotNull { cs ->
-        categories.find { it.id == cs.categoryId }?.let {
-            PieChartEntry(it.name, cs.totalAmount.toFloat(), Color(it.color.toColorInt()))
+
+    val entries = remember(data, categories) {
+        data.mapNotNull { cs ->
+            categories.find { it.id == cs.categoryId }?.let { cat ->
+                PieChartEntry(cat.name, cs.totalAmount.toFloat(), Color(cat.color.toColorInt()))
+            }
         }
     }
+
     Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.Center,
+        modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        PieChart(entries, size = 200.dp)
-        Spacer(modifier = Modifier.height(16.dp))
-        PieChartLegend(entries)
+        PieChart(entries = entries, size = 200.dp)
+        Spacer(Modifier.height(8.dp))
+        PieChartLegend(entries = entries)
     }
 }
 
 @Composable
-private fun PieChart(entries: List<PieChartEntry>, size: Dp = 200.dp) {
+private fun PieChart(entries: List<PieChartEntry>, size: Dp) {
     Canvas(modifier = Modifier.size(size)) {
-        val total = entries.sumOf { it.value.toDouble() }.toFloat()
+        val sum = entries.sumOf { it.value.toDouble() }.toFloat()
         var startAngle = -90f
         entries.forEach { entry ->
-            val sweep = entry.value / total * 360f
+            val sweep = (entry.value / sum) * 360f
             drawArc(entry.color, startAngle, sweep, useCenter = true)
             startAngle += sweep
         }
@@ -136,22 +130,18 @@ private fun PieChart(entries: List<PieChartEntry>, size: Dp = 200.dp) {
 @Composable
 private fun PieChartLegend(entries: List<PieChartEntry>) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         entries.forEach { entry ->
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(vertical = 4.dp)
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
                         .size(12.dp)
                         .background(entry.color, CircleShape)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "${entry.label}: ${"%.2f".format(entry.value)}")
+                Spacer(Modifier.width(8.dp))
+                Text("${entry.label}: ${"%.2f".format(entry.value)}", style = MaterialTheme.typography.bodySmall)
             }
         }
     }
@@ -160,17 +150,19 @@ private fun PieChartLegend(entries: List<PieChartEntry>) {
 @Composable
 fun TransactionItem(
     transaction: Transaction,
-    getCategory: (String) -> Category?,
-    getWallet: (String) -> Wallet?
+    category: Category?,
+    wallet: Wallet?
 ) {
-    val category = getCategory(transaction.categoryId)
-    val wallet = getWallet(transaction.walletId)
-    val sign = if (transaction.isIncome) "+" else "-"
-    val amount = kotlin.math.abs(transaction.amount)
-    val amountColor = if (transaction.isIncome) Color(0xFF4CAF50) else Color(0xFFF44336)
+    var showDialog by remember { mutableStateOf(false) }
+
+    if (showDialog) {
+        EditTransaction(transaction = transaction, onDismiss = { showDialog = false })
+    }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { showDialog = true },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
@@ -181,31 +173,31 @@ fun TransactionItem(
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .background(Color((category?.color ?: "#6200EE").toColorInt())),
+                    .background(Color((category?.color ?: "#6200EE").toColorInt()), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = getIcon(category?.iconName ?: "shopping_cart"),
-                    contentDescription = category?.name,
-                    tint = Color.White
-                )
+                Icon(getIcon(category?.iconName ?: "shopping_cart"), contentDescription = null, tint = Color.White)
             }
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = transaction.description, style = MaterialTheme.typography.bodyLarge)
+                Text(transaction.description)
                 Text(
-                    text = "${category?.name ?: ""} • ${wallet?.name ?: ""}",
+                    "${category?.name.orEmpty()} • ${wallet?.name.orEmpty()}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
                 Text(
-                    text = transaction.date,
+                    transaction.date,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                 )
             }
+            val absAmount = abs(transaction.amount)
+            val signText = if (transaction.amount < 0) "-" else "+"
+            val formattedAmount = "%.2f".format(absAmount)
+            val amountColor = if (transaction.amount < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
             Text(
-                text = "$sign${transaction.currencyCode} ${"%.2f".format(amount)}",
+                text = "$signText${transaction.currencyCode} $formattedAmount",
                 color = amountColor,
                 style = MaterialTheme.typography.bodyLarge
             )
