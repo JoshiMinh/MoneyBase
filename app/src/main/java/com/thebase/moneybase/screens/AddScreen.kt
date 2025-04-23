@@ -18,7 +18,10 @@ import androidx.compose.ui.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
 import com.thebase.moneybase.functionalities.wallet.WalletAgent
 import com.thebase.moneybase.data.*
@@ -58,6 +61,7 @@ fun AddScreen(onBack: () -> Unit = {}) {
     var showAddCategoryDialog by remember { mutableStateOf(false) }
     var actionCategory by remember { mutableStateOf<Category?>(null) }
 
+    // Replace the LaunchedEffect with
     LaunchedEffect(Unit) {
         categories = categoryDao.getCategoriesByUser("0123")
         wallets = walletDao.getWalletsByUser("0123")
@@ -179,20 +183,28 @@ fun AddScreen(onBack: () -> Unit = {}) {
         )
     }
 
-    showWalletAgent?.let {
+    showWalletAgent?.let { wallet ->
         WalletAgent(
-            it,
-            {},
-            {
+            wallet = wallet,
+            onEditDone = { updatedWallet ->
                 scope.launch {
                     withContext(Dispatchers.IO) {
-                        walletDao.delete(it)
+                        walletDao.update(updatedWallet) // Update wallet in DB
+                        wallets = walletDao.getWalletsByUser("0123") // Refresh list
+                    }
+                    showWalletAgent = null
+                }
+            },
+            onRemove = { deletedWallet ->
+                scope.launch {
+                    withContext(Dispatchers.IO) {
+                        walletDao.delete(deletedWallet)
                         wallets = walletDao.getWalletsByUser("0123")
                     }
                     showWalletAgent = null
                 }
             },
-            { showWalletAgent = null }
+            onDismiss = { showWalletAgent = null }
         )
     }
 
@@ -410,11 +422,29 @@ private fun WalletItem(
         ) {
             Icon(getIcon(wallet.iconName), contentDescription = null, tint = color, modifier = Modifier.size(32.dp))
             Spacer(Modifier.height(6.dp))
-            Text(wallet.name, style = MaterialTheme.typography.bodyLarge)
+
+            Text(
+                wallet.name,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                fontSize = when {
+                    wallet.name.length > 15 -> 14.sp
+                    wallet.name.length > 10 -> 16.sp
+                    else -> MaterialTheme.typography.bodyLarge.fontSize
+                }
+            )
+
             Text(
                 "${wallet.currencyCode} ${"%.2f".format(wallet.balance)}",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
             )
         }
     }

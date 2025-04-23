@@ -3,8 +3,8 @@ package com.thebase.moneybase.data
 import androidx.compose.ui.graphics.Color
 
 object ColorPalette {
-
     val colorMap: Map<String, Color> = mapOf(
+
         "red" to Color(0xFFF44336),
         "pink" to Color(0xFFE91E63),
         "purple" to Color(0xFF9C27B0),
@@ -28,5 +28,20 @@ object ColorPalette {
         "black" to Color(0xFF000000)
     )
 
+    val reverseColorMap: Map<String, String> by lazy {
+        colorMap.entries.associate { (name, color) -> color.toHexString() to name }
+    }
+
     val defaultColor = Color(0xFF2196F3)
+
+    fun getHexCode(colorName: String): String {
+        return colorMap[colorName]?.toHexString() ?: defaultColor.toHexString()
+    }
+}
+
+fun Color.toHexString(): String {
+    val red = (red * 255).toInt()
+    val green = (green * 255).toInt()
+    val blue = (blue * 255).toInt()
+    return String.format("#%02X%02X%02X", red, green, blue)
 }

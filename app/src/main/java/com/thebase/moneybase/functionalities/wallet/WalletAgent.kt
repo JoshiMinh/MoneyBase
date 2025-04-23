@@ -52,18 +52,16 @@ fun WalletAgent(
     }
 
     if (showEditWallet) {
-        EditWallet(
+        EditWalletDialog(
             wallet = wallet,
             onDismiss = { showEditWallet = false },
-            onWalletUpdated = { updatedWallet ->
+            onSave = { updatedWallet ->
                 onEditDone(updatedWallet)
                 showEditWallet = false
-                onDismiss()
             },
-            onWalletDeleted = { deletedWallet ->
-                onRemove(deletedWallet)
+            onDelete = {
                 showEditWallet = false
-                onDismiss()
+                showRemoveConfirmation = true
             }
         )
     }
@@ -86,7 +84,9 @@ fun WalletAgent(
                 ) { Text("Edit") }
                 Button(
                     onClick = { showRemoveConfirmation = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Remove") }
             }
@@ -103,8 +103,8 @@ fun AddWallet(
     var type by remember { mutableStateOf(Wallet.WalletType.OTHER) }
     var currency by remember { mutableStateOf("USD") }
     var balance by remember { mutableStateOf("0.0") }
-    var colorHex by remember { mutableStateOf("purple") } // Using color name, not hex
-    var selectedIcon by remember { mutableStateOf("account_balance_wallet") } // <- New
+    var colorName by remember { mutableStateOf("purple") }
+    var selectedIcon by remember { mutableStateOf("account_balance_wallet") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -119,7 +119,9 @@ fun AddWallet(
                 )
                 OutlinedTextField(
                     value = balance,
-                    onValueChange = { balance = it.filter { c -> c.isDigit() || c == '.' } },
+                    onValueChange = {
+                        if (it.isValidDecimal()) balance = it
+                    },
                     label = { Text("Initial Balance") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
@@ -133,64 +135,12 @@ fun AddWallet(
                 )
 
                 Text("Choose a Color", style = MaterialTheme.typography.labelLarge)
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                ) {
-                    items(ColorPalette.colorMap.keys.toList()) { colorName ->
-                        val color = ColorPalette.colorMap[colorName] ?: ColorPalette.defaultColor
-                        Surface(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clickable { colorHex = colorName },
-                            shape = CircleShape,
-                            tonalElevation = if (colorHex == colorName) 6.dp else 0.dp,
-                            border = if (colorHex == colorName)
-                                BorderStroke(2.dp, MaterialTheme.colorScheme.onSurface)
-                            else null,
-                            color = color
-                        ) {}
-                    }
-                }
+                ColorSelector(colorName) { colorName = it }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text("Choose an Icon", style = MaterialTheme.typography.labelLarge)
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                ) {
-                    items(com.thebase.moneybase.data.Icon.iconMap.keys.toList()) { iconName ->
-                        val icon = com.thebase.moneybase.data.Icon.iconMap[iconName]
-                        Surface(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clickable { selectedIcon = iconName },
-                            shape = CircleShape,
-                            tonalElevation = if (selectedIcon == iconName) 6.dp else 0.dp,
-                            border = if (selectedIcon == iconName)
-                                BorderStroke(2.dp, MaterialTheme.colorScheme.onSurface)
-                            else null,
-                            color = MaterialTheme.colorScheme.surfaceVariant
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                icon?.let {
-                                    Icon(
-                                        imageVector = it,
-                                        contentDescription = iconName,
-                                        tint = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+                IconSelector(selectedIcon) { selectedIcon = it }
             }
         },
         confirmButton = {
@@ -203,12 +153,13 @@ fun AddWallet(
                             type = type,
                             currencyCode = currency,
                             balance = balance.toDoubleOrNull() ?: 0.0,
-                            userId = "0123",
-                            iconName = selectedIcon, // <- Use selected icon
-                            color = colorHex
+                            userId = "0123", // Replace with actual user ID
+                            iconName = selectedIcon,
+                            color = ColorPalette.getHexCode(colorName)
                         )
                     )
-                }
+                },
+                enabled = name.isNotBlank()
             ) { Text("Create") }
         },
         dismissButton = {
@@ -218,41 +169,22 @@ fun AddWallet(
 }
 
 @Composable
-fun EditWallet(
+private fun EditWalletDialog(
     wallet: Wallet,
     onDismiss: () -> Unit,
-    onWalletUpdated: (Wallet) -> Unit,
-    onWalletDeleted: (Wallet) -> Unit
+    onSave: (Wallet) -> Unit,
+    onDelete: () -> Unit
 ) {
     var name by remember { mutableStateOf(wallet.name) }
     var type by remember { mutableStateOf(wallet.type) }
     var currency by remember { mutableStateOf(wallet.currencyCode) }
     var balance by remember { mutableStateOf(wallet.balance.toString()) }
-    var colorHex by remember { mutableStateOf(wallet.color) }
-    var selectedIcon by remember { mutableStateOf(wallet.iconName) }
-    var showDeleteConfirmation by remember { mutableStateOf(false) }
-
-    if (showDeleteConfirmation) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirmation = false },
-            title = { Text("Delete Wallet") },
-            text = { Text("Are you sure you want to delete ${wallet.name}?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    onWalletDeleted(wallet)
-                    showDeleteConfirmation = false
-                    onDismiss()
-                }) {
-                    Text("Delete")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirmation = false }) {
-                    Text("Cancel")
-                }
-            }
+    var colorName by remember {
+        mutableStateOf(
+            ColorPalette.reverseColorMap[wallet.color] ?: "purple"
         )
     }
+    var selectedIcon by remember { mutableStateOf(wallet.iconName) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -267,7 +199,9 @@ fun EditWallet(
                 )
                 OutlinedTextField(
                     value = balance,
-                    onValueChange = { balance = it.filter { c -> c.isDigit() || c == '.' } },
+                    onValueChange = {
+                        if (it.isValidDecimal()) balance = it
+                    },
                     label = { Text("Balance") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
@@ -281,87 +215,40 @@ fun EditWallet(
                 )
 
                 Text("Choose a Color", style = MaterialTheme.typography.labelLarge)
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                ) {
-                    items(ColorPalette.colorMap.keys.toList()) { colorName ->
-                        val color = ColorPalette.colorMap[colorName] ?: ColorPalette.defaultColor
-                        Surface(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clickable { colorHex = colorName },
-                            shape = CircleShape,
-                            tonalElevation = if (colorHex == colorName) 6.dp else 0.dp,
-                            border = if (colorHex == colorName)
-                                BorderStroke(2.dp, MaterialTheme.colorScheme.onSurface)
-                            else null,
-                            color = color
-                        ) {}
-                    }
-                }
+                ColorSelector(colorName) { colorName = it }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text("Choose an Icon", style = MaterialTheme.typography.labelLarge)
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                ) {
-                    items(com.thebase.moneybase.data.Icon.iconMap.keys.toList()) { iconName ->
-                        val icon = com.thebase.moneybase.data.Icon.iconMap[iconName]
-                        Surface(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clickable { selectedIcon = iconName },
-                            shape = CircleShape,
-                            tonalElevation = if (selectedIcon == iconName) 6.dp else 0.dp,
-                            border = if (selectedIcon == iconName)
-                                BorderStroke(2.dp, MaterialTheme.colorScheme.onSurface)
-                            else null,
-                            color = MaterialTheme.colorScheme.surfaceVariant
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                icon?.let {
-                                    Icon(
-                                        imageVector = it,
-                                        contentDescription = iconName,
-                                        tint = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+                IconSelector(selectedIcon) { selectedIcon = it }
             }
         },
         confirmButton = {
             TextButton(
                 onClick = {
-                    onWalletUpdated(
+                    onSave(
                         wallet.copy(
                             name = name,
                             type = type,
                             currencyCode = currency,
                             balance = balance.toDoubleOrNull() ?: 0.0,
-                            color = colorHex,
+                            color = ColorPalette.getHexCode(colorName),
                             iconName = selectedIcon
                         )
                     )
-                    onDismiss()
-                }
+                },
+                enabled = name.isNotBlank()
             ) { Text("Save") }
         },
         dismissButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = { showDeleteConfirmation = true }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                TextButton(
+                    onClick = onDelete,
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Delete")
                 }
                 TextButton(onClick = onDismiss) {
                     Text("Cancel")
@@ -369,6 +256,74 @@ fun EditWallet(
             }
         }
     )
+}
+
+@Composable
+private fun ColorSelector(
+    selectedColor: String,
+    onColorSelected: (String) -> Unit
+) {
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(horizontal = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+    ) {
+        items(ColorPalette.colorMap.keys.toList()) { colorName ->
+            val color = ColorPalette.colorMap[colorName] ?: ColorPalette.defaultColor
+            Surface(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clickable { onColorSelected(colorName) },
+                shape = CircleShape,
+                tonalElevation = if (selectedColor == colorName) 6.dp else 0.dp,
+                border = if (selectedColor == colorName)
+                    BorderStroke(2.dp, MaterialTheme.colorScheme.onSurface)
+                else null,
+                color = color
+            ) {}
+        }
+    }
+}
+
+@Composable
+private fun IconSelector(
+    selectedIcon: String,
+    onIconSelected: (String) -> Unit
+) {
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(horizontal = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+    ) {
+        items(com.thebase.moneybase.data.Icon.iconMap.keys.toList()) { iconName ->
+            val icon = com.thebase.moneybase.data.Icon.iconMap[iconName]
+            Surface(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clickable { onIconSelected(iconName) },
+                shape = CircleShape,
+                tonalElevation = if (selectedIcon == iconName) 6.dp else 0.dp,
+                border = if (selectedIcon == iconName)
+                    BorderStroke(2.dp, MaterialTheme.colorScheme.onSurface)
+                else null,
+                color = MaterialTheme.colorScheme.surfaceVariant
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    icon?.let {
+                        Icon(
+                            imageVector = it,
+                            contentDescription = iconName,
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -402,4 +357,8 @@ private fun WalletTypeDropdown(
             }
         }
     }
+}
+
+private fun String.isValidDecimal(): Boolean {
+    return matches(Regex("^\\d*\\.?\\d*$")) && count { it == '.' } <= 1
 }
