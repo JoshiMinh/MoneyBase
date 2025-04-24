@@ -44,14 +44,19 @@ fun AddCategoryDialog(
                 val baseId = name.trim().lowercase()
                 val existing = existingCategories.filter { it.id.startsWith(baseId) }
                 val newId = baseId + (existing.size + 1)
+
+                // Convert the selected color to hex code
+                val colorHexCode = ColorPalette.getHexCode(selectedColor)
+
                 val category = Category(
                     id = newId,
                     name = name,
                     iconName = selectedIcon,
-                    color = selectedColor,
+                    color = colorHexCode, // Save the hex code
                     userId = "0123"
                 )
                 onCategoryAdded(category)
+                onDismiss() // Call onDismiss after adding
             }
         },
         onDismiss = onDismiss,
@@ -68,7 +73,7 @@ fun EditCategoryDialog(
 ) {
     var name by rememberSaveable { mutableStateOf(category.name) }
     var selectedIcon by rememberSaveable { mutableStateOf(category.iconName) }
-    var selectedColor by rememberSaveable { mutableStateOf(category.color) }
+    var selectedColor by rememberSaveable { mutableStateOf(category.color) } // Keep as hex code
     val scope = rememberCoroutineScope()
 
     CategoryDialogContent(
@@ -77,13 +82,16 @@ fun EditCategoryDialog(
         selectedIcon = selectedIcon,
         onIconSelected = { selectedIcon = it },
         selectedColor = selectedColor,
-        onColorSelected = { selectedColor = it },
+        onColorSelected = { selectedColor = it }, // Keep the color name for selection
         onConfirm = {
             scope.launch {
+                // Convert the selected color to hex code
+                val colorHexCode = ColorPalette.getHexCode(selectedColor)
+
                 val updatedCategory = category.copy(
                     name = name,
                     iconName = selectedIcon,
-                    color = selectedColor
+                    color = colorHexCode // Save the hex code
                 )
                 onCategoryUpdated(updatedCategory)
             }

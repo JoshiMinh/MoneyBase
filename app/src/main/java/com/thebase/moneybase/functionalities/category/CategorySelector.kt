@@ -100,7 +100,7 @@ fun CategorySelector(
             confirmButton = {
                 TextButton(onClick = {
                     onEditCategory(cat)
-                    actionCat = null
+                    actionCat = null // Reset actionCat after edit
                 }) {
                     Text("Edit")
                 }
@@ -109,7 +109,7 @@ fun CategorySelector(
                 Row {
                     TextButton(onClick = {
                         onRemoveCategory(cat)
-                        actionCat = null
+                        actionCat = null // Reset actionCat after removal
                     }) {
                         Text("Remove")
                     }

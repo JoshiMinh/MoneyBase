@@ -2,16 +2,19 @@ package com.thebase.moneybase.screens
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
@@ -52,36 +55,58 @@ fun HomeScreen(userId: String) {
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
+            .background(Color.Gray) // Grey background for the entire screen
     ) {
-        SpendingPieChart(
-            data = categorySpending,
-            categories = categories,
+        // Container for the pie chart and transaction history
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(240.dp)
-        )
-        Spacer(Modifier.height(16.dp))
-        Text(
-            text = "Transaction History",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(Modifier.height(8.dp))
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .fillMaxSize()
+                .background(Color.LightGray) // Light grey background for the box
+                .padding(16.dp)
         ) {
-            items(transactions) { tx ->
-                TransactionItem(
-                    transaction = tx,
-                    category = categories.firstOrNull { it.id == tx.categoryId },
-                    wallet = wallets.firstOrNull { it.id == tx.walletId }
-                )
+            // Pie Chart Section
+            SpendingPieChart(
+                data = categorySpending,
+                categories = categories,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(240.dp)
+            )
+            Spacer(Modifier.height(16.dp))
+
+            // Transaction History Section
+            Text(
+                text = "Transaction History",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth()
+            )
+            IconButton(
+                onClick = { /* TODO: Add functionality here */ },
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .size(48.dp)
+                    .background(Color.Cyan, shape = CircleShape) // Sky blue color for the button
+            ) {
+                Icon(Icons.Default.ExpandMore, contentDescription = "Extend", tint = Color.White)
+            }
+            Spacer(Modifier.height(8.dp))
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(transactions) { tx ->
+                    TransactionItem(
+                        transaction = tx,
+                        category = categories.firstOrNull { it.id == tx.categoryId },
+                        wallet = wallets.firstOrNull { it.id == tx.walletId }
+                    )
+                }
             }
         }
     }
 }
-
 @Composable
 private fun SpendingPieChart(
     data: List<CategorySpending>,
@@ -99,7 +124,7 @@ private fun SpendingPieChart(
     val entries = remember(data, categories) {
         data.mapNotNull { cs ->
             categories.find { it.id == cs.categoryId }?.let { cat ->
-                PieChartEntry(cat.name, cs.totalAmount.toFloat(), Color(cat.color.toColorInt()))
+                PieChartEntry(cat.name, cs.totalAmount.toFloat(), Color(android.graphics.Color.parseColor(cat.color)))
             }
         }
     }
@@ -162,8 +187,10 @@ fun TransactionItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { showDialog = true },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            .clickable { showDialog = true }
+            .padding(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -173,14 +200,14 @@ fun TransactionItem(
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .background(Color((category?.color ?: "#6200EE").toColorInt()), CircleShape),
+                    .background(Color(android.graphics.Color.parseColor(category?.color ?: "#6200EE")), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(getIcon(category?.iconName ?: "shopping_cart"), contentDescription = null, tint = Color.White)
             }
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(transaction.description)
+                Text(transaction.description, style = MaterialTheme.typography.bodyMedium)
                 Text(
                     "${category?.name.orEmpty()} • ${wallet?.name.orEmpty()}",
                     style = MaterialTheme.typography.bodySmall,
