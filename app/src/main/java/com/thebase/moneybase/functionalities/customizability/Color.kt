@@ -1,4 +1,4 @@
-package com.thebase.moneybase.data
+package com.thebase.moneybase.functionalities.customizability
 
 import androidx.compose.ui.graphics.Color
 

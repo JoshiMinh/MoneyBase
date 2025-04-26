@@ -1,4 +1,4 @@
-package com.thebase.moneybase.functionalities.category
+package com.thebase.moneybase.functionalities.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -7,23 +7,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Divider
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
-import com.thebase.moneybase.data.Category
-import com.thebase.moneybase.data.Icon.getIcon
+import com.thebase.moneybase.firebase.Category
+import com.thebase.moneybase.firebase.CategoryRepository
+import com.thebase.moneybase.functionalities.customizability.Icon
+import kotlinx.coroutines.launch
 
 @Suppress("DEPRECATION")
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
@@ -34,14 +28,17 @@ fun CategorySelector(
     onDismiss: () -> Unit,
     onAddCategory: () -> Unit,
     onEditCategory: (Category) -> Unit,
-    onRemoveCategory: (Category) -> Unit
+    onRemoveCategory: (Category) -> Unit,
+    userId: String
 ) {
+    val categoryRepo = remember { CategoryRepository() }
+    val scope = rememberCoroutineScope()
     var actionCat by remember { mutableStateOf<Category?>(null) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        dragHandle = {},
-        containerColor = MaterialTheme.colorScheme.background,
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
         tonalElevation = 4.dp
     ) {
         Column(
@@ -59,12 +56,17 @@ fun CategorySelector(
                     style = MaterialTheme.typography.titleMedium
                 )
                 IconButton(onClick = onAddCategory) {
-                    Icon(Icons.Default.Add, contentDescription = null)
+                    Icon(Icons.Default.Add, contentDescription = "Add category")
                 }
             }
-            Divider()
-            LazyColumn {
-                items(categories) { cat ->
+            Divider(Modifier.padding(vertical = 8.dp))
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 400.dp)
+            ) {
+                items(categories, key = { it.id }) { cat ->  // Fixed items usage
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -76,12 +78,16 @@ fun CategorySelector(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = getIcon(cat.iconName),
+                            imageVector = Icon.getIcon(cat.iconName),  // Fixed icon reference
                             contentDescription = cat.name,
-                            tint = Color(cat.color.toColorInt()),
-                            modifier = Modifier.size(20.dp)
+                            tint = try {
+                                Color(cat.color.toColorInt())
+                            } catch (e: Exception) {
+                                MaterialTheme.colorScheme.primary
+                            },
+                            modifier = Modifier.size(24.dp)
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(Modifier.width(12.dp))
                         Text(
                             text = cat.name,
                             style = MaterialTheme.typography.bodyLarge
@@ -100,20 +106,24 @@ fun CategorySelector(
             confirmButton = {
                 TextButton(onClick = {
                     onEditCategory(cat)
-                    actionCat = null // Reset actionCat after edit
+                    actionCat = null
                 }) {
                     Text("Edit")
                 }
             },
             dismissButton = {
-                Row {
-                    TextButton(onClick = {
-                        onRemoveCategory(cat)
-                        actionCat = null // Reset actionCat after removal
-                    }) {
-                        Text("Remove")
+                Column {
+                    TextButton(
+                        onClick = {
+                            scope.launch {
+                                categoryRepo.deleteCategory(userId, cat.id)
+                                onRemoveCategory(cat)
+                            }
+                            actionCat = null
+                        }
+                    ) {
+                        Text("Delete", color = MaterialTheme.colorScheme.error)
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
                     TextButton(onClick = { actionCat = null }) {
                         Text("Cancel")
                     }

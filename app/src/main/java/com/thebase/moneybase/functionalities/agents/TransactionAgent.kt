@@ -1,11 +1,11 @@
-package com.thebase.moneybase.functionalities.transaction
+package com.thebase.moneybase.functionalities.agents
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import com.thebase.moneybase.data.Transaction
+import com.thebase.moneybase.firebase.*
 
 @Composable
 fun EditTransaction(

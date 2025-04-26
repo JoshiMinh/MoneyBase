@@ -1,4 +1,4 @@
-package com.thebase.moneybase.functionalities.category
+package com.thebase.moneybase.functionalities.agents
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -13,23 +13,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.thebase.moneybase.data.Category
-import com.thebase.moneybase.data.Icon
+import com.thebase.moneybase.firebase.*
+import com.thebase.moneybase.functionalities.customizability.Icon
 import kotlinx.coroutines.launch
-import com.thebase.moneybase.data.ColorPalette
-
-private const val DEFAULT_ICON_NAME = "shopping_cart"
-private const val DEFAULT_COLOR = "#2196F3"
+import com.thebase.moneybase.functionalities.customizability.ColorPalette
 
 @Composable
 fun AddCategoryDialog(
     onDismiss: () -> Unit,
     onCategoryAdded: suspend (Category) -> Unit,
-    existingCategories: List<Category>
+    existingCategories: List<Category>,
+    userId: String,
+    showError: (String) -> Unit
 ) {
     var name by rememberSaveable { mutableStateOf("") }
-    var selectedIcon by rememberSaveable { mutableStateOf(DEFAULT_ICON_NAME) }
-    var selectedColor by rememberSaveable { mutableStateOf(DEFAULT_COLOR) }
+    var selectedIcon by rememberSaveable { mutableStateOf("shopping_cart") }
+    var selectedColor by rememberSaveable { mutableStateOf("#2196F3") }
     val scope = rememberCoroutineScope()
 
     CategoryDialogContent(
@@ -41,22 +40,29 @@ fun AddCategoryDialog(
         onColorSelected = { selectedColor = it },
         onConfirm = {
             scope.launch {
-                val baseId = name.trim().lowercase()
-                val existing = existingCategories.filter { it.id.startsWith(baseId) }
-                val newId = baseId + (existing.size + 1)
+                try {
+                    if (name.isBlank()) {
+                        showError("Category name cannot be empty")
+                        return@launch
+                    }
 
-                // Convert the selected color to hex code
-                val colorHexCode = ColorPalette.getHexCode(selectedColor)
+                    if (existingCategories.any { it.name.equals(name, true) }) {
+                        showError("Category with this name already exists")
+                        return@launch
+                    }
 
-                val category = Category(
-                    id = newId,
-                    name = name,
-                    iconName = selectedIcon,
-                    color = colorHexCode, // Save the hex code
-                    userId = "0123"
-                )
-                onCategoryAdded(category)
-                onDismiss() // Call onDismiss after adding
+                    val category = Category(
+                        id = "",
+                        name = name,
+                        iconName = selectedIcon,
+                        color = ColorPalette.getHexCode(selectedColor),
+                        userId = userId
+                    )
+                    onCategoryAdded(category)
+                    onDismiss()
+                } catch (e: Exception) {
+                    showError("Failed to create category: ${e.message}")
+                }
             }
         },
         onDismiss = onDismiss,
@@ -69,11 +75,13 @@ fun EditCategoryDialog(
     category: Category,
     onDismiss: () -> Unit,
     onCategoryUpdated: suspend (Category) -> Unit,
-    onCategoryDeleted: suspend (Category) -> Unit
+    onCategoryDeleted: suspend (Category) -> Unit,
+    userId: String,
+    showError: (String) -> Unit
 ) {
     var name by rememberSaveable { mutableStateOf(category.name) }
     var selectedIcon by rememberSaveable { mutableStateOf(category.iconName) }
-    var selectedColor by rememberSaveable { mutableStateOf(category.color) } // Keep as hex code
+    var selectedColor by rememberSaveable { mutableStateOf(category.color) }
     val scope = rememberCoroutineScope()
 
     CategoryDialogContent(
@@ -82,25 +90,38 @@ fun EditCategoryDialog(
         selectedIcon = selectedIcon,
         onIconSelected = { selectedIcon = it },
         selectedColor = selectedColor,
-        onColorSelected = { selectedColor = it }, // Keep the color name for selection
+        onColorSelected = { selectedColor = it },
         onConfirm = {
             scope.launch {
-                // Convert the selected color to hex code
-                val colorHexCode = ColorPalette.getHexCode(selectedColor)
+                try {
+                    if (name.isBlank()) {
+                        showError("Category name cannot be empty")
+                        return@launch
+                    }
 
-                val updatedCategory = category.copy(
-                    name = name,
-                    iconName = selectedIcon,
-                    color = colorHexCode // Save the hex code
-                )
-                onCategoryUpdated(updatedCategory)
+                    val updatedCategory = category.copy(
+                        name = name,
+                        iconName = selectedIcon,
+                        color = selectedColor,
+                        userId = userId
+                    )
+                    onCategoryUpdated(updatedCategory)
+                    onDismiss()
+                } catch (e: Exception) {
+                    showError("Failed to update category: ${e.message}")
+                }
             }
         },
         onDismiss = onDismiss,
         showDelete = true,
         onDelete = {
             scope.launch {
-                onCategoryDeleted(category)
+                try {
+                    onCategoryDeleted(category)
+                    onDismiss()
+                } catch (e: Exception) {
+                    showError("Failed to delete category: ${e.message}")
+                }
             }
         }
     )

@@ -8,25 +8,37 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 
-data class BottomNavItem(val route: String, val label: String, val icon: ImageVector)
+sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
+    object Home : Screen("home", "Home", Icons.Filled.Home)
+    object Add : Screen("add", "Add", Icons.Filled.Add)
+    object Settings : Screen("settings", "Settings", Icons.Filled.Settings)
+
+    companion object {
+        val bottomNavItems = listOf(Home, Add, Settings)
+
+        fun fromRoute(route: String?): Screen = when (route?.substringBefore("/")) {
+            Home.route -> Home
+            Add.route -> Add
+            Settings.route -> Settings
+            else -> Home
+        }
+    }
+}
 
 @Composable
 fun Navigation(navController: NavHostController) {
-    val items = listOf(
-        BottomNavItem("add", "Add", Icons.Filled.Add),
-        BottomNavItem("home", "Home", Icons.Filled.Home),
-        BottomNavItem("settings", "Settings", Icons.Filled.Settings)
-    )
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+    val currentScreen = Screen.fromRoute(currentRoute)
 
     NavigationBar {
-        items.forEach {
+        Screen.bottomNavItems.forEach { screen ->
             NavigationBarItem(
-                icon = { Icon(it.icon, contentDescription = it.label) },
-                selected = currentRoute == it.route,
+                icon = { Icon(screen.icon, contentDescription = screen.label) },
+                label = { Text(screen.label) },
+                selected = currentScreen == screen,
                 onClick = {
-                    if (currentRoute != it.route) {
-                        navController.navigate(it.route) {
+                    if (currentScreen != screen) {
+                        navController.navigate(screen.route) {
                             popUpTo(navController.graph.startDestinationId) { saveState = true }
                             launchSingleTop = true
                             restoreState = true
