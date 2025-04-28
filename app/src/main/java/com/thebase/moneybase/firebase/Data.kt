@@ -1,66 +1,65 @@
 package com.thebase.moneybase.firebase
 
-import com.google.firebase.Timestamp
-import com.google.firebase.firestore.IgnoreExtraProperties
+import androidx.annotation.Keep
+import com.google.firebase.firestore.DocumentId
 
-/**
- * Represents a financial transaction for a user.
- */
-@IgnoreExtraProperties
+@Keep
+data class User(
+    @DocumentId val id: String = "",
+    val displayName: String = "",
+    val email: String = "",
+    val createdAt: String = "", // Date stored as String
+    val lastLoginAt: String = "", // Date stored as String
+    val isPremium: Boolean = false,
+    val language: String = "en",
+    val profilePictureUrl: String = "",
+    val theme: String = "light"
+)
+
+@Keep
 data class Transaction(
-    var id: String = "",
-    var walletId: String = "",
-    var description: String = "",
-    var date: Timestamp = Timestamp.now(),
-    var amount: Double = 0.0,
-    var currencyCode: String = "USD",
-    var isIncome: Boolean = false,
-    var categoryId: String = "",
-    var isSynced: Boolean = false,
-    var createdAt: Timestamp = Timestamp.now(),
-    var updatedAt: Timestamp = Timestamp.now()
+    @DocumentId val id: String = "",
+    val walletId: String = "",
+    val userId: String = "",
+    val description: String = "",
+    val amount: Double = 0.0,
+    val currencyCode: String = "USD",
+    val isIncome: Boolean = false,
+    val categoryId: String = "",
+    val date: String = "", // Date stored as String
+    val isSynced: Boolean = false,
+    val createdAt: String = "", // Date stored as String
+    val updatedAt: String = "" // Date stored as String
 )
 
-/**
- * A user-defined category (e.g. “Groceries”, “Salary”).
- */
-@IgnoreExtraProperties
+@Keep
 data class Category(
-    var id: String = "",
-    var name: String = "",
-    var iconName: String = "",
-    var color: String = "#6200EE",
-    var userId: String = "",
-    var isSynced: Boolean = false,
-    var isDeleted: Boolean = false
+    @DocumentId val id: String = "",
+    val userId: String = "",
+    val name: String = "",
+    val iconName: String = "",
+    val color: String = "#6200EE"
 )
 
-/**
- * Currency info for conversion/display.
- */
-@IgnoreExtraProperties
+@Keep
 data class Currency(
-    var code: String = "USD",
-    var symbol: String = "$",
-    var name: String = "US Dollar",
-    var usdValue: Double = 1.0
+    val code: String = "USD",
+    val symbol: String = "$",
+    val name: String = "US Dollar",
+    val usdValue: Double = 1.0
 )
 
-/**
- * A user wallet (cash, bank account, crypto, etc.).
- */
-@IgnoreExtraProperties
+@Keep
 data class Wallet(
-    var id: String = "",
-    var name: String = "",
-    var type: WalletType = WalletType.OTHER,
-    var currencyCode: String = "USD",
-    var balance: Double = 0.0,
-    var userId: String = "",
-    var isSynced: Boolean = false,
-    var isDeleted: Boolean = false,
-    var iconName: String = "account_balance_wallet",
-    var color: String = "#9C27B0"
+    @DocumentId val id: String = "",
+    val userId: String = "",
+    val name: String = "",
+    val type: WalletType = WalletType.OTHER,
+    val currencyCode: String = "USD",
+    val balance: Double = 0.0,
+    val isSynced: Boolean = false,
+    val iconName: String = "account_balance_wallet",
+    val color: String = "#9C27B0"
 ) {
     enum class WalletType { PHYSICAL, BANK_ACCOUNT, CRYPTO, INVESTMENT, OTHER }
 }

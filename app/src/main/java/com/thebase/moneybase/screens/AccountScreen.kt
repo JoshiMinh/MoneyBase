@@ -1,6 +1,6 @@
+// AccountScreen.kt
 package com.thebase.moneybase.screens
 
-import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -11,9 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.content.edit
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
@@ -21,16 +19,13 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountScreen(onTestLogin: () -> Unit) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     var isLoading by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Account") }
-            )
+            CenterAlignedTopAppBar(title = { Text("Account") })
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { padding ->
@@ -51,12 +46,12 @@ fun AccountScreen(onTestLogin: () -> Unit) {
                 AuthProviderButton(
                     icon = Icons.Default.Email,
                     text = "Continue with Email",
-                    onClick = { /* TODO: Email auth */ }
+                    onClick = { /* TODO: Implement Email auth */ }
                 )
                 AuthProviderButton(
                     icon = Icons.Default.AccountCircle,
                     text = "Continue with Google",
-                    onClick = { /* TODO: Google auth */ }
+                    onClick = { /* TODO: Implement Google auth */ }
                 )
             }
 
@@ -67,8 +62,6 @@ fun AccountScreen(onTestLogin: () -> Unit) {
                         isLoading = true
                         try {
                             Firebase.auth.signOut()
-                            context.getSharedPreferences("moneybase_prefs", Context.MODE_PRIVATE)
-                                .edit { putString("userId", "test_user_1") }
                             onTestLogin()
                             snackbarHostState.showSnackbar("Logged in as test user")
                         } catch (e: Exception) {

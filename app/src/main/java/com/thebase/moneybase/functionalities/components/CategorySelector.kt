@@ -15,116 +15,93 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
 import com.thebase.moneybase.firebase.Category
-import com.thebase.moneybase.firebase.CategoryRepository
 import com.thebase.moneybase.functionalities.customizability.Icon
-import kotlinx.coroutines.launch
 
-@Suppress("DEPRECATION")
+@Suppress("DEPRECATION", "unused")
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun CategorySelector(
     categories: List<Category>,
+    userId: String,
     onCategorySelected: (Category) -> Unit,
-    onDismiss: () -> Unit,
     onAddCategory: () -> Unit,
     onEditCategory: (Category) -> Unit,
     onRemoveCategory: (Category) -> Unit,
-    userId: String
+    onDismiss: () -> Unit
 ) {
-    val categoryRepo = remember { CategoryRepository() }
-    val scope = rememberCoroutineScope()
-    var actionCat by remember { mutableStateOf<Category?>(null) }
+    var actionCategory by remember { mutableStateOf<Category?>(null) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         dragHandle = { BottomSheetDefaults.DragHandle() },
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        tonalElevation = 4.dp
+        tonalElevation = 8.dp
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Select Category",
-                    style = MaterialTheme.typography.titleMedium
-                )
+                Text("Select Category", style = MaterialTheme.typography.titleMedium)
                 IconButton(onClick = onAddCategory) {
-                    Icon(Icons.Default.Add, contentDescription = "Add category")
+                    Icon(Icons.Default.Add, contentDescription = "Add")
                 }
             }
-            Divider(Modifier.padding(vertical = 8.dp))
-
+            Divider(modifier = Modifier.padding(vertical = 8.dp))
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 400.dp)
             ) {
-                items(categories, key = { it.id }) { cat ->  // Fixed items usage
+                items(categories, key = { it.id }) { cat ->
                     Row(
-                        modifier = Modifier
+                        Modifier
                             .fillMaxWidth()
                             .padding(vertical = 8.dp)
                             .combinedClickable(
-                                onClick = { onCategorySelected(cat) },
-                                onLongClick = { actionCat = cat }
+                                onClick = {
+                                    onCategorySelected(cat)
+                                    onDismiss()
+                                },
+                                onLongClick = { actionCategory = cat }
                             ),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icon.getIcon(cat.iconName),  // Fixed icon reference
+                            imageVector = Icon.getIcon(cat.iconName),
                             contentDescription = cat.name,
-                            tint = try {
-                                Color(cat.color.toColorInt())
-                            } catch (e: Exception) {
-                                MaterialTheme.colorScheme.primary
-                            },
-                            modifier = Modifier.size(24.dp)
+                            tint = runCatching { Color(cat.color.toColorInt()) }
+                                .getOrElse { MaterialTheme.colorScheme.primary }
                         )
                         Spacer(Modifier.width(12.dp))
-                        Text(
-                            text = cat.name,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
+                        Text(cat.name, style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             }
         }
     }
 
-    actionCat?.let { cat ->
+    actionCategory?.let { cat ->
         AlertDialog(
-            onDismissRequest = { actionCat = null },
+            onDismissRequest = { actionCategory = null },
             title = { Text(cat.name) },
-            text = { Text("What do you want to do?") },
+            text = { Text("What would you like to do?") },
             confirmButton = {
                 TextButton(onClick = {
                     onEditCategory(cat)
-                    actionCat = null
-                }) {
-                    Text("Edit")
-                }
+                    actionCategory = null
+                }) { Text("Edit") }
             },
             dismissButton = {
                 Column {
-                    TextButton(
-                        onClick = {
-                            scope.launch {
-                                categoryRepo.deleteCategory(userId, cat.id)
-                                onRemoveCategory(cat)
-                            }
-                            actionCat = null
-                        }
-                    ) {
+                    TextButton(onClick = {
+                        onRemoveCategory(cat)
+                        actionCategory = null
+                        onDismiss()
+                    }) {
                         Text("Delete", color = MaterialTheme.colorScheme.error)
                     }
-                    TextButton(onClick = { actionCat = null }) {
+                    TextButton(onClick = { actionCategory = null }) {
                         Text("Cancel")
                     }
                 }

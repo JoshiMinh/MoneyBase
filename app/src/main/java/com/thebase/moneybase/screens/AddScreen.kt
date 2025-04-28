@@ -15,7 +15,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.DateRange
@@ -31,14 +30,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
-import com.google.firebase.Timestamp
-import com.thebase.moneybase.firebase.*
+import com.thebase.moneybase.firebase.Repositories
+import com.thebase.moneybase.firebase.Transaction
+import com.thebase.moneybase.firebase.Category
+import com.thebase.moneybase.firebase.Wallet
 import com.thebase.moneybase.functionalities.agents.AddCategoryDialog
 import com.thebase.moneybase.functionalities.agents.AddWallet
 import com.thebase.moneybase.functionalities.agents.EditCategoryDialog
 import com.thebase.moneybase.functionalities.agents.WalletAgent
 import com.thebase.moneybase.functionalities.components.CategorySelector
-import com.thebase.moneybase.functionalities.customizability.Icon
 import com.thebase.moneybase.functionalities.customizability.Icon.getIcon
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -54,12 +54,11 @@ fun AddScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Repositories
-    val categoryRepo = remember { CategoryRepository() }
-    val walletRepo = remember { WalletRepository() }
-    val transactionRepo = remember { TransactionRepository() }
+    val repo = remember { Repositories() }
 
-    // State variables
+    val categories by repo.getCategoriesFlow(userId).collectAsState(initial = emptyList())
+    val wallets by repo.getWalletsFlow(userId).collectAsState(initial = emptyList())
+
     var isIncome by remember { mutableStateOf(false) }
     var calendar by remember { mutableStateOf(Calendar.getInstance()) }
     val dateText = remember(calendar) {
@@ -68,10 +67,19 @@ fun AddScreen(
     var note by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
 
-    var categories by remember { mutableStateOf<List<Category>>(emptyList()) }
-    var wallets by remember { mutableStateOf<List<Wallet>>(emptyList()) }
     var selectedCategory by remember { mutableStateOf<Category?>(null) }
     var selectedWalletId by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(categories) {
+        if (categories.isNotEmpty() && selectedCategory == null) {
+            selectedCategory = categories[0]
+        }
+    }
+    LaunchedEffect(wallets) {
+        if (wallets.isNotEmpty() && selectedWalletId == null) {
+            selectedWalletId = wallets[0].id
+        }
+    }
 
     var showDatePicker by remember { mutableStateOf(false) }
     var showCategorySheet by remember { mutableStateOf(false) }
@@ -80,49 +88,33 @@ fun AddScreen(
     var showAddWallet by remember { mutableStateOf(false) }
     var editingWallet by remember { mutableStateOf<Wallet?>(null) }
 
-    // Load data
-    LaunchedEffect(userId) {
-        try {
-            categories = categoryRepo.getCategories(userId)
-            wallets = walletRepo.getWallets(userId)
-            selectedCategory = categories.firstOrNull()
-            selectedWalletId = wallets.firstOrNull()?.id
-        } catch (e: Exception) {
-            snackbarHostState.showSnackbar("Error loading data: ${e.message}")
-        }
-    }
-
-    // Date picker
     if (showDatePicker) {
-        val datePicker = remember {
-            DatePickerDialog(
-                context,
-                { _, y, m, d ->
-                    calendar = Calendar.getInstance().apply { set(y, m, d) }
-                    showDatePicker = false
-                },
-                calendar.get(Calendar.YEAR),
-                calendar.get(Calendar.MONTH),
-                calendar.get(Calendar.DAY_OF_MONTH)
-            )
-        }
-        datePicker.show()
+        DatePickerDialog(
+            context,
+            { _, y, m, d ->
+                calendar = Calendar.getInstance().apply { set(y, m, d) }
+                showDatePicker = false
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        ).show()
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-    ) { paddingValues ->
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { padding ->
         Column(
             modifier = Modifier
                 .verticalScroll(rememberScrollState())
-                .padding(paddingValues)
+                .padding(padding)
                 .padding(16.dp)
         ) {
-            IncomeExpenseToggle(isIncome = isIncome, onToggle = { isIncome = it })
-            DateField(date = dateText, onShowPicker = { showDatePicker = true })
-            NoteField(value = note, onValueChange = { note = it })
-            AmountField(value = amount, isIncome = isIncome, onValueChange = { amount = it })
-            CategoryField(selected = selectedCategory, onClick = { showCategorySheet = true })
+            IncomeExpenseToggle(isIncome) { isIncome = it }
+            DateField(dateText) { showDatePicker = true }
+            NoteField(note) { note = it }
+            AmountField(amount, isIncome) { amount = it }
+            CategoryField(selectedCategory) { showCategorySheet = true }
             WalletCarousel(
                 wallets = wallets,
                 selectedId = selectedWalletId,
@@ -135,22 +127,22 @@ fun AddScreen(
                     selectedWalletId != null &&
                     amount.isValidDecimal()
 
-            SubmitButton(isValid = isValid) {
+            Spacer(Modifier.height(24.dp))
+            SubmitButton(isValid) {
                 scope.launch {
                     try {
                         val amt = amount.toDouble()
                         val tx = Transaction(
                             walletId = selectedWalletId!!,
+                            userId = userId,
                             description = note,
-                            date = Timestamp(calendar.time),
+                            date = dateText,
                             amount = if (isIncome) amt else -amt,
                             currencyCode = wallets.first { it.id == selectedWalletId }.currencyCode,
                             isIncome = isIncome,
                             categoryId = selectedCategory!!.id
                         )
-                        transactionRepo.saveTransaction(userId, tx)
-                        val wallet = wallets.first { it.id == selectedWalletId }
-                        walletRepo.saveWallet(userId, wallet.copy(balance = wallet.balance + tx.amount))
+                        repo.addTransaction(userId, tx)
                         snackbarHostState.showSnackbar("Transaction added")
                         onBack()
                     } catch (e: Exception) {
@@ -161,10 +153,10 @@ fun AddScreen(
         }
     }
 
-    // Category dialogs
     if (showCategorySheet) {
         CategorySelector(
             categories = categories,
+            userId = userId,
             onCategorySelected = {
                 selectedCategory = it
                 showCategorySheet = false
@@ -174,11 +166,14 @@ fun AddScreen(
             onEditCategory = { editingCategory = it },
             onRemoveCategory = { cat ->
                 scope.launch {
-                    categoryRepo.deleteCategory(userId, cat.id)
-                    categories = categories.filterNot { it.id == cat.id }
+                    try {
+                        repo.deleteCategory(userId, cat.id) // Directly delete the category
+                        snackbarHostState.showSnackbar("Category deleted successfully")
+                    } catch (e: Exception) {
+                        snackbarHostState.showSnackbar("Error deleting category: ${e.message}")
+                    }
                 }
-            },
-            userId = userId
+            }
         )
     }
 
@@ -187,13 +182,12 @@ fun AddScreen(
             onDismiss = { showAddCategory = false },
             onCategoryAdded = { cat ->
                 scope.launch {
-                    categoryRepo.saveCategory(userId, cat)
-                    categories = categoryRepo.getCategories(userId)
+                    repo.addCategory(userId, cat)
                 }
             },
             existingCategories = categories,
             userId = userId,
-            showError = TODO()
+            showError = { msg -> scope.launch { snackbarHostState.showSnackbar(msg) } }
         )
     }
 
@@ -201,59 +195,61 @@ fun AddScreen(
         EditCategoryDialog(
             category = cat,
             onDismiss = { editingCategory = null },
-            onCategoryUpdated = {
+            onCategoryUpdated = { updated ->
                 scope.launch {
-                    categoryRepo.saveCategory(userId, it)
-                    categories = categoryRepo.getCategories(userId)
+                    try {
+                        repo.updateCategory(userId, updated) // Update the category
+                        snackbarHostState.showSnackbar("Category updated successfully")
+                    } catch (e: Exception) {
+                        snackbarHostState.showSnackbar("Error updating category: ${e.message}")
+                    }
                 }
             },
             onCategoryDeleted = {
                 scope.launch {
-                    categoryRepo.deleteCategory(userId, cat.id)
-                    categories = categories.filterNot { it.id == cat.id }
+                    try {
+                        repo.deleteCategory(userId, cat.id) // Delete the category
+                        snackbarHostState.showSnackbar("Category deleted successfully")
+                    } catch (e: Exception) {
+                        snackbarHostState.showSnackbar("Error deleting category: ${e.message}")
+                    }
                 }
             },
             userId = userId,
-            showError = TODO()
+            showError = { msg -> scope.launch { snackbarHostState.showSnackbar(msg) } }
         )
     }
 
-    // Wallet dialogs
     if (showAddWallet) {
         AddWallet(
             onDismiss = { showAddWallet = false },
             onWalletAdded = { w ->
                 scope.launch {
-                    walletRepo.saveWallet(userId, w)
-                    wallets = walletRepo.getWallets(userId)
+                    repo.addWallet(userId, w)
                 }
-            },
-            userId = userId
+            }
         )
     }
-
     editingWallet?.let { w ->
         WalletAgent(
             wallet = w,
             onEditDone = { updated ->
                 scope.launch {
-                    walletRepo.saveWallet(userId, updated)
-                    wallets = walletRepo.getWallets(userId)
+                    repo.updateWallet(userId, updated)
+                    editingWallet = null
                 }
             },
             onRemove = {
                 scope.launch {
-                    walletRepo.deleteWallet(userId, w.id)
-                    wallets = wallets.filterNot { it.id == w.id }
+                    repo.deleteWallet(userId, w.id)
+                    editingWallet = null
                 }
             },
-            onDismiss = { editingWallet = null },
-            userId = userId
+            onDismiss = { editingWallet = null }
         )
     }
 }
 
-/** Toggle between Expense and Income. */
 @Composable
 private fun IncomeExpenseToggle(isIncome: Boolean, onToggle: (Boolean) -> Unit) {
     Surface(
@@ -289,7 +285,6 @@ private fun IncomeExpenseToggle(isIncome: Boolean, onToggle: (Boolean) -> Unit) 
     Spacer(Modifier.height(24.dp))
 }
 
-/** Date selection field. */
 @Composable
 private fun DateField(date: String, onShowPicker: () -> Unit) {
     Text("Date", style = MaterialTheme.typography.labelLarge)
@@ -310,7 +305,6 @@ private fun DateField(date: String, onShowPicker: () -> Unit) {
     Spacer(Modifier.height(16.dp))
 }
 
-/** Note input field. */
 @Composable
 private fun NoteField(value: String, onValueChange: (String) -> Unit) {
     Text("Note", style = MaterialTheme.typography.labelLarge)
@@ -324,7 +318,6 @@ private fun NoteField(value: String, onValueChange: (String) -> Unit) {
     Spacer(Modifier.height(16.dp))
 }
 
-/** Amount input field, digits and decimal only. */
 @Composable
 private fun AmountField(
     value: String,
@@ -350,8 +343,6 @@ private fun AmountField(
     Spacer(Modifier.height(24.dp))
 }
 
-/** Category selection button. */
-/** Category selection button - FIXED color handling */
 @Composable
 private fun CategoryField(selected: Category?, onClick: () -> Unit) {
     Text("Category", style = MaterialTheme.typography.labelLarge)
@@ -369,7 +360,7 @@ private fun CategoryField(selected: Category?, onClick: () -> Unit) {
     ) {
         selected?.let {
             Icon(
-                Icon.getIcon(it.iconName),  // FIXED icon access
+                getIcon(it.iconName),
                 contentDescription = null,
                 tint = try {
                     Color(it.color.toColorInt())
@@ -384,7 +375,6 @@ private fun CategoryField(selected: Category?, onClick: () -> Unit) {
     Spacer(Modifier.height(24.dp))
 }
 
-/** Horizontal carousel of wallets - FIXED item keys */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun WalletCarousel(
@@ -397,7 +387,7 @@ private fun WalletCarousel(
     Text("Wallet", style = MaterialTheme.typography.labelLarge)
     Spacer(Modifier.height(8.dp))
     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        items(wallets, key = { it.id }) { w ->  // FIXED key
+        items(wallets, key = { it.id }) { w ->
             val color = try {
                 Color(w.color.toColorInt())
             } catch (e: Exception) {
@@ -461,7 +451,6 @@ private fun WalletCarousel(
     Spacer(Modifier.height(32.dp))
 }
 
-/** Submit button at bottom of form. */
 @Composable
 private fun SubmitButton(isValid: Boolean, onSubmit: () -> Unit) {
     Button(

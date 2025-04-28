@@ -1,178 +1,230 @@
+// Repositories.kt
 package com.thebase.moneybase.firebase
 
+import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import javax.inject.Inject
 
-/**
- * CRUD operations on /users/{userId}
- */
-class UserRepository @Inject constructor() {
-    private val db: FirebaseFirestore = Firebase.firestore
+class Repositories {
+    private val db = Firebase.firestore
+    private val auth = Firebase.auth
 
-    /** Create or overwrite the user document. */
+    // --- User Operations ---
+    /** Create or overwrite a User document */
     suspend fun createUser(user: User) {
-        db.collection("users")
-            .document(user.id)
-            .set(user)
-            .await()
-    }
-
-    /** Fetches the user document or returns null if absent. */
-    suspend fun getUser(userId: String): User? =
-        db.collection("users")
-            .document(userId)
-            .get()
-            .await()
-            .toObject(User::class.java)
-}
-
-/**
- * Wallets under /users/{userId}/wallets
- */
-class WalletRepository @Inject constructor() {
-    private val db: FirebaseFirestore = Firebase.firestore
-
-    /** Returns all non-deleted wallets for a user. */
-    suspend fun getWallets(userId: String): List<Wallet> = try {
-        db.collection("users")
-            .document(userId)
-            .collection("wallets")
-            .whereEqualTo("isDeleted", false)
-            .get()
-            .await()
-            .toObjects(Wallet::class.java)
-    } catch (e: Exception) {
-        emptyList()
-    }
-
-    /** Creates a new wallet or updates an existing one. */
-    suspend fun saveWallet(userId: String, wallet: Wallet) {
-        val ref = if (wallet.id.isBlank()) {
+        try {
             db.collection("users")
-                .document(userId)
-                .collection("wallets")
-                .document()
-        } else {
-            db.collection("users")
-                .document(userId)
-                .collection("wallets")
-                .document(wallet.id)
+                .document(user.id)
+                .set(user)
+                .await()
+        } catch (e: Exception) {
+            // Handle the exception
         }
-
-        wallet.id = ref.id
-        ref.set(wallet).await()
     }
 
-    /** Deletes the given wallet document. */
-    suspend fun deleteWallet(userId: String, walletId: String) {
-        db.collection("users")
-            .document(userId)
-            .collection("wallets")
-            .document(walletId)
-            .delete()
-            .await()
-    }
-}
+    /** Currently signed-in Firebase Auth user (if any) */
+    fun getCurrentUser(): FirebaseUser? = auth.currentUser
 
-/**
- * Categories under /users/{userId}/categories
- */
-class CategoryRepository @Inject constructor() {
-    private val db: FirebaseFirestore = Firebase.firestore
-
-    /** Returns all non-deleted categories for a user. */
-    suspend fun getCategories(userId: String): List<Category> = try {
-        db.collection("users")
-            .document(userId)
-            .collection("categories")
-            .whereEqualTo("isDeleted", false)
-            .get()
-            .await()
-            .toObjects(Category::class.java)
-    } catch (e: Exception) {
-        emptyList()
-    }
-
-    /** Creates a new category or updates an existing one. */
-    suspend fun saveCategory(userId: String, category: Category) {
-        val ref = if (category.id.isBlank()) {
+    /** Fetch User data by ID */
+    suspend fun getUser(userId: String): User? {
+        return try {
             db.collection("users")
                 .document(userId)
-                .collection("categories")
-                .document()
-        } else {
-            db.collection("users")
-                .document(userId)
-                .collection("categories")
-                .document(category.id)
+                .get()
+                .await()
+                .toObject(User::class.java)
+        } catch (e: Exception) {
+            // Handle the exception
+            null
         }
-
-        category.id = ref.id
-        ref.set(category).await()
     }
 
-    /** Deletes the given category document. */
-    suspend fun deleteCategory(userId: String, categoryId: String) {
-        db.collection("users")
-            .document(userId)
-            .collection("categories")
-            .document(categoryId)
-            .delete()
-            .await()
-    }
-}
-
-/**
- * Transactions under /users/{userId}/transactions
- */
-class TransactionRepository @Inject constructor() {
-    private val db: FirebaseFirestore = Firebase.firestore
-
-    /**
-     * Returns all transactions ordered by `createdAt` descending.
-     * Make sure your Transaction model has a `createdAt` field in Firestore.
-     */
-    suspend fun getTransactions(userId: String): List<Transaction> = try {
-        db.collection("users")
+    // --- Transactions ---
+    /** Stream all (non-deleted) transactions for a user */
+    fun getTransactionsFlow(userId: String): Flow<List<Transaction>> = callbackFlow {
+        val listener = db.collection("users")
             .document(userId)
             .collection("transactions")
-            .orderBy("createdAt", Query.Direction.DESCENDING)
-            .get()
-            .await()
-            .toObjects(Transaction::class.java)
-    } catch (e: Exception) {
-        emptyList()
+            .addSnapshotListener { snap, err ->
+                if (err != null) {
+                    close(err); return@addSnapshotListener
+                }
+                val list = snap?.toObjects(Transaction::class.java) ?: emptyList()
+                trySend(list)
+            }
+        awaitClose { listener.remove() }
     }
 
-    /** Creates a new transaction or updates an existing one. */
-    suspend fun saveTransaction(userId: String, transaction: Transaction) {
-        val ref = if (transaction.id.isBlank()) {
-            db.collection("users")
+    /** Add a new transaction, auto-assigning its ID */
+    suspend fun addTransaction(userId: String, transaction: Transaction) {
+        try {
+            val doc = db.collection("users")
                 .document(userId)
                 .collection("transactions")
                 .document()
-        } else {
+            val txWithId = transaction.copy(id = doc.id)
+            doc.set(txWithId).await()
+        } catch (e: Exception) {
+            // Handle the exception
+        }
+    }
+
+    /** Update an existing transaction (overwrites by ID) */
+    suspend fun updateTransaction(userId: String, transaction: Transaction) {
+        try {
             db.collection("users")
                 .document(userId)
                 .collection("transactions")
                 .document(transaction.id)
+                .set(transaction)
+                .await()
+        } catch (e: Exception) {
+            // Handle the exception
         }
-
-        transaction.id = ref.id
-        ref.set(transaction).await()
     }
 
-    /** Deletes the given transaction document. */
+    /** Delete a transaction by its ID */
     suspend fun deleteTransaction(userId: String, transactionId: String) {
-        db.collection("users")
+        try {
+            db.collection("users")
+                .document(userId)
+                .collection("transactions")
+                .document(transactionId)
+                .delete()
+                .await()
+        } catch (e: Exception) {
+            // Handle the exception
+        }
+    }
+
+    // --- Wallets ---
+    /** Stream all (non-deleted) wallets for a user */
+    fun getWalletsFlow(userId: String): Flow<List<Wallet>> = callbackFlow {
+        val listener = db.collection("users")
             .document(userId)
-            .collection("transactions")
-            .document(transactionId)
-            .delete()
-            .await()
+            .collection("wallets")
+            .addSnapshotListener { snap, err ->
+                if (err != null) {
+                    close(err); return@addSnapshotListener
+                }
+                val list = snap?.toObjects(Wallet::class.java) ?: emptyList()
+                trySend(list)
+            }
+        awaitClose { listener.remove() }
+    }
+
+    /** Add a new wallet, returning its generated ID */
+    suspend fun addWallet(userId: String, wallet: Wallet): String {
+        return try {
+            val doc = db.collection("users")
+                .document(userId)
+                .collection("wallets")
+                .document()
+            val wWithId = wallet.copy(id = doc.id)
+            doc.set(wWithId).await()
+            doc.id
+        } catch (e: Exception) {
+            // Handle the exception
+            ""
+        }
+    }
+
+    /** Update an existing wallet (overwrites by ID) */
+    suspend fun updateWallet(userId: String, wallet: Wallet) {
+        try {
+            db.collection("users")
+                .document(userId)
+                .collection("wallets")
+                .document(wallet.id)
+                .set(wallet)
+                .await()
+        } catch (e: Exception) {
+            // Handle the exception
+        }
+    }
+
+    /** Soft-delete or hard-delete a wallet by ID */
+    suspend fun deleteWallet(userId: String, walletId: String) {
+        try {
+            // Hard delete:
+            db.collection("users")
+                .document(userId)
+                .collection("wallets")
+                .document(walletId)
+                .delete()
+                .await()
+            // Or, to soft-delete instead, replace the above with:
+            // db.collection("users").document(userId).collection("wallets")
+            //   .document(walletId).update("isDeleted", true).await()
+        } catch (e: Exception) {
+            // Handle the exception
+        }
+    }
+
+    // --- Categories ---
+    /** Stream all categories for a user */
+    fun getCategoriesFlow(userId: String): Flow<List<Category>> = callbackFlow {
+        val listener = db.collection("users")
+            .document(userId)
+            .collection("categories")
+            .addSnapshotListener { snap, err ->
+                if (err != null) {
+                    close(err); return@addSnapshotListener
+                }
+                val list = snap?.toObjects(Category::class.java) ?: emptyList()
+                trySend(list)
+            }
+        awaitClose { listener.remove() }
+    }
+
+    /** Add a new category, returning its generated ID */
+    suspend fun addCategory(userId: String, category: Category): String {
+        return try {
+            val doc = db.collection("users")
+                .document(userId)
+                .collection("categories")
+                .document()
+            val cWithId = category.copy(id = doc.id)
+            doc.set(cWithId).await()
+            doc.id
+        } catch (e: Exception) {
+            // Handle the exception
+            ""
+        }
+    }
+
+    /** Update an existing category (overwrites by ID) */
+    suspend fun updateCategory(userId: String, category: Category) {
+        try {
+            db.collection("users")
+                .document(userId)
+                .collection("categories")
+                .document(category.id)
+                .set(category)
+                .await()
+        } catch (e: Exception) {
+            // Handle the exception
+        }
+    }
+
+    /** Hard-delete a category by ID */
+    suspend fun deleteCategory(userId: String, categoryId: String) {
+        try {
+            db.collection("users")
+                .document(userId)
+                .collection("categories")
+                .document(categoryId)
+                .delete()
+                .await()
+        } catch (e: Exception) {
+            // Handle the exception
+        }
     }
 }
