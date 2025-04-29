@@ -1,4 +1,3 @@
-// AccountScreen.kt
 package com.thebase.moneybase.screens
 
 import android.util.Log
@@ -37,7 +36,6 @@ fun AccountScreen(onTestLogin: () -> Unit) {
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // --- Auth Provider Buttons ---
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -55,7 +53,6 @@ fun AccountScreen(onTestLogin: () -> Unit) {
                 )
             }
 
-            // --- Test Login Button ---
             Button(
                 onClick = {
                     scope.launch {
@@ -87,7 +84,6 @@ fun AccountScreen(onTestLogin: () -> Unit) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Footer
             Text(
                 "MoneyBase App",
                 style = MaterialTheme.typography.bodySmall,

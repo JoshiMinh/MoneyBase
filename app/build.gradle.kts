@@ -1,37 +1,40 @@
 plugins {
-    // Android application & Kotlin support
+    // Applying Android application plugin
     alias(libs.plugins.android.application)
+
+    // Applying Kotlin Android plugin
     alias(libs.plugins.kotlin.android)
 
-    // Jetpack Compose
+    // Applying Kotlin Compose plugin
     alias(libs.plugins.kotlin.compose)
 
-    // Firebase & Google services
+    // Google services plugin
     id("com.google.gms.google-services")
 
-    // Kotlin annotation processing
+    // Kotlin KAPT plugin for annotation processing
     id("kotlin-kapt")
 }
 
 @Suppress("UnstableApiUsage")
 android {
-    namespace           = "com.thebase.moneybase"
-    compileSdk          = 35
+    namespace = "com.thebase.moneybase"
+    compileSdk = 35
 
     defaultConfig {
-        applicationId        = "com.thebase.moneybase"
-        minSdk               = 26
-        targetSdk            = 35
-        versionCode          = 1
-        versionName          = "1.0"
+        applicationId = "com.thebase.moneybase"
+        minSdk = 26
+        targetSdk = 35
+        versionCode = 1
+        versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Use support library for vector drawables on older devices
+        // Enable support for vector drawables
         vectorDrawables.useSupportLibrary = true
     }
 
     buildTypes {
         release {
+            // Disable code minification for release build
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -41,80 +44,86 @@ android {
     }
 
     compileOptions {
+        // Set Java compatibility to version 11
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
 
     kotlinOptions {
+        // Set JVM target for Kotlin
         jvmTarget = "11"
     }
 
     buildFeatures {
+        // Enable Jetpack Compose
         compose = true
     }
 
     composeOptions {
+        // Specify Compose compiler extension version
         kotlinCompilerExtensionVersion = "1.5.3"
     }
 
     packaging.resources {
-        // Exclude duplicate licence files from dependencies
+        // Exclude specific resources from packaging
         excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }
 }
 
 dependencies {
-    // --- AndroidX Core & Lifecycle ---
+    // Core AndroidX and lifecycle dependencies
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
 
-    // --- AndroidX WorkManager ---
+    // WorkManager dependency
     implementation(libs.androidx.work.runtime.ktx)
 
-    // --- Jetpack Compose BOM & UI modules ---
+    // Compose dependencies
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
 
-    // --- Material Design 3 & Icons ---
+    // Material3 and icons
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons.extended)
 
-    // --- Navigation ---
+    // Image loading library
+    implementation(libs.coil.compose)
+    // Navigation component for Compose
     implementation(libs.androidx.navigation.compose)
 
-    // --- Kotlin Coroutines ---
+    // Coroutines dependencies
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.play.services)
 
-    // --- Firebase (BOM, Analytics, Firestore, Auth) ---
+    // Firebase dependencies
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.auth.ktx)
 
-    // --- Google Sign-In & Credentials API ---
+    // Credentials and authentication
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
 
-    // --- Networking (Retrofit + Gson converter) ---
+    // Networking with Retrofit and Gson converter
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
 
-    // --- Testing ---
+    // Testing dependencies
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
-    // Use Compose BOM for androidTest as well
+    // Compose testing dependencies
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
 
-    // --- Debug-only tools ---
+    // Debugging tools
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 }

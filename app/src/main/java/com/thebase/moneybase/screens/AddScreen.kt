@@ -167,7 +167,7 @@ fun AddScreen(
             onRemoveCategory = { cat ->
                 scope.launch {
                     try {
-                        repo.deleteCategory(userId, cat.id) // Directly delete the category
+                        repo.deleteCategory(userId, cat.id)
                         snackbarHostState.showSnackbar("Category deleted successfully")
                     } catch (e: Exception) {
                         snackbarHostState.showSnackbar("Error deleting category: ${e.message}")
@@ -198,7 +198,7 @@ fun AddScreen(
             onCategoryUpdated = { updated ->
                 scope.launch {
                     try {
-                        repo.updateCategory(userId, updated) // Update the category
+                        repo.updateCategory(userId, updated)
                         snackbarHostState.showSnackbar("Category updated successfully")
                     } catch (e: Exception) {
                         snackbarHostState.showSnackbar("Error updating category: ${e.message}")
@@ -208,7 +208,7 @@ fun AddScreen(
             onCategoryDeleted = {
                 scope.launch {
                     try {
-                        repo.deleteCategory(userId, cat.id) // Delete the category
+                        repo.deleteCategory(userId, cat.id)
                         snackbarHostState.showSnackbar("Category deleted successfully")
                     } catch (e: Exception) {
                         snackbarHostState.showSnackbar("Error deleting category: ${e.message}")

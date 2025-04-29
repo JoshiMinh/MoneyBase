@@ -1,34 +1,44 @@
 package com.thebase.moneybase.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.thebase.moneybase.R
 import com.thebase.moneybase.firebase.Repositories
 import com.thebase.moneybase.firebase.User
-import java.text.SimpleDateFormat
-import java.util.*
+import com.thebase.moneybase.ui.theme.ColorScheme
+import com.thebase.moneybase.ui.theme.*
+import androidx.compose.foundation.Image
+import coil.compose.rememberImagePainter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     userId: String,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onColorSchemeChange: (ColorScheme) -> Unit
 ) {
     val repo = remember { Repositories() }
     var user by remember { mutableStateOf<User?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
+    var selectedColorScheme by remember { mutableStateOf(ColorScheme.Dark) }
 
-    // Fetch once when the screen appears or userId changes
     LaunchedEffect(userId) {
         isLoading = true
         errorMsg = null
@@ -46,20 +56,16 @@ fun SettingsScreen(
         }
     }
 
-    val dateFormat = remember {
-        SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
-    }
-
     Column(
         Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         Column {
             when {
                 isLoading -> {
-                    // Centered spinner while loading
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator()
                     }
@@ -72,35 +78,90 @@ fun SettingsScreen(
                     )
                 }
                 else -> {
-                    // Data loaded successfully
-                    UserInfoItem("UUID:", userId)
-                    UserInfoItem("Display Name:", user?.displayName ?: "")
-                    UserInfoItem("Email:", user?.email ?: "")
-                    UserInfoItem(
-                        "Created At:",
-                        user?.createdAt ?: "Unknown"
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .background(Color.Gray, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (user?.profilePictureUrl.isNullOrEmpty()) {
+                            Icon(
+                                Icons.Default.AccountCircle,
+                                contentDescription = null,
+                                modifier = Modifier.size(80.dp),
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        } else {
+                            Image(
+                                painter = rememberImagePainter(data = user?.profilePictureUrl),
+                                contentDescription = null,
+                                modifier = Modifier.size(80.dp),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    Text(
+                        text = user?.displayName ?: "Display Name",
+                        style = MaterialTheme.typography.headlineMedium
                     )
-                    UserInfoItem(
-                        "Last Login At:",
-                        user?.lastLoginAt ?: "Unknown"
+
+                    Text(
+                        text = userId,
+                        style = MaterialTheme.typography.bodyMedium
                     )
-                    UserInfoItem("Language:", user?.language ?: "")
-                    UserInfoItem("Theme:", user?.theme ?: "")
-                    UserInfoItem("Premium User:", if (user?.isPremium == true) "Yes" else "No")
-                    UserInfoItem(
-                        "Profile Picture:",
-                        user?.profilePictureUrl?.takeIf { it.isNotEmpty() } ?: "Not set"
+
+                    Text(
+                        text = user?.email ?: "Email",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = null,
+                        tint = if (user?.isPremium == true) Color(0xFFFFD700) else Color.Gray,
+                        modifier = Modifier.size(24.dp)
                     )
 
                     Spacer(Modifier.height(24.dp))
 
                     Text("Settings", style = MaterialTheme.typography.headlineMedium)
-                    SettingsRow(icon = Icons.Default.AccountCircle, text = "Account")
+
+                    Text("Select Color Scheme", style = MaterialTheme.typography.bodyLarge)
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        Modifier
+                            .horizontalScroll(rememberScrollState())
+                            .padding(vertical = 8.dp)
+                    ) {
+                        listOf(ColorScheme.Light, ColorScheme.Dark, ColorScheme.Blue, ColorScheme.Green, ColorScheme.Red).forEach { scheme ->
+                            IconButton(
+                                onClick = {
+                                    selectedColorScheme = scheme
+                                    onColorSchemeChange(scheme)
+                                },
+                                modifier = Modifier
+                                    .padding(horizontal = 8.dp)
+                                    .size(48.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .aspectRatio(1f)
+                                        .background(
+                                            color = getPrimaryColorForScheme(scheme),
+                                            shape = CircleShape
+                                        )
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
 
-        // Logout button + footer
         Column {
             Button(
                 onClick = onLogout,
@@ -129,34 +190,12 @@ fun SettingsScreen(
     }
 }
 
-@Composable
-private fun UserInfoItem(label: String, value: String) {
-    Column(Modifier.padding(vertical = 4.dp)) {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-        )
-        Text(value, style = MaterialTheme.typography.bodyMedium)
-    }
-    Spacer(Modifier.height(8.dp))
-}
-
-@Composable
-private fun SettingsRow(icon: ImageVector, text: String) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            icon,
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
-        Spacer(Modifier.width(16.dp))
-        Text(text, style = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp))
+private fun getPrimaryColorForScheme(scheme: ColorScheme): Color {
+    return when (scheme) {
+        ColorScheme.Light -> LightThemeColors.primary
+        ColorScheme.Dark -> DarkThemeColors.primary
+        ColorScheme.Blue -> BlueThemeColors.primary
+        ColorScheme.Green -> GreenThemeColors.primary
+        ColorScheme.Red -> RedThemeColors.primary
     }
 }

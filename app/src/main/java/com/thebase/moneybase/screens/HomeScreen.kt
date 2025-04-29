@@ -73,7 +73,10 @@ fun TransactionItem(
             Spacer(Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(transaction.description, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    transaction.description,
+                    style = MaterialTheme.typography.bodyMedium
+                )
 
                 Text(
                     listOfNotNull(category?.name, wallet?.name)

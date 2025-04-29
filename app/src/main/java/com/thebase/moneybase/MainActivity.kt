@@ -1,4 +1,3 @@
-// MainActivity.kt
 package com.thebase.moneybase
 
 import android.os.Bundle
@@ -17,7 +16,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import com.thebase.moneybase.screens.*
-import com.thebase.moneybase.ui.theme.MoneyBaseTheme
+import com.thebase.moneybase.ui.theme.*
 
 class MainActivity : ComponentActivity() {
 
@@ -25,22 +24,27 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            MoneyBaseTheme {
-                val prefs = remember { getSharedPreferences("moneybase_prefs", MODE_PRIVATE) }
-                var userId by rememberSaveable { mutableStateOf(prefs.getString(KEY_USER_ID, null)) }
-                val navController = rememberNavController()
+            val prefs = remember { getSharedPreferences("moneybase_prefs", MODE_PRIVATE) }
+            var userId by rememberSaveable { mutableStateOf(prefs.getString(KEY_USER_ID, null)) }
+            var colorScheme by rememberSaveable {
+                mutableStateOf(
+                    ColorScheme.valueOf(prefs.getString(KEY_COLOR_SCHEME, ColorScheme.Dark.name) ?: ColorScheme.Dark.name)
+                )
+            }
+            val navController = rememberNavController()
 
-                LaunchedEffect(userId) {
-                    if (userId == null) {
-                        navController.navigate("auth") {
-                            popUpTo(0) { inclusive = true }
-                        }
+            LaunchedEffect(userId) {
+                if (userId == null) {
+                    navController.navigate("auth") {
+                        popUpTo(0) { inclusive = true }
                     }
                 }
+            }
 
+            MoneyBaseTheme(colorScheme = colorScheme) {
                 Scaffold(
                     bottomBar = {
-                        if (userId != null) Navigation(navController)
+                        if (userId != null) Navigation(navController, colorScheme)
                     }
                 ) { padding ->
                     AppNavigation(
@@ -54,6 +58,10 @@ class MainActivity : ComponentActivity() {
                             prefs.edit { remove(KEY_USER_ID) }
                             userId = null
                         },
+                        onColorSchemeChange = { scheme ->
+                            colorScheme = scheme
+                            prefs.edit { putString(KEY_COLOR_SCHEME, scheme.name) }
+                        },
                         modifier = Modifier.padding(padding)
                     )
                 }
@@ -63,6 +71,7 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val KEY_USER_ID = "userId"
+        const val KEY_COLOR_SCHEME = "colorScheme"
         const val TEST_USER_ID = "ff5298cf-3218-4f44-8820-724361d38aad"
     }
 }
@@ -73,6 +82,7 @@ private fun AppNavigation(
     userId: String?,
     onLogin: (String) -> Unit,
     onLogout: () -> Unit,
+    onColorSchemeChange: (ColorScheme) -> Unit,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -82,7 +92,7 @@ private fun AppNavigation(
     ) {
         authGraph(navController, onLogin)
         if (userId != null) {
-            appGraph(navController, userId, onLogout)
+            appGraph(navController, userId, onLogout, onColorSchemeChange)
         }
     }
 }
@@ -109,23 +119,18 @@ private fun NavGraphBuilder.authGraph(
 private fun NavGraphBuilder.appGraph(
     navController: NavHostController,
     userId: String,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onColorSchemeChange: (ColorScheme) -> Unit
 ) {
     navigation(startDestination = "home", route = "app") {
-        composable("home") {
-            HomeScreen(userId)
-        }
         composable("add") {
             AddScreen(userId, onBack = { navController.popBackStack() })
         }
+        composable("home") {
+            HomeScreen(userId)
+        }
         composable("settings") {
-            SettingsScreen(userId, onLogout = {
-                onLogout()
-                navController.navigate("auth") {
-                    popUpTo("app") { inclusive = true }
-                    launchSingleTop = true
-                }
-            })
+            SettingsScreen(userId, onLogout, onColorSchemeChange)
         }
     }
 }

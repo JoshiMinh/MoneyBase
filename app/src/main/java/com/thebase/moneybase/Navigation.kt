@@ -7,18 +7,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.thebase.moneybase.ui.theme.ColorScheme
+import com.thebase.moneybase.ui.theme.*
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
-    object Home : Screen("home", "Home", Icons.Filled.Home)
     object Add : Screen("add", "Add", Icons.Filled.Add)
+    object Home : Screen("home", "Home", Icons.Filled.Home)
     object Settings : Screen("settings", "Settings", Icons.Filled.Settings)
 
     companion object {
         val bottomNavItems = listOf(Home, Add, Settings)
 
         fun fromRoute(route: String?): Screen = when (route?.substringBefore("/")) {
-            Home.route -> Home
             Add.route -> Add
+            Home.route -> Home
             Settings.route -> Settings
             else -> Home
         }
@@ -26,11 +28,21 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
 }
 
 @Composable
-fun Navigation(navController: NavHostController) {
+fun Navigation(navController: NavHostController, colorScheme: ColorScheme) {
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
     val currentScreen = Screen.fromRoute(currentRoute)
 
-    NavigationBar {
+    val colors = when (colorScheme) {
+        ColorScheme.Light -> LightThemeColors
+        ColorScheme.Dark -> DarkThemeColors
+        ColorScheme.Blue -> BlueThemeColors
+        ColorScheme.Green -> GreenThemeColors
+        ColorScheme.Red -> RedThemeColors
+    }
+
+    NavigationBar(
+        containerColor = colors.background
+    ) {
         Screen.bottomNavItems.forEach { screen ->
             NavigationBarItem(
                 icon = { Icon(screen.icon, contentDescription = screen.label) },

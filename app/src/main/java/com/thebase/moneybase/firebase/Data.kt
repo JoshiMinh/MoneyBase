@@ -8,12 +8,10 @@ data class User(
     @DocumentId val id: String = "",
     val displayName: String = "",
     val email: String = "",
-    val createdAt: String = "", // Date stored as String
-    val lastLoginAt: String = "", // Date stored as String
+    val createdAt: String = "",
+    val lastLoginAt: String = "",
     val isPremium: Boolean = false,
-    val language: String = "en",
-    val profilePictureUrl: String = "",
-    val theme: String = "light"
+    val profilePictureUrl: String = ""
 )
 
 @Keep
@@ -26,10 +24,10 @@ data class Transaction(
     val currencyCode: String = "USD",
     val isIncome: Boolean = false,
     val categoryId: String = "",
-    val date: String = "", // Date stored as String
+    val date: String = "",
     val isSynced: Boolean = false,
-    val createdAt: String = "", // Date stored as String
-    val updatedAt: String = "" // Date stored as String
+    val createdAt: String = "",
+    val updatedAt: String = ""
 )
 
 @Keep
