@@ -30,14 +30,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
-import com.thebase.moneybase.firebase.Repositories
-import com.thebase.moneybase.firebase.Transaction
-import com.thebase.moneybase.firebase.Category
-import com.thebase.moneybase.firebase.Wallet
-import com.thebase.moneybase.functionalities.agents.AddCategoryDialog
-import com.thebase.moneybase.functionalities.agents.AddWallet
-import com.thebase.moneybase.functionalities.agents.EditCategoryDialog
-import com.thebase.moneybase.functionalities.agents.WalletAgent
+import com.thebase.moneybase.firebase.*
+import com.thebase.moneybase.functionalities.agents.*
 import com.thebase.moneybase.functionalities.components.CategorySelector
 import com.thebase.moneybase.functionalities.customizability.Icon.getIcon
 import kotlinx.coroutines.launch
@@ -70,17 +64,6 @@ fun AddScreen(
     var selectedCategory by remember { mutableStateOf<Category?>(null) }
     var selectedWalletId by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(categories) {
-        if (categories.isNotEmpty() && selectedCategory == null) {
-            selectedCategory = categories[0]
-        }
-    }
-    LaunchedEffect(wallets) {
-        if (wallets.isNotEmpty() && selectedWalletId == null) {
-            selectedWalletId = wallets[0].id
-        }
-    }
-
     var showDatePicker by remember { mutableStateOf(false) }
     var showCategorySheet by remember { mutableStateOf(false) }
     var showAddCategory by remember { mutableStateOf(false) }
@@ -88,17 +71,33 @@ fun AddScreen(
     var showAddWallet by remember { mutableStateOf(false) }
     var editingWallet by remember { mutableStateOf<Wallet?>(null) }
 
-    if (showDatePicker) {
-        DatePickerDialog(
-            context,
-            { _, y, m, d ->
-                calendar = Calendar.getInstance().apply { set(y, m, d) }
-                showDatePicker = false
-            },
-            calendar.get(Calendar.YEAR),
-            calendar.get(Calendar.MONTH),
-            calendar.get(Calendar.DAY_OF_MONTH)
-        ).show()
+    LaunchedEffect(categories) {
+        if (categories.isNotEmpty() && selectedCategory == null) {
+            selectedCategory = categories[0]
+        }
+    }
+
+    LaunchedEffect(wallets) {
+        if (wallets.isNotEmpty() && selectedWalletId == null) {
+            selectedWalletId = wallets[0].id
+        }
+    }
+
+    // Show Date Picker only once using a side-effect
+    LaunchedEffect(showDatePicker) {
+        if (showDatePicker) {
+            DatePickerDialog(
+                context,
+                { _, y, m, d ->
+                    calendar = Calendar.getInstance().apply { set(y, m, d) }
+                },
+                calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH),
+                calendar.get(Calendar.DAY_OF_MONTH)
+            ).apply {
+                setOnDismissListener { showDatePicker = false }
+            }.show()
+        }
     }
 
     Scaffold(
@@ -230,6 +229,7 @@ fun AddScreen(
             }
         )
     }
+
     editingWallet?.let { w ->
         WalletAgent(
             wallet = w,
@@ -249,6 +249,7 @@ fun AddScreen(
         )
     }
 }
+
 
 @Composable
 private fun IncomeExpenseToggle(isIncome: Boolean, onToggle: (Boolean) -> Unit) {

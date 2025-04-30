@@ -11,12 +11,19 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.edit
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.navigation
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.*
+
 import com.thebase.moneybase.screens.*
 import com.thebase.moneybase.ui.theme.*
+
+private object Routes {
+    const val AUTH = "auth"
+    const val APP = "app"
+    const val ACCOUNT = "account"
+    const val HOME = "home"
+    const val ADD = "add"
+    const val SETTINGS = "settings"
+}
 
 class MainActivity : ComponentActivity() {
 
@@ -24,32 +31,35 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
+            // Persisted user ID and theme scheme
             val prefs = remember { getSharedPreferences("moneybase_prefs", MODE_PRIVATE) }
             var userId by rememberSaveable { mutableStateOf(prefs.getString(KEY_USER_ID, null)) }
             var colorScheme by rememberSaveable {
                 mutableStateOf(
-                    ColorScheme.valueOf(prefs.getString(KEY_COLOR_SCHEME, ColorScheme.Dark.name) ?: ColorScheme.Dark.name)
+                    ColorScheme.valueOf(
+                        prefs.getString(KEY_COLOR_SCHEME, ColorScheme.Dark.name)
+                            .orEmpty()
+                    )
                 )
             }
             val navController = rememberNavController()
 
+            // Redirect to auth if not logged in
             LaunchedEffect(userId) {
-                if (userId == null) {
-                    navController.navigate("auth") {
+                if (userId.isNullOrEmpty()) {
+                    navController.navigate(Routes.AUTH) {
                         popUpTo(0) { inclusive = true }
                     }
                 }
             }
 
-            MoneyBaseTheme(colorScheme = colorScheme) {
+            MoneyBaseTheme(colorScheme) {
                 Scaffold(
-                    bottomBar = {
-                        if (userId != null) Navigation(navController, colorScheme)
-                    }
+                    bottomBar = { if (userId != null) Navigation(navController, colorScheme) }
                 ) { padding ->
                     AppNavigation(
-                        navController,
-                        userId,
+                        navController = navController,
+                        userId = userId,
                         onLogin = { id ->
                             prefs.edit { putString(KEY_USER_ID, id) }
                             userId = id
@@ -59,8 +69,8 @@ class MainActivity : ComponentActivity() {
                             userId = null
                         },
                         onColorSchemeChange = { scheme ->
-                            colorScheme = scheme
                             prefs.edit { putString(KEY_COLOR_SCHEME, scheme.name) }
+                            colorScheme = scheme
                         },
                         modifier = Modifier.padding(padding)
                     )
@@ -86,51 +96,56 @@ private fun AppNavigation(
     modifier: Modifier = Modifier
 ) {
     NavHost(
-        navController,
-        startDestination = if (userId == null) "auth" else "app",
+        navController = navController,
+        startDestination = if (userId.isNullOrEmpty()) Routes.AUTH else Routes.APP,
         modifier = modifier
     ) {
         authGraph(navController, onLogin)
-        if (userId != null) {
+        if (!userId.isNullOrEmpty()) {
             appGraph(navController, userId, onLogout, onColorSchemeChange)
         }
     }
 }
 
+/** Authentication flow with a single Account screen. */
 private fun NavGraphBuilder.authGraph(
     navController: NavHostController,
     onLogin: (String) -> Unit
-) {
-    navigation(startDestination = "account", route = "auth") {
-        composable("account") {
-            AccountScreen(
-                onTestLogin = {
-                    onLogin(MainActivity.TEST_USER_ID)
-                    navController.navigate("app") {
-                        popUpTo("auth") { inclusive = true }
-                        launchSingleTop = true
-                    }
+) = navigation(startDestination = Routes.ACCOUNT, route = Routes.AUTH) {
+    composable(Routes.ACCOUNT) {
+        AccountScreen(
+            onTestLogin = {
+                onLogin(MainActivity.TEST_USER_ID)
+                navController.navigate(Routes.APP) {
+                    popUpTo(Routes.AUTH) { inclusive = true }
+                    launchSingleTop = true
                 }
-            )
-        }
+            },
+            onLoginSuccess = { id ->
+                onLogin(id)
+                navController.navigate(Routes.APP) {
+                    popUpTo(Routes.AUTH) { inclusive = true }
+                    launchSingleTop = true
+                }
+            }
+        )
     }
 }
 
+/** Main app flow: Add → Home → Settings screens. */
 private fun NavGraphBuilder.appGraph(
     navController: NavHostController,
     userId: String,
     onLogout: () -> Unit,
     onColorSchemeChange: (ColorScheme) -> Unit
-) {
-    navigation(startDestination = "home", route = "app") {
-        composable("add") {
-            AddScreen(userId, onBack = { navController.popBackStack() })
-        }
-        composable("home") {
-            HomeScreen(userId)
-        }
-        composable("settings") {
-            SettingsScreen(userId, onLogout, onColorSchemeChange)
-        }
+) = navigation(startDestination = Routes.HOME, route = Routes.APP) {
+    composable(Routes.ADD) {
+        AddScreen(userId, onBack = { navController.popBackStack() })
+    }
+    composable(Routes.HOME) {
+        HomeScreen(userId)
+    }
+    composable(Routes.SETTINGS) {
+        SettingsScreen(userId, onLogout, onColorSchemeChange)
     }
 }

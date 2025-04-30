@@ -70,3 +70,11 @@ fun MoneyBaseTheme(
         content = content
     )
 }
+
+fun getIconColorForScheme(scheme: ColorScheme): Color = when (scheme) {
+    ColorScheme.Light -> Color.White
+    ColorScheme.Dark -> Color.Black
+    ColorScheme.Blue -> Color(0xFF1E88E5)
+    ColorScheme.Green -> Color(0xFF43A047)
+    ColorScheme.Red -> Color(0xFFD32F2F)
+}

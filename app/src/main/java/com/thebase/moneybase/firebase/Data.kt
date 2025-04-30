@@ -8,6 +8,7 @@ data class User(
     @DocumentId val id: String = "",
     val displayName: String = "",
     val email: String = "",
+    val passwordHash: String = "",
     val createdAt: String = "",
     val lastLoginAt: String = "",
     val isPremium: Boolean = false,

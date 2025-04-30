@@ -1,11 +1,12 @@
 package com.thebase.moneybase.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
@@ -18,13 +19,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.thebase.moneybase.R
+import coil.compose.rememberAsyncImagePainter
 import com.thebase.moneybase.firebase.Repositories
 import com.thebase.moneybase.firebase.User
 import com.thebase.moneybase.ui.theme.ColorScheme
 import com.thebase.moneybase.ui.theme.*
-import androidx.compose.foundation.Image
-import coil.compose.rememberImagePainter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,7 +92,7 @@ fun SettingsScreen(
                             )
                         } else {
                             Image(
-                                painter = rememberImagePainter(data = user?.profilePictureUrl),
+                                painter = rememberAsyncImagePainter(model = user?.profilePictureUrl),
                                 contentDescription = null,
                                 modifier = Modifier.size(80.dp),
                                 contentScale = ContentScale.Crop
@@ -145,13 +144,14 @@ fun SettingsScreen(
                                 modifier = Modifier
                                     .padding(horizontal = 8.dp)
                                     .size(48.dp)
+                                    .border(1.dp, Color.Gray, CircleShape) // Added grey border
                             ) {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .aspectRatio(1f)
                                         .background(
-                                            color = getPrimaryColorForScheme(scheme),
+                                            color = getIconColorForScheme(scheme),
                                             shape = CircleShape
                                         )
                                 )
@@ -187,15 +187,5 @@ fun SettingsScreen(
                 textAlign = TextAlign.Center
             )
         }
-    }
-}
-
-private fun getPrimaryColorForScheme(scheme: ColorScheme): Color {
-    return when (scheme) {
-        ColorScheme.Light -> LightThemeColors.primary
-        ColorScheme.Dark -> DarkThemeColors.primary
-        ColorScheme.Blue -> BlueThemeColors.primary
-        ColorScheme.Green -> GreenThemeColors.primary
-        ColorScheme.Red -> RedThemeColors.primary
     }
 }

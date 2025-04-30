@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -40,9 +41,7 @@ fun Navigation(navController: NavHostController, colorScheme: ColorScheme) {
         ColorScheme.Red -> RedThemeColors
     }
 
-    NavigationBar(
-        containerColor = colors.background
-    ) {
+    NavigationBar(containerColor = colors.background) {
         Screen.bottomNavItems.forEach { screen ->
             NavigationBarItem(
                 icon = { Icon(screen.icon, contentDescription = screen.label) },
@@ -56,7 +55,14 @@ fun Navigation(navController: NavHostController, colorScheme: ColorScheme) {
                             restoreState = true
                         }
                     }
-                }
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = colors.primary,
+                    unselectedIconColor = Color.Gray,
+                    selectedTextColor = colors.primary,
+                    unselectedTextColor = Color.Gray,
+                    indicatorColor = colors.primary.copy(alpha = 0.2f)
+                )
             )
         }
     }

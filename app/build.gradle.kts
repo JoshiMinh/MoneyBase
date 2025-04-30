@@ -104,6 +104,8 @@ dependencies {
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.auth.ktx)
+    implementation(libs.google.firebase.auth)
+    implementation(libs.play.services.auth)
 
     // Credentials and authentication
     implementation(libs.androidx.credentials)

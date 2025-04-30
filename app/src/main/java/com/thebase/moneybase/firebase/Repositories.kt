@@ -1,4 +1,3 @@
-// Repositories.kt
 package com.thebase.moneybase.firebase
 
 import com.google.firebase.auth.ktx.auth
@@ -9,16 +8,34 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
+@Suppress("unused")
 class Repositories {
     private val db = Firebase.firestore
     private val auth = Firebase.auth
 
-    // --- User Operations ---
-    suspend fun createUser(user: User) {
-        try {
+    suspend fun registerUser(email: String, password: String, username: String): Boolean {
+        return try {
+            val result = auth.createUserWithEmailAndPassword(email, password).await()
+            val user = User(
+                id = result.user?.uid ?: "",
+                displayName = username,
+                email = email,
+                passwordHash = password.hashCode().toString(),
+                createdAt = System.currentTimeMillis().toString()
+            )
             db.collection("users").document(user.id).set(user).await()
+            true
         } catch (e: Exception) {
-            // Handle the exception
+            false
+        }
+    }
+
+    suspend fun loginUser(email: String, password: String): Boolean {
+        return try {
+            auth.signInWithEmailAndPassword(email, password).await()
+            true
+        } catch (e: Exception) {
+            false
         }
     }
 
@@ -32,7 +49,6 @@ class Repositories {
         }
     }
 
-    // --- Transactions ---
     fun getTransactionsFlow(userId: String): Flow<List<Transaction>> = callbackFlow {
         val listener = db.collection("users").document(userId)
             .collection("transactions").addSnapshotListener { snap, err ->
@@ -51,7 +67,6 @@ class Repositories {
             val txWithId = transaction.copy(id = doc.id)
             doc.set(txWithId).await()
         } catch (e: Exception) {
-            // Handle the exception
         }
     }
 
@@ -60,7 +75,6 @@ class Repositories {
             db.collection("users").document(userId).collection("transactions")
                 .document(transaction.id).set(transaction).await()
         } catch (e: Exception) {
-            // Handle the exception
         }
     }
 
@@ -69,11 +83,9 @@ class Repositories {
             db.collection("users").document(userId).collection("transactions")
                 .document(transactionId).delete().await()
         } catch (e: Exception) {
-            // Handle the exception
         }
     }
 
-    // --- Wallets ---
     fun getWalletsFlow(userId: String): Flow<List<Wallet>> = callbackFlow {
         val listener = db.collection("users").document(userId).collection("wallets")
             .addSnapshotListener { snap, err ->
@@ -102,7 +114,6 @@ class Repositories {
             db.collection("users").document(userId).collection("wallets")
                 .document(wallet.id).set(wallet).await()
         } catch (e: Exception) {
-            // Handle the exception
         }
     }
 
@@ -111,11 +122,9 @@ class Repositories {
             db.collection("users").document(userId).collection("wallets")
                 .document(walletId).delete().await()
         } catch (e: Exception) {
-            // Handle the exception
         }
     }
 
-    // --- Categories ---
     fun getCategoriesFlow(userId: String): Flow<List<Category>> = callbackFlow {
         val listener = db.collection("users").document(userId).collection("categories")
             .addSnapshotListener { snap, err ->
@@ -144,7 +153,6 @@ class Repositories {
             db.collection("users").document(userId).collection("categories")
                 .document(category.id).set(category).await()
         } catch (e: Exception) {
-            // Handle the exception
         }
     }
 
@@ -153,7 +161,6 @@ class Repositories {
             db.collection("users").document(userId).collection("categories")
                 .document(categoryId).delete().await()
         } catch (e: Exception) {
-            // Handle the exception
         }
     }
 }

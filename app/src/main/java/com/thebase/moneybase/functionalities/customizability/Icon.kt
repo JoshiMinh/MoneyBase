@@ -25,31 +25,39 @@ import androidx.compose.ui.graphics.vector.ImageVector
 
 object Icon {
 
+    /** Map of icon identifiers to their ImageVector for flexible theming. */
     val iconMap: Map<String, ImageVector> = mapOf(
-        "fastfood" to Icons.Default.Fastfood,
-        "directions_car" to Icons.Default.DirectionsCar,
-        "shopping_cart" to Icons.Default.ShoppingCart,
-        "receipt" to Icons.Default.Receipt,
-        "local_activity" to Icons.Default.LocalActivity,
-        "more_horiz" to Icons.Default.MoreHoriz,
-        "account_balance_wallet" to Icons.Default.AccountBalanceWallet,
-        "account_balance" to Icons.Default.AccountBalance,
-        "currency_bitcoin" to Icons.Default.AttachMoney,
+        // Food & shopping
+        "fastfood"               to Icons.Default.Fastfood,
+        "shopping_cart"          to Icons.Default.ShoppingCart,
+        "receipt"                to Icons.Default.Receipt,
+        "local_cafe"             to Icons.Default.LocalCafe,
 
-        // 10 new ones
-        "flight" to Icons.Default.Flight,
-        "home" to Icons.Default.Home,
-        "phone_android" to Icons.Default.PhoneAndroid,
-        "savings" to Icons.Default.Savings,
-        "subscriptions" to Icons.Default.Subscriptions,
-        "medical_services" to Icons.Default.MedicalServices,
-        "sports_soccer" to Icons.Default.SportsSoccer,
-        "local_cafe" to Icons.Default.LocalCafe,
-        "directions_bus" to Icons.Default.DirectionsBus,
-        "emoji_events" to Icons.Default.EmojiEvents
+        // Transport
+        "directions_car"         to Icons.Default.DirectionsCar,
+        "directions_bus"         to Icons.Default.DirectionsBus,
+        "flight"                 to Icons.Default.Flight,
+
+        // Finance & accounts
+        "account_balance_wallet" to Icons.Default.AccountBalanceWallet,
+        "account_balance"        to Icons.Default.AccountBalance,
+        "currency_bitcoin"       to Icons.Default.AttachMoney,
+        "savings"                to Icons.Default.Savings,
+        "subscriptions"          to Icons.Default.Subscriptions,
+
+        // Activities & misc.
+        "local_activity"         to Icons.Default.LocalActivity,
+        "more_horiz"             to Icons.Default.MoreHoriz,
+        "home"                   to Icons.Default.Home,
+        "phone_android"          to Icons.Default.PhoneAndroid,
+        "medical_services"       to Icons.Default.MedicalServices,
+        "sports_soccer"          to Icons.Default.SportsSoccer,
+        "emoji_events"           to Icons.Default.EmojiEvents
     )
 
-    fun getIcon(iconName: String): ImageVector {
-        return iconMap[iconName] ?: Icons.Default.Category
-    }
+    /**
+     * Returns the ImageVector for [iconName], or a default Category icon if not found.
+     */
+    fun getIcon(iconName: String): ImageVector =
+        iconMap[iconName] ?: Icons.Default.Category
 }
