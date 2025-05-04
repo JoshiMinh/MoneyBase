@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">MoneyBase</string>
+    <!-- 
+    Nếu Google Services plugin không tự động điền giá trị này:
+    1. Đăng nhập vào Firebase Console
+    2. Vào phần Authentication -> Sign-in method -> Google
+    3. Sao chép Web SDK Client ID và thay thế giá trị dưới đây
+    -->
+    <string name="default_web_client_id" translatable="false">284259483635-geruaub92vfh6k2bvp4n9t700cprj6tt.apps.googleusercontent.com</string>
 </resources>

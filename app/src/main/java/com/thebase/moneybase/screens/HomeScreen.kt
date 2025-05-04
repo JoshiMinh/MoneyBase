@@ -14,7 +14,7 @@ import com.thebase.moneybase.firebase.Transaction
 import com.thebase.moneybase.firebase.Category
 import com.thebase.moneybase.firebase.Wallet
 import com.thebase.moneybase.functionalities.customizability.Icon.getIcon
-import com.thebase.moneybase.functionalities.agents.EditTransaction
+import com.thebase.moneybase.functionalities.components.EditTransaction
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.abs

@@ -31,8 +31,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
 import com.thebase.moneybase.firebase.*
-import com.thebase.moneybase.functionalities.agents.*
+import com.thebase.moneybase.functionalities.components.AddCategoryDialog
+import com.thebase.moneybase.functionalities.components.AddWallet
 import com.thebase.moneybase.functionalities.components.CategorySelector
+import com.thebase.moneybase.functionalities.components.EditCategoryDialog
+import com.thebase.moneybase.functionalities.components.WalletAgent
 import com.thebase.moneybase.functionalities.customizability.Icon.getIcon
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat

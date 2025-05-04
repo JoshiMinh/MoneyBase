@@ -16,13 +16,14 @@ import androidx.navigation.compose.*
 import com.thebase.moneybase.screens.*
 import com.thebase.moneybase.ui.theme.*
 
-private object Routes {
+object Routes {
     const val AUTH = "auth"
     const val APP = "app"
     const val ACCOUNT = "account"
     const val HOME = "home"
     const val ADD = "add"
     const val SETTINGS = "settings"
+    const val ABOUT = "about"
 }
 
 class MainActivity : ComponentActivity() {
@@ -101,9 +102,7 @@ private fun AppNavigation(
         modifier = modifier
     ) {
         authGraph(navController, onLogin)
-        if (!userId.isNullOrEmpty()) {
-            appGraph(navController, userId, onLogout, onColorSchemeChange)
-        }
+        appGraph(navController, userId ?: "", onLogout, onColorSchemeChange)
     }
 }
 
@@ -123,9 +122,9 @@ private fun NavGraphBuilder.authGraph(
             },
             onLoginSuccess = { id ->
                 onLogin(id)
+                navController.popBackStack()
                 navController.navigate(Routes.APP) {
-                    popUpTo(Routes.AUTH) { inclusive = true }
-                    launchSingleTop = true
+                    popUpTo(0) { inclusive = true }
                 }
             }
         )
@@ -146,6 +145,9 @@ private fun NavGraphBuilder.appGraph(
         HomeScreen(userId)
     }
     composable(Routes.SETTINGS) {
-        SettingsScreen(userId, onLogout, onColorSchemeChange)
+        SettingsScreen(userId, onLogout, onColorSchemeChange, navController)
+    }
+    composable(Routes.ABOUT) {
+        AboutScreen(navController)
     }
 }

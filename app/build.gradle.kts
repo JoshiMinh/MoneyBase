@@ -115,6 +115,10 @@ dependencies {
     // Networking with Retrofit and Gson converter
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
+    
+    // Cloudinary for image storage
+    implementation("com.cloudinary:cloudinary-android:2.3.1")
+    implementation("com.cloudinary:cloudinary-core:1.34.0")
 
     // Testing dependencies
     testImplementation(libs.junit)

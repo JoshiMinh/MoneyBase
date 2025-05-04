@@ -1,4 +1,4 @@
-package com.thebase.moneybase.functionalities.agents
+package com.thebase.moneybase.functionalities.components
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.AlertDialog

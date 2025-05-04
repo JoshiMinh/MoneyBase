@@ -15,6 +15,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object Add : Screen("add", "Add", Icons.Filled.Add)
     object Home : Screen("home", "Home", Icons.Filled.Home)
     object Settings : Screen("settings", "Settings", Icons.Filled.Settings)
+    object About : Screen("about", "About", Icons.Filled.Info)
 
     companion object {
         val bottomNavItems = listOf(Home, Add, Settings)
@@ -23,6 +24,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
             Add.route -> Add
             Home.route -> Home
             Settings.route -> Settings
+            About.route -> About
             else -> Home
         }
     }
