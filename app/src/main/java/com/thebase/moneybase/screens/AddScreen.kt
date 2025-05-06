@@ -30,13 +30,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
-import com.thebase.moneybase.firebase.*
-import com.thebase.moneybase.functionalities.components.AddCategoryDialog
-import com.thebase.moneybase.functionalities.components.AddWallet
-import com.thebase.moneybase.functionalities.components.CategorySelector
-import com.thebase.moneybase.functionalities.components.EditCategoryDialog
-import com.thebase.moneybase.functionalities.components.WalletAgent
-import com.thebase.moneybase.functionalities.customizability.Icon.getIcon
+import com.thebase.moneybase.database.*
+import com.thebase.moneybase.components.AddCategoryDialog
+import com.thebase.moneybase.components.AddWallet
+import com.thebase.moneybase.components.CategorySelector
+import com.thebase.moneybase.components.EditCategoryDialog
+import com.thebase.moneybase.components.WalletAgent
+import com.thebase.moneybase.ui.Icon.getIcon
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -51,7 +51,7 @@ fun AddScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val repo = remember { Repositories() }
+    val repo = remember { FirebaseRepositories() }
 
     val categories by repo.getCategoriesFlow(userId).collectAsState(initial = emptyList())
     val wallets by repo.getWalletsFlow(userId).collectAsState(initial = emptyList())

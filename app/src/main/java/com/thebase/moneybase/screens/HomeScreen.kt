@@ -10,11 +10,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.thebase.moneybase.firebase.Transaction
-import com.thebase.moneybase.firebase.Category
-import com.thebase.moneybase.firebase.Wallet
-import com.thebase.moneybase.functionalities.customizability.Icon.getIcon
-import com.thebase.moneybase.functionalities.components.EditTransaction
+import com.thebase.moneybase.database.Transaction
+import com.thebase.moneybase.database.Category
+import com.thebase.moneybase.database.Wallet
+import com.thebase.moneybase.ui.Icon.getIcon
+import com.thebase.moneybase.components.EditTransaction
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.abs

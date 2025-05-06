@@ -1,4 +1,4 @@
-package com.thebase.moneybase.functionalities.utils
+package com.thebase.moneybase.utils
 
 import android.content.ContentValues
 import android.content.Context
@@ -8,9 +8,9 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
 import androidx.documentfile.provider.DocumentFile
-import com.thebase.moneybase.firebase.Transaction
-import com.thebase.moneybase.firebase.Category
-import com.thebase.moneybase.firebase.Wallet
+import com.thebase.moneybase.database.Transaction
+import com.thebase.moneybase.database.Category
+import com.thebase.moneybase.database.Wallet
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException

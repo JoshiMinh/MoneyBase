@@ -1,5 +1,7 @@
 [versions]
 agp = "8.9.1"
+cloudinaryAndroid = "2.3.1"
+cloudinaryCore = "1.34.0"
 coilCompose = "2.5.0"
 converterGson = "2.10.0"
 firebaseBom = "33.12.0"
@@ -42,6 +44,8 @@ androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref =
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "roomVersion" }
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "roomVersion" }
 androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "workRuntimeKtx" }
+cloudinary-android = { module = "com.cloudinary:cloudinary-android", version.ref = "cloudinaryAndroid" }
+cloudinary-core = { module = "com.cloudinary:cloudinary-core", version.ref = "cloudinaryCore" }
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
 converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "converterGson" }
 firebase-analytics = { module = "com.google.firebase:firebase-analytics" }

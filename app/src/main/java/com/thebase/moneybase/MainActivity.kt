@@ -12,9 +12,9 @@ import androidx.core.content.edit
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
-
 import com.thebase.moneybase.screens.*
-import com.thebase.moneybase.ui.theme.*
+import com.thebase.moneybase.ui.ColorScheme
+import com.thebase.moneybase.ui.MoneyBaseTheme
 
 object Routes {
     const val AUTH = "auth"
@@ -32,20 +32,20 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            // Persisted user ID and theme scheme
             val prefs = remember { getSharedPreferences("moneybase_prefs", MODE_PRIVATE) }
+
             var userId by rememberSaveable { mutableStateOf(prefs.getString(KEY_USER_ID, null)) }
             var colorScheme by rememberSaveable {
                 mutableStateOf(
                     ColorScheme.valueOf(
-                        prefs.getString(KEY_COLOR_SCHEME, ColorScheme.Dark.name)
-                            .orEmpty()
+                        prefs.getString(KEY_COLOR_SCHEME, ColorScheme.Purple.name).orEmpty()
                     )
                 )
             }
+            var darkMode by rememberSaveable { mutableStateOf(prefs.getBoolean(KEY_DARK_MODE, true)) }
+
             val navController = rememberNavController()
 
-            // Redirect to auth if not logged in
             LaunchedEffect(userId) {
                 if (userId.isNullOrEmpty()) {
                     navController.navigate(Routes.AUTH) {
@@ -54,24 +54,30 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            MoneyBaseTheme(colorScheme) {
+            MoneyBaseTheme(colorScheme = colorScheme, darkMode = darkMode) {
                 Scaffold(
                     bottomBar = { if (userId != null) Navigation(navController, colorScheme) }
                 ) { padding ->
                     AppNavigation(
                         navController = navController,
                         userId = userId,
-                        onLogin = { id ->
-                            prefs.edit { putString(KEY_USER_ID, id) }
-                            userId = id
+                        colorScheme = colorScheme,
+                        darkMode = darkMode,           // ← pass it here
+                        onLogin = {
+                            prefs.edit { putString(KEY_USER_ID, it) }
+                            userId = it
                         },
                         onLogout = {
                             prefs.edit { remove(KEY_USER_ID) }
                             userId = null
                         },
-                        onColorSchemeChange = { scheme ->
-                            prefs.edit { putString(KEY_COLOR_SCHEME, scheme.name) }
-                            colorScheme = scheme
+                        onColorSchemeChange = {
+                            prefs.edit { putString(KEY_COLOR_SCHEME, it.name) }
+                            colorScheme = it
+                        },
+                        onDarkModeToggle = {
+                            prefs.edit { putBoolean(KEY_DARK_MODE, it) }
+                            darkMode = it
                         },
                         modifier = Modifier.padding(padding)
                     )
@@ -83,7 +89,7 @@ class MainActivity : ComponentActivity() {
     companion object {
         const val KEY_USER_ID = "userId"
         const val KEY_COLOR_SCHEME = "colorScheme"
-        const val TEST_USER_ID = "ff5298cf-3218-4f44-8820-724361d38aad"
+        const val KEY_DARK_MODE = "darkMode"
     }
 }
 
@@ -91,52 +97,54 @@ class MainActivity : ComponentActivity() {
 private fun AppNavigation(
     navController: NavHostController,
     userId: String?,
+    colorScheme: ColorScheme,
+    darkMode: Boolean,                            // ← add here
     onLogin: (String) -> Unit,
     onLogout: () -> Unit,
     onColorSchemeChange: (ColorScheme) -> Unit,
+    onDarkModeToggle: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     NavHost(
-        navController = navController,
-        startDestination = if (userId.isNullOrEmpty()) Routes.AUTH else Routes.APP,
-        modifier = modifier
+        navController     = navController,
+        startDestination  = if (userId.isNullOrEmpty()) Routes.AUTH else Routes.APP,
+        modifier          = modifier
     ) {
         authGraph(navController, onLogin)
-        appGraph(navController, userId ?: "", onLogout, onColorSchemeChange)
+        appGraph(
+            navController,
+            userId ?: "",
+            colorScheme,
+            darkMode,                           // ← and here
+            onLogout,
+            onColorSchemeChange,
+            onDarkModeToggle
+        )
     }
 }
 
-/** Authentication flow with a single Account screen. */
 private fun NavGraphBuilder.authGraph(
     navController: NavHostController,
     onLogin: (String) -> Unit
 ) = navigation(startDestination = Routes.ACCOUNT, route = Routes.AUTH) {
     composable(Routes.ACCOUNT) {
-        AccountScreen(
-            onTestLogin = {
-                onLogin(MainActivity.TEST_USER_ID)
-                navController.navigate(Routes.APP) {
-                    popUpTo(Routes.AUTH) { inclusive = true }
-                    launchSingleTop = true
-                }
-            },
-            onLoginSuccess = { id ->
-                onLogin(id)
-                navController.popBackStack()
-                navController.navigate(Routes.APP) {
-                    popUpTo(0) { inclusive = true }
-                }
+        AccountScreen(onLoginSuccess = {
+            onLogin(it)
+            navController.navigate(Routes.APP) {
+                popUpTo(0) { inclusive = true }
             }
-        )
+        })
     }
 }
 
-/** Main app flow: Add → Home → Settings screens. */
 private fun NavGraphBuilder.appGraph(
     navController: NavHostController,
     userId: String,
+    colorScheme: ColorScheme,                      // ← add here
+    darkMode: Boolean,                             // ← add here
     onLogout: () -> Unit,
-    onColorSchemeChange: (ColorScheme) -> Unit
+    onColorSchemeChange: (ColorScheme) -> Unit,
+    onDarkModeToggle: (Boolean) -> Unit
 ) = navigation(startDestination = Routes.HOME, route = Routes.APP) {
     composable(Routes.ADD) {
         AddScreen(userId, onBack = { navController.popBackStack() })
@@ -145,7 +153,15 @@ private fun NavGraphBuilder.appGraph(
         HomeScreen(userId)
     }
     composable(Routes.SETTINGS) {
-        SettingsScreen(userId, onLogout, onColorSchemeChange, navController)
+        SettingsScreen(
+            userId              = userId,
+            currentScheme       = colorScheme,
+            darkMode            = darkMode,          // ← and finally here
+            onLogout            = onLogout,
+            onColorSchemeChange = onColorSchemeChange,
+            onDarkModeToggle    = onDarkModeToggle,
+            navController       = navController
+        )
     }
     composable(Routes.ABOUT) {
         AboutScreen(navController)

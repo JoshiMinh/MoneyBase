@@ -14,12 +14,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -29,25 +25,25 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.thebase.moneybase.Routes
-import com.thebase.moneybase.firebase.CloudinaryManager
-import com.thebase.moneybase.firebase.Repositories
-import com.thebase.moneybase.firebase.User
+import com.thebase.moneybase.database.FirebaseRepositories
+import com.thebase.moneybase.database.User
+import com.thebase.moneybase.database.uploadImageToCloudinary
+import com.thebase.moneybase.components.ChangePasswordDialog
+import com.thebase.moneybase.components.EditProfileDialog
+import com.thebase.moneybase.components.TimePickerDialog
 import com.thebase.moneybase.notifications.NotificationHelper
-import com.thebase.moneybase.ui.theme.ColorScheme
-import com.thebase.moneybase.ui.theme.*
+import com.thebase.moneybase.ui.ColorScheme
+import com.thebase.moneybase.ui.*
+import com.thebase.moneybase.utils.CsvExporter
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -55,20 +51,24 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    userId: String, 
+    userId: String,
+    currentScheme: ColorScheme,
+    darkMode: Boolean,                          // ← new
     onLogout: () -> Unit,
     onColorSchemeChange: (ColorScheme) -> Unit,
+    onDarkModeToggle: (Boolean) -> Unit,
     navController: NavController
 ) {
+    // declare local state for which palette is selected
+    var selectedScheme by remember { mutableStateOf(currentScheme) }
     val context = LocalContext.current
-    val repo = remember { Repositories() }
+    val repo = remember { FirebaseRepositories() }
     var user by remember { mutableStateOf<User?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
-    var selectedColorScheme by remember { mutableStateOf(ColorScheme.Dark) }
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
-    
+
     // Notification helper
     val notificationHelper = remember { NotificationHelper(context) }
     
@@ -448,7 +448,7 @@ fun SettingsScreen(
                                     }
                                 }
                                 
-                                if (user?.isPremium == true) {
+                                if (user?.premium == true) {
                                     Spacer(Modifier.height(12.dp))
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
@@ -531,7 +531,7 @@ fun SettingsScreen(
                                         
                                         try {
                                             // Xuất ra CSV
-                                            val fileUri = com.thebase.moneybase.functionalities.utils.CsvExporter.exportTransactions(
+                                            val fileUri = CsvExporter.exportTransactions(
                                                 context, 
                                                 transactions, 
                                                 categories, 
@@ -732,37 +732,80 @@ fun SettingsScreen(
                         Text("App Settings", style = MaterialTheme.typography.headlineMedium)
                         Spacer(Modifier.height(16.dp))
 
+
+                        // Dark Mode Toggle
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DarkMode,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Dark Mode", style = MaterialTheme.typography.bodyLarge)
+                                Text(
+                                    text = if (darkMode) "On" else "Off",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Switch(
+                                checked = darkMode,
+                                onCheckedChange = onDarkModeToggle
+                            )
+                        }
                         Text("Select Color Scheme", style = MaterialTheme.typography.bodyLarge)
                         Spacer(Modifier.height(8.dp))
+
+// Color Scheme Picker
                         Row(
                             Modifier
                                 .horizontalScroll(rememberScrollState())
                                 .padding(vertical = 8.dp)
                         ) {
-                            listOf(ColorScheme.Light, ColorScheme.Dark, ColorScheme.Blue, ColorScheme.Green, ColorScheme.Red).forEach { scheme ->
+                            ColorScheme.values().forEach { scheme ->
+                                val isSelected = scheme == selectedScheme
+                                val baseColor = getIconColorForScheme(scheme)
+                                val displayColor = if (isSelected) baseColor.copy(alpha = 0.5f) else baseColor
+
                                 IconButton(
                                     onClick = {
-                                        selectedColorScheme = scheme
+                                        selectedScheme = scheme
                                         onColorSchemeChange(scheme)
                                     },
                                     modifier = Modifier
                                         .padding(horizontal = 8.dp)
                                         .size(48.dp)
-                                        .border(1.dp, Color.Gray, CircleShape)
+                                        .border(
+                                            width = if (isSelected) 2.dp else 1.dp,
+                                            color = if (isSelected)
+                                                MaterialTheme.colorScheme.primary
+                                            else Color.Gray,
+                                            shape = CircleShape
+                                        )
                                 ) {
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .aspectRatio(1f)
-                                            .background(
-                                                color = getIconColorForScheme(scheme),
-                                                shape = CircleShape
+                                            .background(color = displayColor, shape = CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (isSelected) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = "Selected",
+                                                tint = MaterialTheme.colorScheme.onPrimary
                                             )
-                                    )
+                                        }
+                                    }
                                 }
                             }
                         }
-                        
                         Spacer(Modifier.height(16.dp))
                         
                         // About Button
@@ -816,425 +859,3 @@ fun SettingsScreen(
         }
     }
 }
-
-private fun uploadImageToCloudinary(
-    context: android.content.Context,
-    imageUri: Uri,
-    userId: String,
-    repo: Repositories,
-    coroutineScope: kotlinx.coroutines.CoroutineScope,
-    snackbarHostState: SnackbarHostState,
-    onSuccess: () -> Unit
-) {
-    android.util.Log.d("MoneyBase", "Starting image upload to Cloudinary for user: $userId")
-    
-    coroutineScope.launch {
-        try {
-            snackbarHostState.showSnackbar("Uploading image...")
-            
-            // Tải ảnh lên Cloudinary
-            android.util.Log.d("MoneyBase", "Calling CloudinaryManager.uploadImage")
-            val imageUrl = CloudinaryManager.uploadImage(
-                context = context,
-                imageUri = imageUri,
-                userId = userId
-            )
-            
-            if (imageUrl != null) {
-                android.util.Log.d("MoneyBase", "Cloudinary upload successful, received URL: $imageUrl")
-                // Cập nhật URL ảnh vào Profile
-                val success = repo.updateProfilePicture(userId, imageUrl)
-                if (success) {
-                    android.util.Log.d("MoneyBase", "Profile picture updated successfully")
-                    snackbarHostState.showSnackbar("Profile picture updated successfully")
-                    onSuccess()
-                } else {
-                    android.util.Log.e("MoneyBase", "Failed to update profile picture")
-                    snackbarHostState.showSnackbar("Failed to update profile picture")
-                }
-            } else {
-                android.util.Log.e("MoneyBase", "Cloudinary upload failed, no URL returned")
-                snackbarHostState.showSnackbar("Failed to upload image")
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("MoneyBase", "Error during image upload", e)
-            snackbarHostState.showSnackbar("Error: ${e.message}")
-        }
-    }
-}
-
-@Composable
-fun EditProfileDialog(
-    user: User?,
-    onDismiss: () -> Unit,
-    onSave: (name: String) -> Unit
-) {
-    var displayName by remember { mutableStateOf(user?.displayName ?: "") }
-    var nameError by remember { mutableStateOf<String?>(null) }
-
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = MaterialTheme.shapes.medium,
-            color = MaterialTheme.colorScheme.surface
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .fillMaxWidth()
-            ) {
-                Text(
-                    text = "Edit Profile",
-                    style = MaterialTheme.typography.headlineSmall
-                )
-                
-                Spacer(Modifier.height(16.dp))
-                
-                OutlinedTextField(
-                    value = displayName,
-                    onValueChange = { 
-                        displayName = it
-                        nameError = null
-                    },
-                    label = { Text("Display Name") },
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = nameError != null,
-                    supportingText = { nameError?.let { Text(it) } },
-                    singleLine = true
-                )
-                
-                // Hiển thị email nhưng không cho phép chỉnh sửa
-                Spacer(Modifier.height(8.dp))
-                
-                OutlinedTextField(
-                    value = user?.email ?: "",
-                    onValueChange = { },
-                    label = { Text("Email") },
-                    modifier = Modifier.fillMaxWidth(),
-                    readOnly = true,
-                    enabled = false,
-                    singleLine = true
-                )
-                
-                Spacer(Modifier.height(24.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Cancel")
-                    }
-                    
-                    Button(
-                        onClick = {
-                            var isValid = true
-                            
-                            if (displayName.isBlank()) {
-                                nameError = "Name is required"
-                                isValid = false
-                            }
-                            
-                            if (isValid) {
-                                onSave(displayName)
-                            }
-                        }
-                    ) {
-                        Text("Save")
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun ChangePasswordDialog(
-    onDismiss: () -> Unit,
-    onSave: (currentPassword: String, newPassword: String) -> Unit
-) {
-    var currentPassword by remember { mutableStateOf("") }
-    var newPassword by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
-    
-    var currentPasswordError by remember { mutableStateOf<String?>(null) }
-    var newPasswordError by remember { mutableStateOf<String?>(null) }
-    var confirmPasswordError by remember { mutableStateOf<String?>(null) }
-
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = MaterialTheme.shapes.medium,
-            color = MaterialTheme.colorScheme.surface
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .fillMaxWidth()
-            ) {
-                Text(
-                    text = "Change Password",
-                    style = MaterialTheme.typography.headlineSmall
-                )
-                
-                Spacer(Modifier.height(16.dp))
-                
-                OutlinedTextField(
-                    value = currentPassword,
-                    onValueChange = { 
-                        currentPassword = it
-                        currentPasswordError = null
-                    },
-                    label = { Text("Current Password") },
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = currentPasswordError != null,
-                    supportingText = { currentPasswordError?.let { Text(it) } },
-                    visualTransformation = PasswordVisualTransformation(),
-                    singleLine = true
-                )
-                
-                Spacer(Modifier.height(8.dp))
-                
-                OutlinedTextField(
-                    value = newPassword,
-                    onValueChange = { 
-                        newPassword = it
-                        newPasswordError = null
-                    },
-                    label = { Text("New Password") },
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = newPasswordError != null,
-                    supportingText = { newPasswordError?.let { Text(it) } },
-                    visualTransformation = PasswordVisualTransformation(),
-                    singleLine = true
-                )
-                
-                Spacer(Modifier.height(8.dp))
-                
-                OutlinedTextField(
-                    value = confirmPassword,
-                    onValueChange = { 
-                        confirmPassword = it
-                        confirmPasswordError = null
-                    },
-                    label = { Text("Confirm New Password") },
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = confirmPasswordError != null,
-                    supportingText = { confirmPasswordError?.let { Text(it) } },
-                    visualTransformation = PasswordVisualTransformation(),
-                    singleLine = true
-                )
-                
-                Spacer(Modifier.height(24.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Cancel")
-                    }
-                    
-                    Button(
-                        onClick = {
-                            var isValid = true
-                            
-                            if (currentPassword.isBlank()) {
-                                currentPasswordError = "Current password is required"
-                                isValid = false
-                            }
-                            
-                            if (newPassword.isBlank()) {
-                                newPasswordError = "New password is required"
-                                isValid = false
-                            } else if (newPassword.length < 6) {
-                                newPasswordError = "Password must be at least 6 characters"
-                                isValid = false
-                            }
-                            
-                            if (confirmPassword.isBlank()) {
-                                confirmPasswordError = "Please confirm your password"
-                                isValid = false
-                            } else if (newPassword != confirmPassword) {
-                                confirmPasswordError = "Passwords do not match"
-                                isValid = false
-                            }
-                            
-                            if (isValid) {
-                                onSave(currentPassword, newPassword)
-                            }
-                        }
-                    ) {
-                        Text("Change")
-                    }
-                }
-            }
-        }
-    }
-}
-
-// Time Picker Dialog
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun TimePickerDialog(
-    initialHour: Int,
-    initialMinute: Int,
-    onDismiss: () -> Unit,
-    onConfirm: (Int, Int) -> Unit
-) {
-    var hour by remember { mutableStateOf(initialHour) }
-    var minute by remember { mutableStateOf(initialMinute) }
-    
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            shape = MaterialTheme.shapes.medium
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Select reminder time",
-                    style = MaterialTheme.typography.titleLarge
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(180.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Hours
-                    ScrollWheel(
-                        items = (0..23).map { it.toString().padStart(2, '0') },
-                        initialIndex = hour,
-                        onValueChange = { selectedIndex -> hour = selectedIndex },
-                        modifier = Modifier.weight(1f)
-                    )
-                    
-                    Text(
-                        text = ":",
-                        style = MaterialTheme.typography.headlineLarge,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-                    
-                    // Minutes
-                    ScrollWheel(
-                        items = (0..59).map { it.toString().padStart(2, '0') },
-                        initialIndex = minute,
-                        onValueChange = { selectedIndex -> minute = selectedIndex },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Cancel")
-                    }
-                    
-                    Spacer(modifier = Modifier.width(8.dp))
-                    
-                    Button(onClick = { onConfirm(hour, minute) }) {
-                        Text("Confirm")
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun ScrollWheel(
-    items: List<String>,
-    initialIndex: Int,
-    onValueChange: (Int) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialIndex)
-    val coroutineScope = rememberCoroutineScope()
-    
-    // Detect when scrolling stops and snap to the center item
-    LaunchedEffect(listState.isScrollInProgress) {
-        if (!listState.isScrollInProgress) {
-            val firstVisibleIndex = listState.firstVisibleItemIndex
-            val firstVisibleOffset = listState.firstVisibleItemScrollOffset
-            
-            // Calculate which item is closer to the center
-            val itemHeight = 60 // approximate item height
-            val index = if (firstVisibleOffset > itemHeight / 2) {
-                firstVisibleIndex + 1
-            } else {
-                firstVisibleIndex
-            }
-            
-            // Snap to the center item
-            coroutineScope.launch {
-                listState.animateScrollToItem(index.coerceIn(0, items.size - 1))
-            }
-            
-            // Notify about the value change
-            onValueChange(index.coerceIn(0, items.size - 1))
-        }
-    }
-    
-    Box(
-        modifier = modifier
-            .height(180.dp)
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                        MaterialTheme.colorScheme.primaryContainer,
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
-                    )
-                ),
-                shape = RoundedCornerShape(8.dp)
-            )
-    ) {
-        LazyColumn(
-            state = listState,
-            contentPadding = PaddingValues(vertical = 60.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxSize()
-        ) {
-            items(items) { item ->
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .padding(vertical = 6.dp)
-                        .height(48.dp)
-                        .fillMaxWidth()
-                ) {
-                    Text(
-                        text = item,
-                        style = MaterialTheme.typography.headlineMedium
-                    )
-                }
-            }
-        }
-        
-        // Highlight for selection
-        Box(
-            modifier = Modifier
-                .padding(horizontal = 16.dp)
-                .align(Alignment.Center)
-                .height(60.dp)
-                .fillMaxWidth()
-                .border(
-                    width = 2.dp,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(8.dp)
-                )
-        )
-    }
-}
-

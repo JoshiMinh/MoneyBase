@@ -1,4 +1,4 @@
-package com.thebase.moneybase.firebase
+package com.thebase.moneybase.database
 
 import androidx.annotation.Keep
 import com.google.firebase.firestore.DocumentId
@@ -10,10 +10,41 @@ data class User(
     val email: String = "",
     val createdAt: String = "",
     val lastLoginAt: String = "",
-    val isPremium: Boolean = false,
+    val premium: Boolean = false,
     val profilePictureUrl: String = "",
     val photoUrl: String? = null
 )
+
+@Keep
+data class Currency(
+    val code: String = "USD",
+    val symbol: String = "$",
+    val name: String = "US Dollar",
+    val usdValue: Double = 1.0
+)
+
+@Keep
+data class Category(
+    @DocumentId val id: String = "",
+    val userId: String = "",
+    val name: String = "",
+    val iconName: String = "",
+    val color: String = ""
+)
+
+@Keep
+data class Wallet(
+    @DocumentId val id: String = "",
+    val userId: String = "",
+    val name: String = "",
+    val type: WalletType = WalletType.PHYSICAL,
+    val currencyCode: String = "USD",
+    val balance: Double = 0.0,
+    val iconName: String = "account_balance_wallet",
+    val color: String = ""
+) {
+    enum class WalletType { PHYSICAL, BANK_ACCOUNT, CRYPTO, INVESTMENT, OTHER }
+}
 
 @Keep
 data class Transaction(
@@ -26,39 +57,5 @@ data class Transaction(
     val isIncome: Boolean = false,
     val categoryId: String = "",
     val date: String = "",
-    val isSynced: Boolean = false,
-    val createdAt: String = "",
-    val updatedAt: String = ""
+    val createdAt: String = ""
 )
-
-@Keep
-data class Category(
-    @DocumentId val id: String = "",
-    val userId: String = "",
-    val name: String = "",
-    val iconName: String = "",
-    val color: String = "#6200EE"
-)
-
-@Keep
-data class Currency(
-    val code: String = "USD",
-    val symbol: String = "$",
-    val name: String = "US Dollar",
-    val usdValue: Double = 1.0
-)
-
-@Keep
-data class Wallet(
-    @DocumentId val id: String = "",
-    val userId: String = "",
-    val name: String = "",
-    val type: WalletType = WalletType.OTHER,
-    val currencyCode: String = "USD",
-    val balance: Double = 0.0,
-    val isSynced: Boolean = false,
-    val iconName: String = "account_balance_wallet",
-    val color: String = "#9C27B0"
-) {
-    enum class WalletType { PHYSICAL, BANK_ACCOUNT, CRYPTO, INVESTMENT, OTHER }
-}

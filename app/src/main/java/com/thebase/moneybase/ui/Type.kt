@@ -1,4 +1,4 @@
-package com.thebase.moneybase.ui.theme
+package com.thebase.moneybase.ui
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

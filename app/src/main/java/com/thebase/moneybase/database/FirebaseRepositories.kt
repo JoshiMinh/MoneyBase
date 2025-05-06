@@ -1,4 +1,4 @@
-package com.thebase.moneybase.firebase
+package com.thebase.moneybase.database
 
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
@@ -9,10 +9,13 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 @Suppress("unused")
-class Repositories {
+class FirebaseRepositories {
     private val db = Firebase.firestore
     private val auth = Firebase.auth
 
+    // ----------------------------
+    // Authentication Functions
+    // ----------------------------
     suspend fun registerUser(email: String, password: String, username: String): Boolean {
         return try {
             val result = auth.createUserWithEmailAndPassword(email, password).await()
@@ -24,11 +27,13 @@ class Repositories {
                 lastLoginAt = System.currentTimeMillis().toString()
             )
             db.collection("users").document(user.id).set(user).await()
-            
-            result.user?.updateProfile(com.google.firebase.auth.UserProfileChangeRequest.Builder()
-                .setDisplayName(username)
-                .build())?.await()
-                
+
+            result.user?.updateProfile(
+                com.google.firebase.auth.UserProfileChangeRequest.Builder()
+                    .setDisplayName(username)
+                    .build()
+            )?.await()
+
             true
         } catch (e: Exception) {
             android.util.Log.e("MoneyBase", "Registration failed", e)
@@ -45,8 +50,28 @@ class Repositories {
         }
     }
 
+    suspend fun updateUserPassword(userId: String, currentPassword: String, newPassword: String): Boolean {
+        return try {
+            val currentUser = auth.currentUser
+            if (currentUser != null && currentUser.uid == userId) {
+                val email = currentUser.email ?: return false
+                val credential = com.google.firebase.auth.EmailAuthProvider.getCredential(email, currentPassword)
+                currentUser.reauthenticate(credential).await()
+                currentUser.updatePassword(newPassword).await()
+                return true
+            }
+            false
+        } catch (e: Exception) {
+            android.util.Log.e("MoneyBase", "Password change failed", e)
+            false
+        }
+    }
+
     fun getCurrentUser() = auth.currentUser
 
+    // ----------------------------
+    // User Management Functions
+    // ----------------------------
     suspend fun getUser(userId: String): User? {
         return try {
             db.collection("users").document(userId).get().await().toObject(User::class.java)
@@ -55,16 +80,61 @@ class Repositories {
         }
     }
 
-    /**
-     * Kiểm tra và tạo tài khoản người dùng khi đăng nhập qua Google nếu chưa tồn tại
-     */
+    suspend fun updateUserProfile(userId: String, displayName: String, email: String): Boolean {
+        return try {
+            val userRef = db.collection("users").document(userId)
+            val userData = hashMapOf<String, Any>(
+                "displayName" to displayName,
+                "email" to email
+            )
+            userRef.update(userData).await()
+
+            val currentUser = auth.currentUser
+            if (currentUser != null && currentUser.uid == userId) {
+                currentUser.updateProfile(
+                    com.google.firebase.auth.UserProfileChangeRequest.Builder()
+                        .setDisplayName(displayName)
+                        .build()
+                ).await()
+
+                if (currentUser.email != email) {
+                    currentUser.updateEmail(email).await()
+                }
+            }
+
+            true
+        } catch (e: Exception) {
+            android.util.Log.e("MoneyBase", "Update profile failed", e)
+            false
+        }
+    }
+
+    suspend fun updateProfilePicture(userId: String, profilePictureUrl: String): Boolean {
+        return try {
+            db.collection("users").document(userId)
+                .update("profilePictureUrl", profilePictureUrl).await()
+
+            val currentUser = auth.currentUser
+            if (currentUser != null && currentUser.uid == userId) {
+                currentUser.updateProfile(
+                    com.google.firebase.auth.UserProfileChangeRequest.Builder()
+                        .setPhotoUri(android.net.Uri.parse(profilePictureUrl))
+                        .build()
+                ).await()
+            }
+
+            true
+        } catch (e: Exception) {
+            android.util.Log.e("MoneyBase", "Profile picture update failed", e)
+            false
+        }
+    }
+
     suspend fun ensureGoogleUserInDatabase(user: com.google.firebase.auth.FirebaseUser): Boolean {
         return try {
-            // Kiểm tra user đã tồn tại trong Firestore chưa
             val userDoc = db.collection("users").document(user.uid).get().await()
-            
+
             if (!userDoc.exists()) {
-                // Tạo user mới nếu chưa tồn tại
                 val newUser = User(
                     id = user.uid,
                     displayName = user.displayName ?: "Google User",
@@ -75,7 +145,6 @@ class Repositories {
                 )
                 db.collection("users").document(user.uid).set(newUser).await()
             } else {
-                // Cập nhật lần đăng nhập gần nhất
                 db.collection("users").document(user.uid)
                     .update("lastLoginAt", System.currentTimeMillis().toString())
                     .await()
@@ -87,6 +156,9 @@ class Repositories {
         }
     }
 
+    // ----------------------------
+    // Transaction Management Functions
+    // ----------------------------
     fun getTransactionsFlow(userId: String): Flow<List<Transaction>> = callbackFlow {
         val listener = db.collection("users").document(userId)
             .collection("transactions").addSnapshotListener { snap, err ->
@@ -124,6 +196,23 @@ class Repositories {
         }
     }
 
+    suspend fun getAllTransactions(userId: String): List<Transaction> {
+        return try {
+            val snapshot = db.collection("users").document(userId)
+                .collection("transactions")
+                .get()
+                .await()
+
+            snapshot.toObjects(Transaction::class.java)
+        } catch (e: Exception) {
+            android.util.Log.e("MoneyBase", "Failed to get all transactions", e)
+            emptyList()
+        }
+    }
+
+    // ----------------------------
+    // Wallet Management Functions
+    // ----------------------------
     fun getWalletsFlow(userId: String): Flow<List<Wallet>> = callbackFlow {
         val listener = db.collection("users").document(userId).collection("wallets")
             .addSnapshotListener { snap, err ->
@@ -163,6 +252,23 @@ class Repositories {
         }
     }
 
+    suspend fun getAllWallets(userId: String): List<Wallet> {
+        return try {
+            val snapshot = db.collection("users").document(userId)
+                .collection("wallets")
+                .get()
+                .await()
+
+            snapshot.toObjects(Wallet::class.java)
+        } catch (e: Exception) {
+            android.util.Log.e("MoneyBase", "Failed to get all wallets", e)
+            emptyList()
+        }
+    }
+
+    // ----------------------------
+    // Category Management Functions
+    // ----------------------------
     fun getCategoriesFlow(userId: String): Flow<List<Category>> = callbackFlow {
         val listener = db.collection("users").document(userId).collection("categories")
             .addSnapshotListener { snap, err ->
@@ -202,123 +308,16 @@ class Repositories {
         }
     }
 
-    suspend fun updateUserProfile(userId: String, displayName: String, email: String): Boolean {
-        return try {
-            // Cập nhật trên Firestore
-            val userRef = db.collection("users").document(userId)
-            val userData = hashMapOf<String, Any>(
-                "displayName" to displayName,
-                "email" to email
-            )
-            userRef.update(userData).await()
-            
-            // Cập nhật trên Firebase Auth nếu người dùng hiện tại là người đang cập nhật
-            val currentUser = auth.currentUser
-            if (currentUser != null && currentUser.uid == userId) {
-                // Cập nhật displayName
-                currentUser.updateProfile(
-                    com.google.firebase.auth.UserProfileChangeRequest.Builder()
-                        .setDisplayName(displayName)
-                        .build()
-                ).await()
-                
-                // Cập nhật email nếu khác với email hiện tại
-                if (currentUser.email != email) {
-                    currentUser.updateEmail(email).await()
-                }
-            }
-            
-            true
-        } catch (e: Exception) {
-            android.util.Log.e("MoneyBase", "Update profile failed", e)
-            false
-        }
-    }
-    
-    suspend fun updateUserPassword(userId: String, currentPassword: String, newPassword: String): Boolean {
-        return try {
-            val currentUser = auth.currentUser
-            if (currentUser != null && currentUser.uid == userId) {
-                // Xác thực lại người dùng với mật khẩu hiện tại
-                val email = currentUser.email ?: return false
-                val credential = com.google.firebase.auth.EmailAuthProvider.getCredential(email, currentPassword)
-                currentUser.reauthenticate(credential).await()
-                
-                // Thay đổi mật khẩu
-                currentUser.updatePassword(newPassword).await()
-                return true
-            }
-            false
-        } catch (e: Exception) {
-            android.util.Log.e("MoneyBase", "Password change failed", e)
-            false
-        }
-    }
-    
-    suspend fun updateProfilePicture(userId: String, profilePictureUrl: String): Boolean {
-        return try {
-            // Cập nhật URL ảnh đại diện trong Firestore
-            db.collection("users").document(userId)
-                .update("profilePictureUrl", profilePictureUrl).await()
-            
-            android.util.Log.d("MoneyBase", "ProfilePictureUrl updated in Firestore: $profilePictureUrl")
-            
-            // Cập nhật trong Firebase Auth
-            val currentUser = auth.currentUser
-            if (currentUser != null && currentUser.uid == userId) {
-                currentUser.updateProfile(
-                    com.google.firebase.auth.UserProfileChangeRequest.Builder()
-                        .setPhotoUri(android.net.Uri.parse(profilePictureUrl))
-                        .build()
-                ).await()
-                android.util.Log.d("MoneyBase", "ProfilePictureUrl updated in Firebase Auth")
-            }
-            
-            true
-        } catch (e: Exception) {
-            android.util.Log.e("MoneyBase", "Profile picture update failed", e)
-            false
-        }
-    }
-
-    suspend fun getAllTransactions(userId: String): List<Transaction> {
-        return try {
-            val snapshot = db.collection("users").document(userId)
-                .collection("transactions")
-                .get()
-                .await()
-            
-            snapshot.toObjects(Transaction::class.java)
-        } catch (e: Exception) {
-            android.util.Log.e("MoneyBase", "Failed to get all transactions", e)
-            emptyList()
-        }
-    }
-    
     suspend fun getAllCategories(userId: String): List<Category> {
         return try {
             val snapshot = db.collection("users").document(userId)
                 .collection("categories")
                 .get()
                 .await()
-            
+
             snapshot.toObjects(Category::class.java)
         } catch (e: Exception) {
             android.util.Log.e("MoneyBase", "Failed to get all categories", e)
-            emptyList()
-        }
-    }
-    
-    suspend fun getAllWallets(userId: String): List<Wallet> {
-        return try {
-            val snapshot = db.collection("users").document(userId)
-                .collection("wallets")
-                .get()
-                .await()
-            
-            snapshot.toObjects(Wallet::class.java)
-        } catch (e: Exception) {
-            android.util.Log.e("MoneyBase", "Failed to get all wallets", e)
             emptyList()
         }
     }

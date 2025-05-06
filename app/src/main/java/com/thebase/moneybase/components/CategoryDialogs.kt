@@ -1,4 +1,4 @@
-package com.thebase.moneybase.functionalities.components
+package com.thebase.moneybase.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -12,9 +12,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.thebase.moneybase.firebase.Category
-import com.thebase.moneybase.functionalities.customizability.Icon
-import com.thebase.moneybase.functionalities.customizability.ColorPalette
+import com.thebase.moneybase.database.Category
+import com.thebase.moneybase.ui.Icon
+import com.thebase.moneybase.ui.ColorPalette
 import kotlinx.coroutines.launch
 
 @Composable

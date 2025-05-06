@@ -3,7 +3,6 @@
     package="com.thebase.moneybase"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
@@ -36,8 +35,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        
-        <!-- FileProvider for camera -->
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -47,8 +45,7 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
-        
-        <!-- Receiver for restarting notifications after device reboot -->
+
         <receiver
             android:name=".notifications.BootReceiver"
             android:exported="true">
@@ -56,13 +53,11 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
-        
-        <!-- Receiver for showing notifications -->
+
         <receiver
             android:name=".notifications.NotificationReceiver"
             android:exported="false" />
-            
-        <!-- Receiver for rescheduling daily notifications -->
+
         <receiver
             android:name=".notifications.DailyAlarmRescheduleReceiver"
             android:exported="false" />

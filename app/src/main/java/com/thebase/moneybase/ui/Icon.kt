@@ -1,4 +1,4 @@
-package com.thebase.moneybase.functionalities.customizability
+package com.thebase.moneybase.ui
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance

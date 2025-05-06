@@ -1,4 +1,4 @@
-package com.thebase.moneybase.functionalities.components
+package com.thebase.moneybase.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
@@ -14,8 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
-import com.thebase.moneybase.firebase.Category
-import com.thebase.moneybase.functionalities.customizability.Icon
+import com.thebase.moneybase.database.Category
+import com.thebase.moneybase.ui.Icon
 
 @Suppress("DEPRECATION", "unused")
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)

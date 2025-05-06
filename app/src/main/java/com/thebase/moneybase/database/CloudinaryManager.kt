@@ -1,13 +1,17 @@
-package com.thebase.moneybase.firebase
+package com.thebase.moneybase.database
 
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import androidx.compose.material3.SnackbarHostState
 import com.cloudinary.android.MediaManager
 import com.cloudinary.android.callback.ErrorInfo
 import com.cloudinary.android.callback.UploadCallback
+import com.thebase.moneybase.R
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.InputStream
 
@@ -16,14 +20,19 @@ class CloudinaryManager {
         private const val TAG = "CloudinaryManager"
         private var isInitialized = false
 
-        // Khởi tạo Cloudinary với config của bạn
+        // ----------------------------
+        // Initialization
+        // ----------------------------
+        /**
+         * Initialize Cloudinary with your configuration.
+         */
         fun init(context: Context) {
             if (!isInitialized) {
                 try {
                     val config = mapOf(
-                        "cloud_name" to "dzepzbiec", // Thay bằng cloud name của bạn
-                        "api_key" to "265685784776223",       // Thay bằng API key của bạn
-                        "api_secret" to "HAIzrk1Bzy7lQjqU6CKPUfNWgk8"  // Thay bằng API secret của bạn
+                        "cloud_name" to context.getString(R.string.cloudinary_cloud_name),
+                        "api_key" to context.getString(R.string.cloudinary_api_key),
+                        "api_secret" to context.getString(R.string.cloudinary_api_secret)
                     )
                     MediaManager.init(context, config)
                     isInitialized = true
@@ -33,7 +42,12 @@ class CloudinaryManager {
             }
         }
 
-        // Upload ảnh từ Uri và trả về URL
+        // ----------------------------
+        // Upload from URI
+        // ----------------------------
+        /**
+         * Upload an image from a URI to Cloudinary and return the secure URL.
+         */
         suspend fun uploadImage(context: Context, imageUri: Uri, userId: String): String? {
             return withContext(Dispatchers.IO) {
                 if (!isInitialized) {
@@ -41,14 +55,13 @@ class CloudinaryManager {
                 }
 
                 val deferred = CompletableDeferred<String?>()
-                
+
                 try {
-                    // Tạo tên file duy nhất dựa trên userId
-                    val requestId = MediaManager.get()
+                    MediaManager.get()
                         .upload(imageUri)
-                        .option("folder", "moneybase/profiles") // Folder trên Cloudinary
-                        .option("public_id", "profile_$userId") // Dùng userId để tạo tên file
-                        .option("overwrite", true)              // Ghi đè nếu file đã tồn tại
+                        .option("folder", context.getString(R.string.cloudinary_folder))
+                        .option("public_id", "profile_$userId")
+                        .option("overwrite", true)
                         .callback(object : UploadCallback {
                             override fun onStart(requestId: String) {
                                 Log.d(TAG, "Upload started: $requestId")
@@ -84,7 +97,12 @@ class CloudinaryManager {
             }
         }
 
-        // Upload ảnh từ InputStream (nếu bạn lấy ảnh từ camera)
+        // ----------------------------
+        // Upload from InputStream
+        // ----------------------------
+        /**
+         * Upload an image from an InputStream (e.g., from the camera) to Cloudinary and return the secure URL.
+         */
         suspend fun uploadImageFromStream(context: Context, inputStream: InputStream, userId: String): String? {
             return withContext(Dispatchers.IO) {
                 if (!isInitialized) {
@@ -92,15 +110,13 @@ class CloudinaryManager {
                 }
 
                 try {
-                    // Đọc dữ liệu từ InputStream
                     val bytes = inputStream.readBytes()
-                    
-                    // Upload dữ liệu lên Cloudinary qua API
+
                     val uploadResult = com.cloudinary.Cloudinary(
                         mapOf(
-                            "cloud_name" to "your_cloud_name",
-                            "api_key" to "your_api_key",
-                            "api_secret" to "your_api_secret"
+                            "cloud_name" to context.getString(R.string.cloudinary_cloud_name),
+                            "api_key" to context.getString(R.string.cloudinary_api_key),
+                            "api_secret" to context.getString(R.string.cloudinary_api_secret)
                         )
                     ).uploader().upload(
                         bytes,
@@ -110,7 +126,7 @@ class CloudinaryManager {
                             "overwrite" to true
                         )
                     )
-                    
+
                     uploadResult["secure_url"] as? String
                 } catch (e: Exception) {
                     Log.e(TAG, "Error uploading from stream", e)
@@ -119,4 +135,57 @@ class CloudinaryManager {
             }
         }
     }
-} 
+}
+
+// ----------------------------
+// Utility Function
+// ----------------------------
+/**
+ * Upload an image to Cloudinary and update the user's profile picture in Firebase.
+ */
+fun uploadImageToCloudinary(
+    context: Context,
+    imageUri: Uri,
+    userId: String,
+    repo: FirebaseRepositories,
+    coroutineScope: CoroutineScope,
+    snackbarHostState: SnackbarHostState,
+    onSuccess: () -> Unit
+) {
+    Log.d("MoneyBase", "Starting image upload to Cloudinary for user: $userId")
+
+    coroutineScope.launch {
+        try {
+            snackbarHostState.showSnackbar("Uploading image...")
+
+            // Upload image to Cloudinary
+            Log.d("MoneyBase", "Calling CloudinaryManager.uploadImage")
+            val imageUrl = CloudinaryManager.uploadImage(
+                context = context,
+                imageUri = imageUri,
+                userId = userId
+            )
+
+            if (imageUrl != null) {
+                Log.d("MoneyBase", "Cloudinary upload successful, received URL: $imageUrl")
+
+                // Update profile picture URL in Firebase
+                val success = repo.updateProfilePicture(userId, imageUrl)
+                if (success) {
+                    Log.d("MoneyBase", "Profile picture updated successfully")
+                    snackbarHostState.showSnackbar("Profile picture updated successfully")
+                    onSuccess()
+                } else {
+                    Log.e("MoneyBase", "Failed to update profile picture")
+                    snackbarHostState.showSnackbar("Failed to update profile picture")
+                }
+            } else {
+                Log.e("MoneyBase", "Cloudinary upload failed, no URL returned")
+                snackbarHostState.showSnackbar("Failed to upload image")
+            }
+        } catch (e: Exception) {
+            Log.e("MoneyBase", "Error during image upload", e)
+            snackbarHostState.showSnackbar("Error: ${e.message}")
+        }
+    }
+}

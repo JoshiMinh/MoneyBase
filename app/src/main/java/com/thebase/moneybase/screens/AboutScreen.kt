@@ -109,6 +109,12 @@ fun AboutScreen(navController: NavController? = null) {
                 facebookUrl = "https://www.facebook.com/joshi.minh52/",
                 onFacebookClick = { uriHandler.openUri("https://www.facebook.com/joshi.minh52/") }
             )
+
+            TeamMemberCard(
+                name = "Nguyễn Văn Phụng",
+                facebookUrl = "https://www.facebook.com/ho.nguyen.ten.phung",
+                onFacebookClick = { uriHandler.openUri("https://www.facebook.com/ho.nguyen.ten.phung") }
+            )
             
             TeamMemberCard(
                 name = "Trần Đình Hoàng Long",
