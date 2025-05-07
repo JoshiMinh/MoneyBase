@@ -13,7 +13,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.InputStream
 
 class CloudinaryManager {
     companion object {
@@ -100,40 +99,6 @@ class CloudinaryManager {
         // ----------------------------
         // Upload from InputStream
         // ----------------------------
-        /**
-         * Upload an image from an InputStream (e.g., from the camera) to Cloudinary and return the secure URL.
-         */
-        suspend fun uploadImageFromStream(context: Context, inputStream: InputStream, userId: String): String? {
-            return withContext(Dispatchers.IO) {
-                if (!isInitialized) {
-                    init(context)
-                }
-
-                try {
-                    val bytes = inputStream.readBytes()
-
-                    val uploadResult = com.cloudinary.Cloudinary(
-                        mapOf(
-                            "cloud_name" to context.getString(R.string.cloudinary_cloud_name),
-                            "api_key" to context.getString(R.string.cloudinary_api_key),
-                            "api_secret" to context.getString(R.string.cloudinary_api_secret)
-                        )
-                    ).uploader().upload(
-                        bytes,
-                        mapOf(
-                            "folder" to "moneybase/profiles",
-                            "public_id" to "profile_$userId",
-                            "overwrite" to true
-                        )
-                    )
-
-                    uploadResult["secure_url"] as? String
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error uploading from stream", e)
-                    null
-                }
-            }
-        }
     }
 }
 

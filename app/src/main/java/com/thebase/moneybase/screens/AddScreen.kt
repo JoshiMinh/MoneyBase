@@ -31,11 +31,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
 import com.thebase.moneybase.database.*
-import com.thebase.moneybase.components.AddCategoryDialog
-import com.thebase.moneybase.components.AddWallet
-import com.thebase.moneybase.components.CategorySelector
-import com.thebase.moneybase.components.EditCategoryDialog
-import com.thebase.moneybase.components.WalletAgent
+import com.thebase.moneybase.utils.components.AddCategoryDialog
+import com.thebase.moneybase.utils.components.AddWallet
+import com.thebase.moneybase.utils.components.CategorySelector
+import com.thebase.moneybase.utils.components.EditCategoryDialog
+import com.thebase.moneybase.utils.components.WalletAgent
 import com.thebase.moneybase.ui.Icon.getIcon
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -217,7 +217,6 @@ fun AddScreen(
                     }
                 }
             },
-            userId = userId,
             showError = { msg -> scope.launch { snackbarHostState.showSnackbar(msg) } }
         )
     }
@@ -368,7 +367,7 @@ private fun CategoryField(selected: Category?, onClick: () -> Unit) {
                 contentDescription = null,
                 tint = try {
                     Color(it.color.toColorInt())
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     MaterialTheme.colorScheme.primary
                 }
             )
@@ -394,7 +393,7 @@ private fun WalletCarousel(
         items(wallets, key = { it.id }) { w ->
             val color = try {
                 Color(w.color.toColorInt())
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 MaterialTheme.colorScheme.error
             }
             Card(

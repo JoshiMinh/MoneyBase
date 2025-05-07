@@ -1,4 +1,4 @@
-package com.thebase.moneybase.components
+package com.thebase.moneybase.utils.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable

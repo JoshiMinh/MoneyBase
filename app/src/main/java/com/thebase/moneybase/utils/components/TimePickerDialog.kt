@@ -1,4 +1,4 @@
-package com.thebase.moneybase.components
+package com.thebase.moneybase.utils.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,7 +26,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -47,8 +47,8 @@ fun TimePickerDialog(
     onDismiss: () -> Unit,
     onConfirm: (Int, Int) -> Unit
 ) {
-    var hour by remember { mutableStateOf(initialHour) }
-    var minute by remember { mutableStateOf(initialMinute) }
+    var hour by remember { mutableIntStateOf(initialHour) }
+    var minute by remember { mutableIntStateOf(initialMinute) }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(

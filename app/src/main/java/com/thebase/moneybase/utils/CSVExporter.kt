@@ -19,8 +19,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.math.abs
 
-class CsvExporter {
+class CSVExporter {
     companion object {
         private const val TAG = "CsvExporter"
         
@@ -62,7 +63,7 @@ class CsvExporter {
                         val type = if (transaction.isIncome) "Thu" else "Chi"
                         
                         // Format số tiền
-                        val amount = "%.2f".format(Locale.getDefault(), Math.abs(transaction.amount))
+                        val amount = "%.2f".format(Locale.getDefault(), abs(transaction.amount))
                         
                         // Thêm dòng dữ liệu
                         append("\"${transaction.id}\",")

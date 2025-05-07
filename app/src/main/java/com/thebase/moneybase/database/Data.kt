@@ -15,6 +15,7 @@ data class User(
     val photoUrl: String? = null
 )
 
+@Suppress("unused")
 @Keep
 data class Currency(
     val code: String = "USD",

@@ -1,4 +1,4 @@
-package com.thebase.moneybase.components
+package com.thebase.moneybase.utils.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -67,7 +67,6 @@ fun AddCategoryDialog(
 @Composable
 fun EditCategoryDialog(
     category: Category,
-    userId: String,
     onCategoryUpdated: suspend (Category) -> Unit,
     onCategoryDeleted: suspend (Category) -> Unit,
     onDismiss: () -> Unit,

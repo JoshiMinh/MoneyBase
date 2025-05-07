@@ -10,7 +10,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.thebase.moneybase.ui.ColorScheme
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
     object Add : Screen("add", "Add", Icons.Filled.Add)
@@ -31,7 +30,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
 }
 
 @Composable
-fun Navigation(navController: NavHostController, colorScheme: ColorScheme) {
+fun Navigation(navController: NavHostController) {
     val backStackEntry = navController.currentBackStackEntryAsState().value
     val currentRoute   = backStackEntry?.destination?.route
     val currentScreen  = Screen.fromRoute(currentRoute)

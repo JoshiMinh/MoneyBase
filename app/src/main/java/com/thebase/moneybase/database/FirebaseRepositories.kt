@@ -7,6 +7,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import androidx.core.net.toUri
 
 @Suppress("unused")
 class FirebaseRepositories {
@@ -98,6 +99,7 @@ class FirebaseRepositories {
                 ).await()
 
                 if (currentUser.email != email) {
+                    @Suppress("DEPRECATION")
                     currentUser.updateEmail(email).await()
                 }
             }
@@ -118,7 +120,7 @@ class FirebaseRepositories {
             if (currentUser != null && currentUser.uid == userId) {
                 currentUser.updateProfile(
                     com.google.firebase.auth.UserProfileChangeRequest.Builder()
-                        .setPhotoUri(android.net.Uri.parse(profilePictureUrl))
+                        .setPhotoUri(profilePictureUrl.toUri())
                         .build()
                 ).await()
             }

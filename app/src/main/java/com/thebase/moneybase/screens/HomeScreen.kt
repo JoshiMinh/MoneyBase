@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package com.thebase.moneybase.screens
 
 import androidx.compose.foundation.background
@@ -14,7 +16,7 @@ import com.thebase.moneybase.database.Transaction
 import com.thebase.moneybase.database.Category
 import com.thebase.moneybase.database.Wallet
 import com.thebase.moneybase.ui.Icon.getIcon
-import com.thebase.moneybase.components.EditTransaction
+import com.thebase.moneybase.utils.components.EditTransaction
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.abs
@@ -26,6 +28,7 @@ fun HomeScreen(userId: String) {
     // Display them using TransactionItem
 }
 
+@Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
 @Composable
 fun TransactionItem(
     transaction: Transaction,
@@ -89,7 +92,7 @@ fun TransactionItem(
                     SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(
                         SimpleDateFormat("MM/dd/yyyy", Locale.getDefault()).parse(transaction.date)
                     )
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     "Invalid Date"
                 }
                 Text(

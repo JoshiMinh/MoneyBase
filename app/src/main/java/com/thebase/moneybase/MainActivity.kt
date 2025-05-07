@@ -56,7 +56,7 @@ class MainActivity : ComponentActivity() {
 
             MoneyBaseTheme(colorScheme = colorScheme, darkMode = darkMode) {
                 Scaffold(
-                    bottomBar = { if (userId != null) Navigation(navController, colorScheme) }
+                    bottomBar = { if (userId != null) Navigation(navController) }
                 ) { padding ->
                     AppNavigation(
                         navController = navController,

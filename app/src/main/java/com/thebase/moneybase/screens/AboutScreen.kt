@@ -2,13 +2,33 @@ package com.thebase.moneybase.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,7 +46,7 @@ import androidx.navigation.NavController
 fun AboutScreen(navController: NavController? = null) {
     val scrollState = rememberScrollState()
     val uriHandler = LocalUriHandler.current
-    val context = LocalContext.current
+    LocalContext.current
 
     Scaffold(
         topBar = {
@@ -36,7 +56,7 @@ fun AboutScreen(navController: NavController? = null) {
                     if (navController != null) {
                         IconButton(onClick = { navController.popBackStack() }) {
                             Icon(
-                                imageVector = Icons.Default.ArrowBack,
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back"
                             )
                         }
@@ -106,25 +126,21 @@ fun AboutScreen(navController: NavController? = null) {
             
             TeamMemberCard(
                 name = "Nguyễn Bình Minh",
-                facebookUrl = "https://www.facebook.com/joshi.minh52/",
                 onFacebookClick = { uriHandler.openUri("https://www.facebook.com/joshi.minh52/") }
             )
 
             TeamMemberCard(
                 name = "Nguyễn Văn Phụng",
-                facebookUrl = "https://www.facebook.com/ho.nguyen.ten.phung",
                 onFacebookClick = { uriHandler.openUri("https://www.facebook.com/ho.nguyen.ten.phung") }
             )
             
             TeamMemberCard(
                 name = "Trần Đình Hoàng Long",
-                facebookUrl = "https://www.facebook.com/hhicYL.XTJ",
                 onFacebookClick = { uriHandler.openUri("https://www.facebook.com/hhicYL.XTJ") }
             )
             
             TeamMemberCard(
                 name = "Nguyễn Thanh Tùng",
-                facebookUrl = "https://www.facebook.com/gnuthnaht17/",
                 onFacebookClick = { uriHandler.openUri("https://www.facebook.com/gnuthnaht17/") }
             )
             
@@ -263,7 +279,6 @@ fun FacebookContactCard(
 @Composable
 fun TeamMemberCard(
     name: String,
-    facebookUrl: String,
     onFacebookClick: () -> Unit
 ) {
     Card(

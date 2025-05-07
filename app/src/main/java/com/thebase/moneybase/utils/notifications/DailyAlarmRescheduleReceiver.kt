@@ -1,4 +1,4 @@
-package com.thebase.moneybase.notifications
+package com.thebase.moneybase.utils.notifications
 
 import android.content.BroadcastReceiver
 import android.content.Context

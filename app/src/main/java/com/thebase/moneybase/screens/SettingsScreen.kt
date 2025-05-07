@@ -7,47 +7,96 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.thebase.moneybase.Routes
+import com.thebase.moneybase.utils.components.ChangePasswordDialog
+import com.thebase.moneybase.utils.components.EditProfileDialog
+import com.thebase.moneybase.utils.components.TimePickerDialog
 import com.thebase.moneybase.database.FirebaseRepositories
 import com.thebase.moneybase.database.User
 import com.thebase.moneybase.database.uploadImageToCloudinary
-import com.thebase.moneybase.components.ChangePasswordDialog
-import com.thebase.moneybase.components.EditProfileDialog
-import com.thebase.moneybase.components.TimePickerDialog
-import com.thebase.moneybase.notifications.NotificationHelper
 import com.thebase.moneybase.ui.ColorScheme
-import com.thebase.moneybase.ui.*
-import com.thebase.moneybase.utils.CsvExporter
+import com.thebase.moneybase.ui.getIconColorForScheme
+import com.thebase.moneybase.utils.CSVExporter
+import com.thebase.moneybase.utils.notifications.NotificationHelper
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Locale
 
+@Suppress("DEPRECATION")
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -74,8 +123,8 @@ fun SettingsScreen(
     
     // Notification settings state
     var notificationEnabled by remember { mutableStateOf(notificationHelper.isNotificationEnabled()) }
-    var notificationHour by remember { mutableStateOf(notificationHelper.getNotificationHour()) }
-    var notificationMinute by remember { mutableStateOf(notificationHelper.getNotificationMinute()) }
+    var notificationHour by remember { mutableIntStateOf(notificationHelper.getNotificationHour()) }
+    var notificationMinute by remember { mutableIntStateOf(notificationHelper.getNotificationMinute()) }
     var showTimePickerDialog by remember { mutableStateOf(false) }
     
     // Dialog states
@@ -99,7 +148,7 @@ fun SettingsScreen(
     }
     
     // Theo dõi khi ứng dụng trở về từ cài đặt khác
-    val lifecycleOwner = LocalLifecycleOwner.current
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
@@ -110,11 +159,7 @@ fun SettingsScreen(
                 
                 // Làm mới trạng thái quyền
                 // Chúng ta không thể làm mới permissions trực tiếp vì nó là remember state
-                if (forceRefreshPermissions) {
-                    forceRefreshPermissions = false
-                } else {
-                    forceRefreshPermissions = true
-                }
+                forceRefreshPermissions = !forceRefreshPermissions
             }
         }
         
@@ -478,7 +523,7 @@ fun SettingsScreen(
                         }
 
                         Spacer(Modifier.height(8.dp))
-                        
+
                         Divider(modifier = Modifier.padding(vertical = 16.dp))
 
                         // Account Settings Section
@@ -531,7 +576,7 @@ fun SettingsScreen(
                                         
                                         try {
                                             // Xuất ra CSV
-                                            val fileUri = CsvExporter.exportTransactions(
+                                            val fileUri = CSVExporter.exportTransactions(
                                                 context, 
                                                 transactions, 
                                                 categories, 
@@ -609,56 +654,11 @@ fun SettingsScreen(
                                 onCheckedChange = { isEnabled ->
                                     if (isEnabled) {
                                         // Kiểm tra quyền khi bật thông báo
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                            val hasPermission = context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == 
-                                                android.content.pm.PackageManager.PERMISSION_GRANTED
-                                            
-                                            if (hasPermission) {
-                                                // Đã có quyền, bật thông báo
-                                                val success = notificationHelper.setNotificationEnabled(true)
-                                                if (success) {
-                                                    notificationEnabled = true
-                                                } else {
-                                                    // Thông báo bị tắt ở cấp hệ thống
-                                                    coroutineScope.launch {
-                                                        val result = snackbarHostState.showSnackbar(
-                                                            message = "Cannot enable notifications because they are disabled at system level",
-                                                            actionLabel = "Settings",
-                                                            duration = androidx.compose.material3.SnackbarDuration.Long
-                                                        )
-                                                        
-                                                        if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
-                                                            notificationHelper.openNotificationSettings()
-                                                        }
-                                                    }
-                                                }
-                                            } else {
-                                                // Kiểm tra xem có nên hiển thị giải thích vì sao cần quyền không
-                                                val shouldShowRationale = androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(
-                                                    context as androidx.activity.ComponentActivity,
-                                                    Manifest.permission.POST_NOTIFICATIONS
-                                                )
-                                                
-                                                if (shouldShowRationale) {
-                                                    // Người dùng đã từ chối lần trước, hiển thị giải thích
-                                                    coroutineScope.launch {
-                                                        val result = snackbarHostState.showSnackbar(
-                                                            message = "Notifications need to be enabled",
-                                                            actionLabel = "Enable",
-                                                            duration = androidx.compose.material3.SnackbarDuration.Long
-                                                        )
-                                                        if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
-                                                            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                                        }
-                                                    }
-                                                } else {
-                                                    // Đây là lần đầu tiên yêu cầu hoặc người dùng đã từ chối vĩnh viễn
-                                                    // Thử yêu cầu quyền trực tiếp trước
-                                                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                                }
-                                            }
-                                        } else {
-                                            // Android < 13 không cần quyền riêng cho thông báo, nhưng vẫn cần kiểm tra cấp hệ thống
+                                        val hasPermission = context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
+                                            android.content.pm.PackageManager.PERMISSION_GRANTED
+
+                                        if (hasPermission) {
+                                            // Đã có quyền, bật thông báo
                                             val success = notificationHelper.setNotificationEnabled(true)
                                             if (success) {
                                                 notificationEnabled = true
@@ -670,11 +670,35 @@ fun SettingsScreen(
                                                         actionLabel = "Settings",
                                                         duration = androidx.compose.material3.SnackbarDuration.Long
                                                     )
-                                                    
+
                                                     if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
                                                         notificationHelper.openNotificationSettings()
                                                     }
                                                 }
+                                            }
+                                        } else {
+                                            // Kiểm tra xem có nên hiển thị giải thích vì sao cần quyền không
+                                            val shouldShowRationale = androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(
+                                                context as androidx.activity.ComponentActivity,
+                                                Manifest.permission.POST_NOTIFICATIONS
+                                            )
+
+                                            if (shouldShowRationale) {
+                                                // Người dùng đã từ chối lần trước, hiển thị giải thích
+                                                coroutineScope.launch {
+                                                    val result = snackbarHostState.showSnackbar(
+                                                        message = "Notifications need to be enabled",
+                                                        actionLabel = "Enable",
+                                                        duration = androidx.compose.material3.SnackbarDuration.Long
+                                                    )
+                                                    if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
+                                                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                                    }
+                                                }
+                                            } else {
+                                                // Đây là lần đầu tiên yêu cầu hoặc người dùng đã từ chối vĩnh viễn
+                                                // Thử yêu cầu quyền trực tiếp trước
+                                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                                             }
                                         }
                                     } else {
@@ -768,7 +792,7 @@ fun SettingsScreen(
                                 .horizontalScroll(rememberScrollState())
                                 .padding(vertical = 8.dp)
                         ) {
-                            ColorScheme.values().forEach { scheme ->
+                            ColorScheme.entries.forEach { scheme ->
                                 val isSelected = scheme == selectedScheme
                                 val baseColor = getIconColorForScheme(scheme)
                                 val displayColor = if (isSelected) baseColor.copy(alpha = 0.5f) else baseColor
