@@ -24,6 +24,9 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
             Add.route      -> Add
             Home.route     -> Home
             Settings.route -> Settings
+            Routes.REPORT  -> Home
+            Routes.HISTORY -> Home
+            Routes.ALL_TRANSACTION -> Home
             else           -> Add
         }
     }

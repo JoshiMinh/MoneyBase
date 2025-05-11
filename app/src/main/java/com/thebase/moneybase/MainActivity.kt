@@ -24,6 +24,9 @@ object Routes {
     const val ADD = "add"
     const val SETTINGS = "settings"
     const val ABOUT = "about"
+    const val REPORT = "report"
+    const val HISTORY = "history"
+    const val ALL_TRANSACTION = "all_transaction"
 }
 
 class MainActivity : ComponentActivity() {
@@ -150,7 +153,7 @@ private fun NavGraphBuilder.appGraph(
         AddScreen(userId, onBack = { navController.popBackStack() })
     }
     composable(Routes.HOME) {
-        HomeScreen(userId)
+        HomeScreen(userId, navController)
     }
     composable(Routes.SETTINGS) {
         SettingsScreen(
@@ -166,4 +169,18 @@ private fun NavGraphBuilder.appGraph(
     composable(Routes.ABOUT) {
         AboutScreen(navController)
     }
+
+    composable(Routes.REPORT) {
+        ReportScreen(userId, navController)
+    }
+
+    composable(Routes.HISTORY) {
+        HistoryScreen(userId, navController)
+    }
+
+    composable(Routes.ALL_TRANSACTION) {
+        AllTransactionScreen(userId, navController)
+    }
+
+
 }

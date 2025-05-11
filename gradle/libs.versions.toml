@@ -33,6 +33,7 @@ roomVersion = "2.7.0"
 rxjava = "3.1.6"
 timber = "5.0.1"
 workRuntimeKtx = "2.10.0"
+charts = "2.0.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -81,6 +82,7 @@ play-services-auth = { module = "com.google.android.gms:play-services-auth", ver
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "converterGson" }
 rxjava = { module = "io.reactivex.rxjava3:rxjava", version.ref = "rxjava" }
 timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
+charts-android = { module = "io.github.dautovicharis:charts-android", version.ref = "charts" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

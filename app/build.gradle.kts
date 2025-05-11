@@ -104,6 +104,9 @@ dependencies {
     implementation(libs.cloudinary.android)
     implementation(libs.cloudinary.core)
 
+    // Charts for visualization
+    implementation(libs.charts.android)
+
     // Testing libraries
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
