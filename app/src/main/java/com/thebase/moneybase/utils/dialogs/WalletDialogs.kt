@@ -1,4 +1,4 @@
-package com.thebase.moneybase.utils.components
+package com.thebase.moneybase.utils.dialogs
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable

@@ -80,9 +80,9 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.thebase.moneybase.Routes
-import com.thebase.moneybase.utils.components.ChangePasswordDialog
-import com.thebase.moneybase.utils.components.EditProfileDialog
-import com.thebase.moneybase.utils.components.TimePickerDialog
+import com.thebase.moneybase.utils.dialogs.ChangePasswordDialog
+import com.thebase.moneybase.utils.dialogs.EditProfileDialog
+import com.thebase.moneybase.utils.dialogs.TimePickerDialog
 import com.thebase.moneybase.database.FirebaseRepositories
 import com.thebase.moneybase.database.User
 import com.thebase.moneybase.database.uploadImageToCloudinary

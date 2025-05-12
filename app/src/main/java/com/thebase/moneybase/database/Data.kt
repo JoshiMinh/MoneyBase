@@ -38,11 +38,11 @@ data class Wallet(
     @DocumentId val id: String = "",
     val userId: String = "",
     val name: String = "",
-    val type: WalletType = WalletType.PHYSICAL,
-    val currencyCode: String = "USD",
     val balance: Double = 0.0,
     val iconName: String = "account_balance_wallet",
-    val color: String = ""
+    val color: String = "",
+    val type: WalletType = WalletType.PHYSICAL,
+    val currencyCode: String = "USD"
 ) {
     enum class WalletType { PHYSICAL, BANK_ACCOUNT, CRYPTO, INVESTMENT, OTHER }
 }
@@ -50,13 +50,13 @@ data class Wallet(
 @Keep
 data class Transaction(
     @DocumentId val id: String = "",
-    val walletId: String = "",
     val userId: String = "",
     val description: String = "",
     val amount: Double = 0.0,
     val currencyCode: String = "USD",
     val isIncome: Boolean = false,
     val categoryId: String = "",
+    val walletId: String = "",
     val date: String = "",
     val createdAt: String = ""
 )

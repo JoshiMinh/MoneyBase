@@ -1,6 +1,5 @@
-package com.thebase.moneybase.screens
+package com.thebase.moneybase.screens.home
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -161,4 +160,3 @@ fun AllTransactionScreen(
         }
     }
 }
-

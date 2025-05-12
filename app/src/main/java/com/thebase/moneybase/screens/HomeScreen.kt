@@ -3,7 +3,6 @@
 package com.thebase.moneybase.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -21,7 +20,6 @@ import com.thebase.moneybase.database.Category
 import com.thebase.moneybase.database.FirebaseRepositories
 import com.thebase.moneybase.database.Transaction
 import com.thebase.moneybase.database.Wallet
-import com.thebase.moneybase.ui.Icon.getIcon
 import io.github.dautovicharis.charts.PieChart
 import io.github.dautovicharis.charts.model.toChartDataSet
 import io.github.dautovicharis.charts.style.PieChartDefaults
@@ -29,6 +27,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.abs
 import androidx.navigation.NavController
+import com.thebase.moneybase.screens.home.TransactionItem
 
 @Composable
 fun HomeScreen(userId: String, navController: NavController) {

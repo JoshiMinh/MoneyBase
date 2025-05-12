@@ -13,6 +13,9 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
 import com.thebase.moneybase.screens.*
+import com.thebase.moneybase.screens.home.AllTransactionScreen
+import com.thebase.moneybase.screens.home.HistoryScreen
+import com.thebase.moneybase.screens.home.ReportScreen
 import com.thebase.moneybase.ui.ColorScheme
 import com.thebase.moneybase.ui.MoneyBaseTheme
 

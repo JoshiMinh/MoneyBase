@@ -1,4 +1,4 @@
-package com.thebase.moneybase.screens
+package com.thebase.moneybase.screens.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,6 +15,7 @@ import com.thebase.moneybase.database.Category
 import com.thebase.moneybase.database.Transaction
 import com.thebase.moneybase.database.Wallet
 import com.thebase.moneybase.ui.Icon.getIcon
+import com.thebase.moneybase.utils.dialogs.EditTransaction
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.abs

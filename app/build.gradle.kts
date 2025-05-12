@@ -54,36 +54,34 @@ android {
 }
 
 dependencies {
-    // Core AndroidX libraries
+    // Core AndroidX
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
-
-    // WorkManager for background tasks
     implementation(libs.androidx.work.runtime.ktx)
 
-    // Jetpack Compose libraries
+    // Jetpack Compose
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
 
-    // Material Design 3 and icons
+    // Material Design
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons.extended)
 
-    // Image loading with Coil
+    // Image Loading
     implementation(libs.coil.compose)
 
-    // Navigation component for Compose
+    // Navigation
     implementation(libs.androidx.navigation.compose)
 
-    // Kotlin Coroutines for async programming
+    // Kotlin Coroutines
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.play.services)
 
-    // Firebase SDKs
+    // Firebase
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.firestore.ktx)
@@ -91,32 +89,34 @@ dependencies {
     implementation(libs.google.firebase.auth)
     implementation(libs.play.services.auth)
 
-    // Authentication and credentials
+    // AndroidX Credentials & Google Identity
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
 
-    // Networking with Retrofit and Gson
+    // Networking (Retrofit + Gson)
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
 
-    // Cloudinary for image storage
+    // Cloudinary
     implementation(libs.cloudinary.android)
     implementation(libs.cloudinary.core)
 
-    // Charts for visualization
+    // Charts & Graphs
     implementation(libs.charts.android)
 
-    // Testing libraries
+    // Unit Testing
     testImplementation(libs.junit)
+
+    // Android Instrumentation Testing
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 
-    // Compose testing libraries
+    // Compose UI Testing
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
 
-    // Debugging tools
+    // Debug Tools
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 }

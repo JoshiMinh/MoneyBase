@@ -1,4 +1,4 @@
-package com.thebase.moneybase.utils.components
+package com.thebase.moneybase.utils.dialogs
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
