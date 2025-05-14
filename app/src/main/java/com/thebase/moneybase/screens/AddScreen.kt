@@ -40,7 +40,6 @@ import com.thebase.moneybase.ui.Icon.getIcon
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
-
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun AddScreen(
@@ -86,7 +85,6 @@ fun AddScreen(
         }
     }
 
-    // Show Date Picker only once using a side-effect
     LaunchedEffect(showDatePicker) {
         if (showDatePicker) {
             DatePickerDialog(
@@ -235,6 +233,7 @@ fun AddScreen(
     editingWallet?.let { w ->
         WalletAgent(
             wallet = w,
+            allWallets = wallets, // <- FIXED: required parameter passed here
             onEditDone = { updated ->
                 scope.launch {
                     repo.updateWallet(userId, updated)
@@ -245,6 +244,17 @@ fun AddScreen(
                 scope.launch {
                     repo.deleteWallet(userId, w.id)
                     editingWallet = null
+                }
+            },
+            onTransfer = { wallet, amount, targetWalletId ->
+                scope.launch {
+                    val success = repo.transferBalance(userId, wallet.id, amount, targetWalletId)
+                    if (!success) {
+                        snackbarHostState.showSnackbar("Transfer failed.")
+                    }
+                    else{
+                        snackbarHostState.showSnackbar("Transfer success.")
+                    }
                 }
             },
             onDismiss = { editingWallet = null }
@@ -372,7 +382,7 @@ private fun CategoryField(selected: Category?, onClick: () -> Unit) {
                 }
             )
             Spacer(Modifier.width(8.dp))
-            Text(it.name, style = MaterialTheme.typography.bodyLarge)
+            Text(it.name, color = MaterialTheme.colorScheme.onBackground)
         } ?: Text("Select Category", style = MaterialTheme.typography.bodyLarge)
     }
     Spacer(Modifier.height(24.dp))

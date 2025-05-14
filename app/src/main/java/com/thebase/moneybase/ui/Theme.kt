@@ -5,18 +5,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 private val LightTheme = lightColorScheme(
-    primary = Color(0xFF6200EE),
-    secondary = Color(0xFF03DAC6),
-    background = Color(0xFFF5F5F5),
     onPrimary = Color.White,
     onSecondary = Color.White,
     onBackground = Color.Black
 )
 
 private val DarkTheme = darkColorScheme(
-    primary = Color(0xFF6200EE),
-    secondary = Color(0xFF03DAC6),
-    background = Color(0xFF111111),
     onPrimary = Color.Black,
     onSecondary = Color.Black,
     onBackground = Color.White

@@ -15,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
-import androidx.navigation.NavController
 import com.thebase.moneybase.database.*
 import io.github.dautovicharis.charts.PieChart
 import io.github.dautovicharis.charts.model.toChartDataSet
@@ -28,7 +27,7 @@ enum class ReportPeriod { MONTH, QUARTER, YEAR }
 enum class ReportType { EXPENSE, INCOME }
 
 @Composable
-fun ReportScreen(userId: String, navController: NavController? = null) {
+fun ReportScreen(userId: String) {
     val repo = remember { FirebaseRepositories() }
     var selectedPeriod by remember { mutableStateOf(ReportPeriod.MONTH) }
     var selectedDate by remember { mutableStateOf(Date()) }
@@ -37,7 +36,7 @@ fun ReportScreen(userId: String, navController: NavController? = null) {
 
     Column(Modifier.fillMaxSize().padding(8.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            ReportPeriod.values().forEach { period ->
+            ReportPeriod.entries.forEach { period ->
                 FilterChip(
                     selected = selectedPeriod == period,
                     onClick = { selectedPeriod = period },
@@ -223,7 +222,7 @@ fun ReportPieChartWidget(
 
             val dataSet = amounts.toChartDataSet(
                 title = "${selectedPeriod.name.lowercase().replaceFirstChar { it.uppercase() }} " +
-                        "${selectedType.name.lowercase().replaceFirstChar { it.uppercase() }}",
+                        selectedType.name.lowercase().replaceFirstChar { it.uppercase() },
                 postfix = "$",
                 labels = names
             )

@@ -2,6 +2,7 @@
 
 package com.thebase.moneybase.screens
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -77,7 +78,11 @@ fun AddCustomPieChart(
         val filtered = expenses.filter {
             try {
                 val date = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault()).parse(it.date)
-                val cal = Calendar.getInstance().apply { time = date }
+                val cal = Calendar.getInstance().apply {
+                    if (date != null) {
+                        time = date
+                    }
+                }
                 cal.get(Calendar.MONTH) == currentMonth && cal.get(Calendar.YEAR) == currentYear
             } catch (e: Exception) {
                 false
@@ -121,7 +126,7 @@ fun AddCustomPieChart(
             .fillMaxWidth()
             .fillMaxHeight(0.5f)
             .padding(8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1C1C1C))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
     ) {
         Column(
             modifier = Modifier
@@ -132,7 +137,6 @@ fun AddCustomPieChart(
             Text(
                 text = "Expense Report",
                 style = MaterialTheme.typography.bodyLarge,
-                color = Color.White,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
 
@@ -146,7 +150,6 @@ fun AddCustomPieChart(
                     Text(
                         text = "At least 2 categories are required to display the chart.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White
                     )
                 }
                 return@Column
@@ -271,7 +274,7 @@ fun RecentTransactionWidget(
     categories: List<Category>,
     wallets: List<Wallet>,
     onClick: () -> Unit = {},
-    modifier: Modifier = Modifier
+    @SuppressLint("ModifierParameter") modifier: Modifier = Modifier
 ) {
     val categoryMap = remember(categories) { categories.associateBy { it.id } }
     val walletMap = remember(wallets) { wallets.associateBy { it.id } }
@@ -290,7 +293,7 @@ fun RecentTransactionWidget(
         modifier = modifier
             .padding(horizontal = 8.dp)
             .padding(bottom = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1C1C1C))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
     ) {
         Column(
             modifier = Modifier
@@ -304,7 +307,6 @@ fun RecentTransactionWidget(
                 Text(
                     text = "Recent Transactions",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = Color.White,
                     modifier = Modifier.weight(1f)
                 )
 
@@ -317,7 +319,7 @@ fun RecentTransactionWidget(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = "View all transactions",
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.size(20.dp)
                     )
                 }

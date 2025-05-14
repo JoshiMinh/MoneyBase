@@ -4,7 +4,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,25 +51,23 @@ fun TransactionItem(
             .fillMaxWidth()
             .clickable { showDialog = true }
             .padding(vertical = 4.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val bgColor = category?.color?.toColorInt()?.let { Color(it) }
+                ?: MaterialTheme.colorScheme.onPrimary
+
             Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .background(
-                        color = category
-                            ?.let { Color(it.color.toColorInt()) }
-                            ?: MaterialTheme.colorScheme.primary,
-                        shape = CircleShape
-                    ),
+                    .background(bgColor, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = getIcon(category?.iconName ?: ""),
+                    imageVector = getIcon(category?.iconName.orEmpty()),
                     contentDescription = null,
                     tint = Color.White
                 )
@@ -75,42 +77,41 @@ fun TransactionItem(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    transaction.description,
+                    text = transaction.description,
                     style = MaterialTheme.typography.bodyMedium
                 )
 
                 Text(
-                    listOfNotNull(category?.name, wallet?.name)
-                        .joinToString(" • "),
+                    text = listOfNotNull(category?.name, wallet?.name).joinToString(" • "),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
 
-                val dateText = try {
+                val dateText = runCatching {
                     SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(
-                        SimpleDateFormat("MM/dd/yyyy", Locale.getDefault()).parse(transaction.date)
+                        SimpleDateFormat("MM/dd/yyyy", Locale.getDefault()).parse(transaction.date)!!
                     )
-                } catch (_: Exception) {
-                    "Invalid Date"
-                }
+                }.getOrElse { "Invalid Date" }
+
                 Text(
-                    dateText,
+                    text = dateText,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                 )
             }
 
+            val amount = abs(transaction.amount)
             val sign = if (transaction.amount < 0) "-" else "+"
-            val formatted = "%.2f".format(abs(transaction.amount))
-            val color = if (transaction.amount < 0)
+            val formattedAmount = String.format(Locale.getDefault(), "%.2f", amount)
+            val amountColor = if (transaction.amount < 0)
                 MaterialTheme.colorScheme.error
             else
                 MaterialTheme.colorScheme.primary
 
             Text(
-                text = "$sign${transaction.currencyCode} $formatted",
-                color = color,
-                style = MaterialTheme.typography.bodyLarge
+                text = "$sign${transaction.currencyCode} $formattedAmount",
+                style = MaterialTheme.typography.bodyLarge,
+                color = amountColor
             )
         }
     }

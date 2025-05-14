@@ -173,14 +173,35 @@
             awaitClose { listener.remove() }
         }
 
-        suspend fun addTransaction(userId: String, transaction: Transaction) {
-            try {
-                val doc = db.collection("users").document(userId).collection("transactions").document()
-                val txWithId = transaction.copy(id = doc.id)
-                doc.set(txWithId).await()
+
+        suspend fun addTransaction(userId: String, transaction: Transaction): Boolean {
+            return try {
+                val userRef = db.collection("users").document(userId)
+                val txsRef = userRef.collection("transactions")
+                val walletsRef = userRef.collection("wallets")
+
+                // atomic write: add transaction + update wallet balance
+                db.runTransaction { ft ->
+                    // 1) update wallet balance
+                    val walletRef = walletsRef.document(transaction.walletId)
+                    val wallet = ft.get(walletRef).toObject(Wallet::class.java)
+                        ?: throw IllegalStateException("Wallet not found")
+                    val newBalance = wallet.balance + transaction.amount
+                    ft.update(walletRef, "balance", newBalance)
+
+                    // 2) write transaction doc
+                    val newDoc = txsRef.document()
+                    val txWithId = transaction.copy(id = newDoc.id)
+                    ft.set(newDoc, txWithId)
+                }.await()
+
+                true
             } catch (e: Exception) {
+                android.util.Log.e("MoneyBase", "addTransaction failed", e)
+                false
             }
         }
+
 
         suspend fun updateTransaction(userId: String, transaction: Transaction) {
             try {
@@ -258,7 +279,44 @@
         // ----------------------------
         // Wallet Management Functions
         // ----------------------------
-          fun getWalletsFlow(userId: String): Flow<List<Wallet>> = callbackFlow {
+
+        suspend fun transferBalance(
+            userId: String,
+            sourceWalletId: String,
+            amount: Double,
+            targetWalletId: String
+        ): Boolean {
+            return try {
+                val userRef = db.collection("users").document(userId)
+                val srcRef = userRef.collection("wallets").document(sourceWalletId)
+                val tgtRef = userRef.collection("wallets").document(targetWalletId)
+
+                db.runTransaction { ft ->
+                    val src = ft.get(srcRef).toObject(Wallet::class.java)
+                        ?: throw IllegalStateException("Source wallet not found")
+                    val tgt = ft.get(tgtRef).toObject(Wallet::class.java)
+                        ?: throw IllegalStateException("Target wallet not found")
+
+                    if (src.balance < amount) {
+                        // abort the transaction
+                        throw com.google.firebase.firestore.FirebaseFirestoreException(
+                            "Insufficient funds",
+                            com.google.firebase.firestore.FirebaseFirestoreException.Code.ABORTED
+                        )
+                    }
+
+                    ft.update(srcRef, "balance", src.balance - amount)
+                    ft.update(tgtRef, "balance", tgt.balance + amount)
+                }.await()
+
+                true
+            } catch (e: Exception) {
+                android.util.Log.e("MoneyBase", "transferBalance failed", e)
+                false
+            }
+        }
+
+        fun getWalletsFlow(userId: String): Flow<List<Wallet>> = callbackFlow {
             val listener = db.collection("users").document(userId).collection("wallets")
                 .addSnapshotListener { snap, err ->
                     if (err != null) {

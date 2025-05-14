@@ -2,6 +2,7 @@ package com.thebase.moneybase.utils.dialogs
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -20,17 +21,20 @@ import com.thebase.moneybase.database.Wallet
 import com.thebase.moneybase.ui.ColorPalette
 import com.thebase.moneybase.ui.Icon
 
+
 @Composable
 fun WalletAgent(
     wallet: Wallet,
+    allWallets: List<Wallet>,
     onEditDone: (Wallet) -> Unit,
     onRemove: (Wallet) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onTransfer: (Wallet, Double, String) -> Unit
 ) {
     var confirmDelete by remember { mutableStateOf(false) }
     var editMode by remember { mutableStateOf(false) }
+    var transferMode by remember { mutableStateOf(false) }
 
-    // Delete confirmation
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
@@ -41,19 +45,14 @@ fun WalletAgent(
                     onRemove(wallet)
                     confirmDelete = false
                     onDismiss()
-                }) {
-                    Text("Delete")
-                }
+                }) { Text("Delete") }
             },
             dismissButton = {
-                TextButton(onClick = { confirmDelete = false }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { confirmDelete = false }) { Text("Cancel") }
             }
         )
     }
 
-    // Edit dialog
     if (editMode) {
         EditWallet(
             wallet = wallet,
@@ -70,8 +69,20 @@ fun WalletAgent(
         )
     }
 
-    // Main agent dialog
-    if (!confirmDelete && !editMode) {
+    if (transferMode) {
+        TransferBalance(
+            wallet = wallet,
+            allWallets = allWallets.filter { it.id != wallet.id },
+            onTransfer = { amount, targetWalletId ->
+                onTransfer(wallet, amount, targetWalletId)
+                transferMode = false
+                onDismiss()
+            },
+            onDismiss = { transferMode = false }
+        )
+    }
+
+    if (!confirmDelete && !editMode && !transferMode) {
         AlertDialog(
             onDismissRequest = onDismiss,
             title = { Text(wallet.name) },
@@ -80,32 +91,110 @@ fun WalletAgent(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Button(
-                        onClick = { editMode = true },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Edit")
-                    }
+                    Button(onClick = { editMode = true }, modifier = Modifier.fillMaxWidth()) { Text("Edit") }
+                    Button(onClick = { transferMode = true }, modifier = Modifier.fillMaxWidth()) { Text("Transfer") }
                     Button(
                         onClick = { confirmDelete = true },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error
-                        ),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                         modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Remove")
-                    }
+                    ) { Text("Remove") }
                 }
             },
             confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = onDismiss) {
-                    Text("Close")
-                }
-            }
+            dismissButton = { TextButton(onClick = onDismiss) { Text("Close") } }
         )
     }
 }
+@Composable
+fun TransferBalance(
+    wallet: Wallet,
+    allWallets: List<Wallet>,
+    onTransfer: (Double, String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var amount by remember { mutableStateOf("") }
+    var expanded by remember { mutableStateOf(false) }
+    var selectedWalletId by remember { mutableStateOf("") }
+
+    // Filter out the source wallet
+    val targetWallets = allWallets.filter { it.id != wallet.id }
+    // Get a display name for the currently selected wallet (or placeholder)
+    val selectedWalletName = targetWallets
+        .firstOrNull { it.id == selectedWalletId }
+        ?.name
+        ?: "Select target wallet"
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Transfer Balance") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Amount input
+                OutlinedTextField(
+                    value = amount,
+                    onValueChange = { if (it.isValidDecimal()) amount = it },
+                    label = { Text("Amount to Transfer") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // Dropdown trigger
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = selectedWalletName,
+                        onValueChange = { /* readOnly */ },
+                        readOnly = true,
+                        label = { Text("Target Wallet") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { expanded = true },
+                        trailingIcon = {
+                            Icon(
+                                Icons.Default.ArrowDropDown,
+                                contentDescription = null,
+                                modifier = Modifier.clickable { expanded = true }
+                            )
+                        }
+                    )
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        targetWallets.forEach { target ->
+                            DropdownMenuItem(
+                                text = { Text(target.name) },
+                                onClick = {
+                                    selectedWalletId = target.id
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onTransfer(amount.toDoubleOrNull() ?: 0.0, selectedWalletId)
+                },
+                enabled = amount.isNotBlank() && selectedWalletId.isNotBlank()
+            ) {
+                Text("Transfer")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+// helper
+private fun String.isValidDecimal() =
+    matches(Regex("^\\d*\\.?\\d*$")) && count { it == '.' } <= 1
+
 
 @Composable
 fun AddWallet(
@@ -365,6 +454,3 @@ private fun WalletTypeDropdown(
         }
     }
 }
-
-private fun String.isValidDecimal() =
-    matches(Regex("^\\d*\\.?\\d*$")) && count { it == '.' } <= 1

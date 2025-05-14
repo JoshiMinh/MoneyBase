@@ -174,7 +174,7 @@ private fun NavGraphBuilder.appGraph(
     }
 
     composable(Routes.REPORT) {
-        ReportScreen(userId, navController)
+        ReportScreen(userId)
     }
 
     composable(Routes.HISTORY) {

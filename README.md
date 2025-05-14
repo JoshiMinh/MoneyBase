@@ -1,1 +1,4 @@
-hello world and it works, finally properly working git, this is the turning point
+MoneyBase
+Personal Finance Management App
+
+Download on Google PLay
