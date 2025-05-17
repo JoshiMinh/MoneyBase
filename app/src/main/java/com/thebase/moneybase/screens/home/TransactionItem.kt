@@ -22,9 +22,10 @@ import com.thebase.moneybase.ui.Icon.getIcon
 import com.thebase.moneybase.utils.dialogs.EditTransaction
 import java.text.SimpleDateFormat
 import java.util.*
-import kotlin.math.abs
 
-@Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
+private val inputFormatter = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
+private val outputFormatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+
 @Composable
 fun TransactionItem(
     transaction: Transaction,
@@ -49,16 +50,21 @@ fun TransactionItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { showDialog = true }
-            .padding(vertical = 4.dp),
-        elevation = CardDefaults.cardElevation(4.dp)
+            .padding(vertical = 4.dp)
+            .clickable { showDialog = true },
+        elevation = CardDefaults.cardElevation(4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.background
+        )
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val bgColor = category?.color?.toColorInt()?.let { Color(it) }
-                ?: MaterialTheme.colorScheme.onPrimary
+            val bgColor = category?.color
+                ?.toColorInt()
+                ?.let { Color(it) }
+                ?: MaterialTheme.colorScheme.primary
 
             Box(
                 modifier = Modifier
@@ -77,39 +83,39 @@ fun TransactionItem(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = transaction.description,
+                    text = listOfNotNull(category?.name, wallet?.name).joinToString(" • "),
                     style = MaterialTheme.typography.bodyMedium
                 )
 
-                Text(
-                    text = listOfNotNull(category?.name, wallet?.name).joinToString(" • "),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
-
                 val dateText = runCatching {
-                    SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(
-                        SimpleDateFormat("MM/dd/yyyy", Locale.getDefault()).parse(transaction.date)!!
-                    )
-                }.getOrElse { "Invalid Date" }
+                    transaction.date
+                        .let(inputFormatter::parse)
+                        ?.let(outputFormatter::format)
+                }.getOrNull() ?: "Invalid Date"
 
                 Text(
                     text = dateText,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                 )
+
+                Text(
+                    text = transaction.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
             }
 
-            val amount = abs(transaction.amount)
+            val amount = kotlin.math.abs(transaction.amount)
             val sign = if (transaction.amount < 0) "-" else "+"
-            val formattedAmount = String.format(Locale.getDefault(), "%.2f", amount)
+            val formatted = String.format(Locale.getDefault(), "%.2f", amount)
             val amountColor = if (transaction.amount < 0)
-                MaterialTheme.colorScheme.error
+                Color(0xFFFF6666)
             else
-                MaterialTheme.colorScheme.primary
+                Color(0xFF66FF66)
 
             Text(
-                text = "$sign${transaction.currencyCode} $formattedAmount",
+                text = "$sign${transaction.currencyCode} $formatted",
                 style = MaterialTheme.typography.bodyLarge,
                 color = amountColor
             )

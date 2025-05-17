@@ -181,12 +181,6 @@ private fun MainAccountView(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Button(onClick = onShowLogin, modifier = Modifier.fillMaxWidth()) {
-            Text("Login")
-        }
-        Button(onClick = onShowRegister, modifier = Modifier.fillMaxWidth()) {
-            Text("Register")
-        }
         AuthProviderButton(
             icon = R.drawable.google_logo,
             text = "Continue with Google",
@@ -194,7 +188,12 @@ private fun MainAccountView(
             modifier = Modifier.fillMaxWidth(),
             enabled = !isLoading
         )
-        Spacer(modifier = Modifier.height(24.dp))
+        Button(onClick = onShowLogin, modifier = Modifier.fillMaxWidth()) {
+            Text("Login", color = MaterialTheme.colorScheme.onPrimary)
+        }
+        Button(onClick = onShowRegister, modifier = Modifier.fillMaxWidth()) {
+            Text("Register", color = MaterialTheme.colorScheme.onPrimary)
+        }
         Text(
             "MoneyBase App",
             style = MaterialTheme.typography.bodySmall,
@@ -216,7 +215,7 @@ private fun AuthProviderButton(
     FilledTonalButton(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
+        shape = MaterialTheme.shapes.large,
         enabled = enabled
     ) {
         Icon(

@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.thebase.moneybase.utils.dialogs
 
 import androidx.compose.foundation.background
@@ -42,9 +44,8 @@ fun EditTransaction(
     var description by remember { mutableStateOf(transaction.description) }
     var selectedCategory by remember { mutableStateOf<Category?>(null) }
     var selectedWallet by remember { mutableStateOf<Wallet?>(null) }
-    var isIncome by remember { mutableStateOf(transaction.isIncome ?: false) }
+    var isIncome by remember(transaction.id) { mutableStateOf(transaction.isIncome) }
 
-    // Date state
     val dateFormatter = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
     var selectedDate by remember {
         mutableStateOf(
@@ -52,12 +53,10 @@ fun EditTransaction(
         )
     }
 
-    // Dropdown states
     var categoryExpanded by remember { mutableStateOf(false) }
     var walletExpanded by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
 
-    // Error states
     var amountError by remember { mutableStateOf<String?>(null) }
     var descriptionError by remember { mutableStateOf<String?>(null) }
     var categoryError by remember { mutableStateOf<String?>(null) }
@@ -69,8 +68,7 @@ fun EditTransaction(
             wallets = repo.getAllWallets(transaction.userId)
             selectedCategory = categories.find { it.id == transaction.categoryId }
             selectedWallet = wallets.find { it.id == transaction.walletId }
-        } catch (e: Exception) {
-            println("Error loading data: ${e.message}")
+        } catch (_: Exception) {
         } finally {
             isLoading = false
         }
@@ -78,12 +76,16 @@ fun EditTransaction(
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
-            Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
-            Column(Modifier.fillMaxWidth().padding(16.dp)) {
-                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text("Edit Transaction", style = MaterialTheme.typography.titleLarge)
                     IconButton(onClick = onDismiss) {
                         Icon(Icons.Default.Close, contentDescription = "Close")
@@ -97,23 +99,41 @@ fun EditTransaction(
                         CircularProgressIndicator()
                     }
                 } else {
-                    LazyColumn(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
                         item {
-                            Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
-                                Row {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(Modifier.height(48.dp)) {
                                     listOf(false to "Expense", true to "Income").forEach { (type, label) ->
+                                        val selected = isIncome == type
                                         Box(
-                                            Modifier.weight(1f)
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxHeight()
                                                 .background(
-                                                    if (isIncome == type) MaterialTheme.colorScheme.primary else Color.Transparent,
-                                                    if (type) RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp)
-                                                    else RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
+                                                    if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                                    shape = if (type) RoundedCornerShape(
+                                                        topEnd = 12.dp,
+                                                        bottomEnd = 12.dp
+                                                    ) else RoundedCornerShape(
+                                                        topStart = 12.dp,
+                                                        bottomStart = 12.dp
+                                                    )
                                                 )
-                                                .clickable { isIncome = type }
-                                                .padding(vertical = 12.dp),
-                                            Alignment.Center
+                                                .clickable { isIncome = type },
+                                            contentAlignment = Alignment.Center
                                         ) {
-                                            Text(label, color = if (isIncome == type) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
+                                            Text(
+                                                text = label,
+                                                color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
                                         }
                                     }
                                 }
@@ -123,7 +143,7 @@ fun EditTransaction(
                         item {
                             OutlinedTextField(
                                 value = amount,
-                                onValueChange = { 
+                                onValueChange = {
                                     if (it.isEmpty() || it.all { c -> c.isDigit() || c == '.' }) {
                                         amount = it
                                         amountError = null
@@ -141,7 +161,7 @@ fun EditTransaction(
                         item {
                             OutlinedTextField(
                                 value = description,
-                                onValueChange = { 
+                                onValueChange = {
                                     description = it
                                     descriptionError = null
                                 },
@@ -161,12 +181,17 @@ fun EditTransaction(
                                     value = selectedCategory?.name ?: "Select Category",
                                     onValueChange = {},
                                     readOnly = true,
-                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
+                                    trailingIcon = {
+                                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded)
+                                    },
                                     modifier = Modifier.fillMaxWidth().menuAnchor(),
                                     isError = categoryError != null,
                                     supportingText = categoryError?.let { { Text(it) } }
                                 )
-                                ExposedDropdownMenu(expanded = categoryExpanded, onDismissRequest = { categoryExpanded = false }) {
+                                ExposedDropdownMenu(
+                                    expanded = categoryExpanded,
+                                    onDismissRequest = { categoryExpanded = false }
+                                ) {
                                     categories.forEach { category ->
                                         DropdownMenuItem(
                                             text = { Text(category.name) },
@@ -190,12 +215,17 @@ fun EditTransaction(
                                     value = selectedWallet?.name ?: "Select Wallet",
                                     onValueChange = {},
                                     readOnly = true,
-                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = walletExpanded) },
+                                    trailingIcon = {
+                                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = walletExpanded)
+                                    },
                                     modifier = Modifier.fillMaxWidth().menuAnchor(),
                                     isError = walletError != null,
                                     supportingText = walletError?.let { { Text(it) } }
                                 )
-                                ExposedDropdownMenu(expanded = walletExpanded, onDismissRequest = { walletExpanded = false }) {
+                                ExposedDropdownMenu(
+                                    expanded = walletExpanded,
+                                    onDismissRequest = { walletExpanded = false }
+                                ) {
                                     wallets.forEach { wallet ->
                                         DropdownMenuItem(
                                             text = { Text(wallet.name) },
@@ -216,31 +246,27 @@ fun EditTransaction(
                                 onValueChange = {},
                                 label = { Text("Date") },
                                 readOnly = true,
-                                modifier = Modifier.fillMaxWidth().clickable { showDatePicker = true }
+                                modifier = Modifier.fillMaxWidth().clickable {
+                                    showDatePicker = true
+                                }
                             )
                         }
 
                         item {
                             Button(
                                 onClick = {
-                                    // Validate inputs
                                     var hasError = false
-                                    
+
                                     if (amount.isEmpty() || amount.toDoubleOrNull() == null) {
                                         amountError = "Please enter a valid amount"
                                         hasError = true
                                     }
-                                    
-                                    if (description.isBlank()) {
-                                        descriptionError = "Please enter a description"
-                                        hasError = true
-                                    }
-                                    
+
                                     if (selectedCategory == null) {
                                         categoryError = "Please select a category"
                                         hasError = true
                                     }
-                                    
+
                                     if (selectedWallet == null) {
                                         walletError = "Please select a wallet"
                                         hasError = true
@@ -262,8 +288,6 @@ fun EditTransaction(
                                             try {
                                                 repo.updateTransaction(userId, updatedTransaction)
                                                 onEditComplete()
-                                            } catch (e: Exception) {
-                                                println("Error updating transaction: ${e.message}")
                                             } finally {
                                                 isSaving = false
                                             }
