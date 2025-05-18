@@ -152,30 +152,36 @@ fun AddScreen(
             }
         }
     }
-
     if (showCategorySheet) {
         CategorySelector(
             categories = categories,
-            userId = userId,
-            onCategorySelected = {
-                selectedCategory = it
+            onCategorySelected = { cat ->
+                selectedCategory = cat
                 showCategorySheet = false
+            },
+            onCategoryReparent = { moved, newParentId ->
+                // here you can immediately reparent locally, or
+                // call your repo.updateCategory(parentId = newParentId)
+                scope.launch {
+                    repo.updateCategory(
+                        userId,
+                        moved.copy(parentCategoryId = newParentId)
+                    )
+                }
             },
             onDismiss = { showCategorySheet = false },
             onAddCategory = { showAddCategory = true },
             onEditCategory = { editingCategory = it },
             onRemoveCategory = { cat ->
                 scope.launch {
-                    try {
-                        repo.deleteCategory(userId, cat.id)
-                        snackbarHostState.showSnackbar("Category deleted successfully")
-                    } catch (e: Exception) {
-                        snackbarHostState.showSnackbar("Error deleting category: ${e.message}")
-                    }
+                    repo.deleteCategory(userId, cat.id)
+                    snackbarHostState.showSnackbar("Category deleted")
                 }
             }
         )
     }
+
+
 
     if (showAddCategory) {
         AddCategoryDialog(
@@ -202,16 +208,6 @@ fun AddScreen(
                         snackbarHostState.showSnackbar("Category updated successfully")
                     } catch (e: Exception) {
                         snackbarHostState.showSnackbar("Error updating category: ${e.message}")
-                    }
-                }
-            },
-            onCategoryDeleted = {
-                scope.launch {
-                    try {
-                        repo.deleteCategory(userId, cat.id)
-                        snackbarHostState.showSnackbar("Category deleted successfully")
-                    } catch (e: Exception) {
-                        snackbarHostState.showSnackbar("Error deleting category: ${e.message}")
                     }
                 }
             },

@@ -7,12 +7,12 @@ import androidx.compose.ui.graphics.Color
 private val LightTheme = lightColorScheme(
     onPrimary = Color.White,
     onSecondary = Color.White,
-    onBackground = Color(0xFF121212)
+    onBackground = Color(0xFF1C1C1C)
 )
 
 private val DarkTheme = darkColorScheme(
-    onPrimary = Color(0xFF121212),
-    onSecondary = Color(0xFF1E1E1E),
+    onPrimary = Color(0xFF1C1C1C),
+    onSecondary = Color(0xFF2C2C2C),
     onBackground = Color(0xFFF5F5F5)
 )
 

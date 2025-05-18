@@ -30,7 +30,8 @@ data class Category(
     val userId: String = "",
     val name: String = "",
     val iconName: String = "",
-    val color: String = ""
+    val color: String = "",
+    val parentCategoryId: String? = null
 )
 
 @Keep

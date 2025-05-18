@@ -73,8 +73,7 @@ fun HistoryScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Black,
-                    titleContentColor = Color.White
+                    containerColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
         }
@@ -100,7 +99,7 @@ fun HistoryScreen(
 
 @Composable
 fun MonthYearPicker(selectedMonth: Calendar, onMonthChanged: (Calendar) -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(Color(0xFF1C1C1C))) {
+    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f))) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -111,13 +110,12 @@ fun MonthYearPicker(selectedMonth: Calendar, onMonthChanged: (Calendar) -> Unit)
                 newMonth.add(Calendar.MONTH, -1)
                 onMonthChanged(newMonth)
             }) {
-                Icon(Icons.Default.ChevronLeft, "Previous Month", tint = Color.White)
+                Icon(Icons.Default.ChevronLeft, "Previous Month")
             }
 
             Text(
                 text = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(selectedMonth.time),
                 style = MaterialTheme.typography.titleMedium,
-                color = Color.White
             )
 
             IconButton(onClick = {
@@ -126,7 +124,7 @@ fun MonthYearPicker(selectedMonth: Calendar, onMonthChanged: (Calendar) -> Unit)
                 val currentMonth = Calendar.getInstance().apply { set(Calendar.DAY_OF_MONTH, 1) }
                 if (newMonth.timeInMillis <= currentMonth.timeInMillis) onMonthChanged(newMonth)
             }) {
-                Icon(Icons.Default.ChevronRight, "Next Month", tint = Color.White)
+                Icon(Icons.Default.ChevronRight, "Next Month")
             }
         }
     }
@@ -143,9 +141,9 @@ fun IncomeExpenseChart(userId: String, repo: FirebaseRepositories, selectedMonth
         isLoading = false
     }
 
-    Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(Color(0xFF1C1C1C))) {
+    Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f))) {
         Column(Modifier.fillMaxWidth().padding(16.dp)) {
-            Text("Income vs Expenses", style = MaterialTheme.typography.titleMedium, color = Color.White)
+            Text("Income vs Expenses", style = MaterialTheme.typography.titleMedium)
 
             if (isLoading) {
                 Box(Modifier.fillMaxWidth().height(200.dp), Alignment.Center) {
@@ -171,7 +169,7 @@ fun IncomeExpenseChart(userId: String, repo: FirebaseRepositories, selectedMonth
 
                 if (filtered.isEmpty()) {
                     Box(Modifier.fillMaxWidth().height(200.dp), Alignment.Center) {
-                        Text("No transactions found for this month", color = Color.White.copy(0.7f), textAlign = TextAlign.Center)
+                        Text("No transactions found for this month", textAlign = TextAlign.Center)
                     }
                 } else {
                     Row(Modifier.fillMaxWidth().height(200.dp), Arrangement.SpaceEvenly, Alignment.Bottom) {
@@ -182,7 +180,7 @@ fun IncomeExpenseChart(userId: String, repo: FirebaseRepositories, selectedMonth
                             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Bottom, modifier = Modifier.weight(1f)) {
                                 Box(Modifier.width(60.dp).height(height).background(color))
                                 Spacer(Modifier.height(8.dp))
-                                Text(label, style = MaterialTheme.typography.bodyMedium, color = Color.White)
+                                Text(label, style = MaterialTheme.typography.bodyMedium)
                             }
                         }
                     }
@@ -190,7 +188,7 @@ fun IncomeExpenseChart(userId: String, repo: FirebaseRepositories, selectedMonth
                         listOf("Income" to income to Color.Green, "Expenses" to expense to Color.Red).forEach { (labelValue, color) ->
                             val (label, value) = labelValue
                             Column(horizontalAlignment = if (label == "Income") Alignment.Start else Alignment.End) {
-                                Text(label, style = MaterialTheme.typography.bodyMedium, color = Color.White)
+                                Text(label, style = MaterialTheme.typography.bodyMedium)
                                 Text("$${value.toInt()}", style = MaterialTheme.typography.bodyLarge, color = color)
                             }
                         }
@@ -225,10 +223,10 @@ fun TransactionList(userId: String, repo: FirebaseRepositories, selectedMonth: C
         isLoading = false
     }
 
-    Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(Color(0xFF1C1C1C))) {
+    Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f))) {
         Column(Modifier.fillMaxWidth().padding(16.dp)) {
             Row(Modifier.fillMaxWidth().padding(bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("All Transactions", style = MaterialTheme.typography.titleMedium, color = Color.White, modifier = Modifier.weight(1f))
+                Text("All Transactions", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                 IconButton(onClick = { navController?.navigate("all_transaction") }) {
                     Icon(Icons.Default.ChevronRight, "View All", tint = Color.White)
                 }
@@ -237,7 +235,7 @@ fun TransactionList(userId: String, repo: FirebaseRepositories, selectedMonth: C
                 Box(Modifier.fillMaxWidth().height(200.dp), Alignment.Center) { CircularProgressIndicator(color = Color.White) }
             } else if (transactions.isEmpty()) {
                 Box(Modifier.fillMaxWidth().height(200.dp), Alignment.Center) {
-                    Text("No transactions found for this month", color = Color.White.copy(0.7f), textAlign = TextAlign.Center)
+                    Text("No transactions found for this month", textAlign = TextAlign.Center)
                 }
             } else {
                 LazyColumn(Modifier.fillMaxWidth().heightIn(max = 400.dp)) {

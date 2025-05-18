@@ -183,8 +183,7 @@ fun ReportPieChartWidget(
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             Text(
                 text = "No transactions found for this period",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White
+                style = MaterialTheme.typography.bodyMedium
             )
         }
         return
@@ -199,8 +198,7 @@ fun ReportPieChartWidget(
         ) {
             Text(
                 text = "At least 2 categories are required to display the chart.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White
+                style = MaterialTheme.typography.bodyMedium
             )
         }
         return
@@ -244,10 +242,7 @@ fun ReportPieChartWidget(
             modifier = Modifier.fillMaxHeight(),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            val totalAmount = categoryTotals.sumOf { it.second.toDouble() }.toFloat()
-
             categoryTotals.forEach {
-                val percentage = (it.second / totalAmount * 100).toInt()
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
@@ -261,19 +256,12 @@ fun ReportPieChartWidget(
                     Text(
                         text = it.first,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White,
                         modifier = Modifier.weight(1f)
                     )
                     Text(
                         text = "$${it.second.toInt()}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.7f)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "$percentage%",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.7f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                     )
                 }
             }

@@ -38,7 +38,6 @@ fun AddCategoryDialog(
         onIconSelected = { selectedIcon = it },
         selectedColor = selectedColor,
         onColorSelected = { selectedColor = it },
-        showDelete = false,
         onConfirm = {
             scope.launch {
                 when {
@@ -59,7 +58,6 @@ fun AddCategoryDialog(
                 }
             }
         },
-        onDelete = null,
         onDismiss = onDismiss
     )
 }
@@ -68,7 +66,6 @@ fun AddCategoryDialog(
 fun EditCategoryDialog(
     category: Category,
     onCategoryUpdated: suspend (Category) -> Unit,
-    onCategoryDeleted: suspend (Category) -> Unit,
     onDismiss: () -> Unit,
     showError: (String) -> Unit
 ) {
@@ -87,7 +84,6 @@ fun EditCategoryDialog(
         onIconSelected = { selectedIcon = it },
         selectedColor = selectedColor,
         onColorSelected = { selectedColor = it },
-        showDelete = true,
         onConfirm = {
             scope.launch {
                 if (name.isBlank()) {
@@ -100,12 +96,6 @@ fun EditCategoryDialog(
                     color = ColorPalette.getHexCode(selectedColor)
                 )
                 onCategoryUpdated(updated)
-                onDismiss()
-            }
-        },
-        onDelete = {
-            scope.launch {
-                onCategoryDeleted(category)
                 onDismiss()
             }
         },
@@ -122,9 +112,7 @@ private fun CategoryDialogContent(
     onIconSelected: (String) -> Unit,
     selectedColor: String,
     onColorSelected: (String) -> Unit,
-    showDelete: Boolean,
     onConfirm: () -> Unit,
-    onDelete: (() -> Unit)?,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
@@ -182,16 +170,6 @@ private fun CategoryDialogContent(
         },
         confirmButton = {
             TextButton(onClick = onConfirm) { Text("Save") }
-        },
-        dismissButton = {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (showDelete && onDelete != null) {
-                    TextButton(onClick = onDelete) {
-                        Text("Delete", color = MaterialTheme.colorScheme.error)
-                    }
-                }
-                TextButton(onClick = onDismiss) { Text("Cancel") }
-            }
         }
     )
 }
