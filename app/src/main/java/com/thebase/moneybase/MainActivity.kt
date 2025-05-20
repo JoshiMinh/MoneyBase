@@ -191,6 +191,4 @@ private fun NavGraphBuilder.appGraph(
     composable(Routes.ALL_TRANSACTION) {
         AllTransactionScreen(userId, navController)
     }
-
-
 }
