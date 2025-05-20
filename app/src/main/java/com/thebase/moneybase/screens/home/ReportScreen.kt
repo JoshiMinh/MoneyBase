@@ -126,14 +126,19 @@ fun ReportPieChartWidget(
     var typeFilteredTransaction by remember { mutableStateOf<List<Transaction>>(emptyList()) }
     var allFilteredTransaction by remember { mutableStateOf<List<Transaction>>(emptyList()) }
 
-    // Filter type
-    typeFilteredTransaction = if (selectedType == ReportType.INCOME) {
-        transactions.filter { it.isIncome == true }
-    } else {
-        transactions.filter { it.isIncome == false }
+    typeFilteredTransaction = when (selectedType) {
+        ReportType.INCOME -> {
+            val method1 = transactions.filter { it.isIncome == true }
+            val method2 = transactions.filter { it.amount > 0 }
+            if (method1.isNotEmpty()) method1 else method2
+        }
+        ReportType.EXPENSE -> {
+            val method1 = transactions.filter { it.isIncome == false }
+            val method2 = transactions.filter { it.amount < 0 }
+            if (method1.isNotEmpty()) method1 else method2
+        }
     }
 
-    // Filter period
     val startCalendar = Calendar.getInstance()
     val endCalendar = Calendar.getInstance()
     startCalendar.time = selectedDate
@@ -168,17 +173,22 @@ fun ReportPieChartWidget(
         txDate != null && !txDate.before(startPeriod) && !txDate.after(endPeriod)
     }
 
-
-
-    // Calculate category totals
     val categoryTotals = categories.map { category ->
-        val total = allFilteredTransaction
-            .filter { it.categoryId == category.id }
-            .sumOf { abs(it.amount) }
+        val total = when (selectedType) {
+            ReportType.EXPENSE -> {
+                allFilteredTransaction
+                    .filter { (it.categoryId == category.id) && (it.amount < 0) }
+                    .sumOf { abs(it.amount) }
+            }
+            ReportType.INCOME -> {
+                allFilteredTransaction
+                    .filter { (it.categoryId == category.id) }
+                    .sumOf { it.amount }
+            }
+        }
         Triple(category.name, total, category.color)
     }.filter { it.second > 0 }
 
-    // Sau khi tính allFilteredTransaction
     if (allFilteredTransaction.isEmpty()) {
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             Text(
@@ -204,11 +214,7 @@ fun ReportPieChartWidget(
         return
     }
 
-
-    Column(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        // PIE CHART
+    Column(modifier = Modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -237,7 +243,6 @@ fun ReportPieChartWidget(
 
         Spacer(Modifier.height(8.dp))
 
-        // CATEGORY LIST
         Column(
             modifier = Modifier.fillMaxHeight(),
             verticalArrangement = Arrangement.spacedBy(8.dp)

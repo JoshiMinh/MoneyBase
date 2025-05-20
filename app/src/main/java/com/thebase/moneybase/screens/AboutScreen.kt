@@ -134,16 +134,6 @@ fun AboutScreen(navController: NavController? = null) {
                 onFacebookClick = { uriHandler.openUri("https://www.facebook.com/ho.nguyen.ten.phung") }
             )
             
-            TeamMemberCard(
-                name = "Trần Đình Hoàng Long",
-                onFacebookClick = { uriHandler.openUri("https://www.facebook.com/hhicYL.XTJ") }
-            )
-            
-            TeamMemberCard(
-                name = "Nguyễn Thanh Tùng",
-                onFacebookClick = { uriHandler.openUri("https://www.facebook.com/gnuthnaht17/") }
-            )
-            
             // App Purpose
             SectionTitle(text = "Purpose")
             

@@ -129,7 +129,6 @@ fun MonthYearPicker(selectedMonth: Calendar, onMonthChanged: (Calendar) -> Unit)
         }
     }
 }
-
 @Composable
 fun IncomeExpenseChart(userId: String, repo: FirebaseRepositories, selectedMonth: Calendar) {
     var transactions by remember { mutableStateOf<List<Transaction>>(emptyList()) }
@@ -164,33 +163,52 @@ fun IncomeExpenseChart(userId: String, repo: FirebaseRepositories, selectedMonth
                     runCatching { df.parse(it.date) }.getOrNull()?.let { d -> d >= start.time && d <= end.time } == true
                 }
 
-                val income = filtered.filter { it.isIncome }.sumOf { it.amount.coerceAtLeast(0.0) }.toFloat()
-                val expense = filtered.filter { !it.isIncome }.sumOf { it.amount.coerceAtMost(0.0).absoluteValue }.toFloat()
+                // Fixed income calculation: look for positive amounts or isIncome flag
+                val income = filtered.filter {  it.amount > 0 }.sumOf { it.amount.absoluteValue }.toFloat()
+
+                // Fixed expense calculation: look for negative amounts or !isIncome flag
+                val expense = filtered.filter {  it.amount < 0 }.sumOf { it.amount.absoluteValue }.toFloat()
 
                 if (filtered.isEmpty()) {
                     Box(Modifier.fillMaxWidth().height(200.dp), Alignment.Center) {
                         Text("No transactions found for this month", textAlign = TextAlign.Center)
                     }
                 } else {
+                    // Set minimum height for bars to ensure they're visible even with small values
+                    val minBarHeight = 20.dp
+
                     Row(Modifier.fillMaxWidth().height(200.dp), Arrangement.SpaceEvenly, Alignment.Bottom) {
-                        listOf("Income" to income to Color.Green, "Expenses" to expense to Color.Red).forEach { (labelValue, color) ->
-                            val (label, value) = labelValue
-                            val maxVal = max(income, expense)
-                            val height = if (maxVal > 0) (value / maxVal * 150).dp else 0.dp
-                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Bottom, modifier = Modifier.weight(1f)) {
+                        val barData = listOf(
+                            Triple("Income", income, Color.Green),
+                            Triple("Expenses", expense, Color.Red)
+                        )
+
+                        barData.forEach { (label, value, color) ->
+                            val maxVal = max(income, expense).coerceAtLeast(1f) // Prevent division by zero
+                            val calculatedHeight = if (value > 0) (value / maxVal * 150) else 0f
+                            val height = calculatedHeight.dp.coerceAtLeast(minBarHeight)
+
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Bottom,
+                                modifier = Modifier.weight(1f)
+                            ) {
                                 Box(Modifier.width(60.dp).height(height).background(color))
                                 Spacer(Modifier.height(8.dp))
                                 Text(label, style = MaterialTheme.typography.bodyMedium)
                             }
                         }
                     }
+
                     Row(Modifier.fillMaxWidth().padding(top = 16.dp), Arrangement.SpaceBetween) {
-                        listOf("Income" to income to Color.Green, "Expenses" to expense to Color.Red).forEach { (labelValue, color) ->
-                            val (label, value) = labelValue
-                            Column(horizontalAlignment = if (label == "Income") Alignment.Start else Alignment.End) {
-                                Text(label, style = MaterialTheme.typography.bodyMedium)
-                                Text("$${value.toInt()}", style = MaterialTheme.typography.bodyLarge, color = color)
-                            }
+                        Column(horizontalAlignment = Alignment.Start) {
+                            Text("Income", style = MaterialTheme.typography.bodyMedium)
+                            Text("$${income.toInt()}", style = MaterialTheme.typography.bodyLarge, color = Color.Green)
+                        }
+
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text("Expenses", style = MaterialTheme.typography.bodyMedium)
+                            Text("$${expense.toInt()}", style = MaterialTheme.typography.bodyLarge, color = Color.Red)
                         }
                     }
                 }

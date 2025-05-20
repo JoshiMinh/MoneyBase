@@ -4,6 +4,7 @@ cloudinaryAndroid = "2.3.1"
 cloudinaryCore = "1.34.0"
 coilCompose = "2.5.0"
 converterGson = "2.10.0"
+coreSplashscreen = "1.0.1"
 firebaseBom = "33.12.0"
 kotlin = "2.0.21"
 coreKtx = "1.10.1"
@@ -27,6 +28,7 @@ charts = "2.0.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleViewmodelCompose" }
 androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
