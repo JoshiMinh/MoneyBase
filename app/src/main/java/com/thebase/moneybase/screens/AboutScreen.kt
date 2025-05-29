@@ -123,26 +123,29 @@ fun AboutScreen(navController: NavController? = null) {
                 title = "Development Team",
                 content = "Our team consists of passionate software developers committed to creating user-friendly financial tools. We believe in building applications that are both functional and accessible to everyone."
             )
-            
+
             TeamMemberCard(
                 name = "Nguyễn Bình Minh",
                 onFacebookClick = { uriHandler.openUri("https://www.facebook.com/joshi.minh52/") }
             )
 
             TeamMemberCard(
-                name = "Nguyễn Văn Phụng",
-                onFacebookClick = { uriHandler.openUri("https://www.facebook.com/ho.nguyen.ten.phung") }
+                name = "Trần Đình Hoàng Long",
+                onFacebookClick = { uriHandler.openUri("https://www.facebook.com/hhicYL.XTJ") }
             )
-            
-            // App Purpose
+
+            TeamMemberCard(
+                name = "Nguyễn Thanh Tùng",
+                onFacebookClick = { uriHandler.openUri("https://www.facebook.com/gnuthnaht17/") }
+            )
+
             SectionTitle(text = "Purpose")
             
             InfoCard(
                 title = "Our Mission",
                 content = "MoneyBase was developed with the mission to help people gain better control over their finances. We aim to provide tools that make tracking expenses effortless, allowing users to make informed financial decisions and achieve their savings goals."
             )
-            
-            // Contact Information
+
             SectionTitle(text = "Contact & Feedback")
             
             FacebookContactCard(

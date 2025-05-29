@@ -181,8 +181,6 @@ fun AddScreen(
         )
     }
 
-
-
     if (showAddCategory) {
         AddCategoryDialog(
             onDismiss = { showAddCategory = false },
@@ -257,7 +255,6 @@ fun AddScreen(
         )
     }
 }
-
 
 @Composable
 private fun IncomeExpenseToggle(isIncome: Boolean, onToggle: (Boolean) -> Unit) {

@@ -1,8 +1,8 @@
 <resources>
     <string name="app_name">MoneyBase</string>
     <string name="default_web_client_id" translatable="false">284259483635-geruaub92vfh6k2bvp4n9t700cprj6tt.apps.googleusercontent.com</string>
-    <string name="cloudinary_cloud_name">dzepzbiec</string>
-    <string name="cloudinary_api_key">265685784776223</string>
-    <string name="cloudinary_api_secret">HAIzrk1Bzy7lQjqU6CKPUfNWgk8</string>
+    <string name="cloudinary_cloud_name">dsajpx2tr</string>
+    <string name="cloudinary_api_key">214163591823842</string>
+    <string name="cloudinary_api_secret">F_kj_b5UJnbEMhilrgksPgqfxno</string>
     <string name="cloudinary_folder">moneybase/profiles</string>
 </resources>

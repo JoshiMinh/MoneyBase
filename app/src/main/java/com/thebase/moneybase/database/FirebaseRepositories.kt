@@ -1,5 +1,4 @@
 @file:Suppress("DEPRECATION")
-
 package com.thebase.moneybase.database
 
 import android.util.Log
@@ -28,20 +27,26 @@ class FirebaseRepositories {
     suspend fun registerUser(email: String, password: String, username: String): Boolean {
         return try {
             val result = auth.createUserWithEmailAndPassword(email, password).await()
-            val user = User(
-                id = result.user?.uid ?: "",
+            val user = result.user ?: return false
+            val userId = user.uid
+            val timestamp = System.currentTimeMillis()
+            val newUser = User(
+                id = userId,
                 displayName = username,
                 email = email,
-                createdAt = System.currentTimeMillis().toString(),
-                lastLoginAt = System.currentTimeMillis().toString()
+                createdAt = timestamp.toString(),
+                lastLoginAt = timestamp.toString()
             )
-            db.collection("users").document(user.id).set(user).await()
+            db.collection("users").document(userId).set(newUser).await()
 
-            result.user?.updateProfile(
+            user.updateProfile(
                 UserProfileChangeRequest.Builder()
                     .setDisplayName(username)
                     .build()
             )?.await()
+
+            addDefaultCategories(userId)
+            addDefaultWallets(userId)
 
             true
         } catch (e: Exception) {
@@ -50,25 +55,49 @@ class FirebaseRepositories {
         }
     }
 
-    suspend fun loginUser(email: String, password: String): Boolean {
-        return try {
-            auth.signInWithEmailAndPassword(email, password).await()
-            true
-        } catch (_: Exception) {
-            false
+    private suspend fun addDefaultCategories(userId: String) {
+        val defaults = listOf(
+            Category(name = "Food", userId = userId, iconName = "fastfood", color = "#FF5733"),
+            Category(name = "Transport", userId = userId, iconName = "directions_car", color = "#2196F3"),
+            Category(name = "Entertainment", userId = userId, iconName = "local_activity", color = "#9C27B0")
+        )
+        defaults.forEach { cat ->
+            val doc = db
+                .collection("users").document(userId)
+                .collection("categories").document()
+            doc.set(cat.copy(id = doc.id)).await()
         }
+    }
+
+    private suspend fun addDefaultWallets(userId: String) {
+        val defaults = listOf(
+            Wallet(name = "Cash", userId = userId, balance = 0.0, iconName = "account_balance_wallet", color = "#4CAF50"),
+            Wallet(name = "Bank Account", userId = userId, balance = 0.0, iconName = "account_balance", color = "#1976D2")
+        )
+        defaults.forEach { wallet ->
+            val doc = db
+                .collection("users").document(userId)
+                .collection("wallets").document()
+            doc.set(wallet.copy(id = doc.id)).await()
+        }
+    }
+
+    suspend fun loginUser(email: String, password: String): Boolean = try {
+        auth.signInWithEmailAndPassword(email, password).await()
+        true
+    } catch (_: Exception) {
+        false
     }
 
     suspend fun updateUserPassword(userId: String, currentPassword: String, newPassword: String): Boolean {
         return try {
-            val currentUser = auth.currentUser
-            if (currentUser != null && currentUser.uid == userId) {
-                val email = currentUser.email ?: return false
-                val credential = EmailAuthProvider.getCredential(email, currentPassword)
-                currentUser.reauthenticate(credential).await()
-                currentUser.updatePassword(newPassword).await()
-                true
-            } else false
+            val user = auth.currentUser ?: return false
+            if (user.uid != userId) return false
+            val email = user.email ?: return false
+            val credential = EmailAuthProvider.getCredential(email, currentPassword)
+            user.reauthenticate(credential).await()
+            user.updatePassword(newPassword).await()
+            true
         } catch (e: Exception) {
             Log.e("MoneyBase", "Password change failed", e)
             false
@@ -81,36 +110,29 @@ class FirebaseRepositories {
     // User Management Functions
     // ----------------------------
 
-    suspend fun getUser(userId: String): User? {
-        return try {
-            db.collection("users").document(userId).get().await().toObject(User::class.java)
-        } catch (_: Exception) {
-            null
-        }
+    suspend fun getUser(userId: String): User? = try {
+        db.collection("users").document(userId)
+            .get().await().toObject(User::class.java)
+    } catch (_: Exception) {
+        null
     }
 
     suspend fun updateUserProfile(userId: String, displayName: String, email: String): Boolean {
         return try {
             val userRef = db.collection("users").document(userId)
-            val userData = mapOf(
+            userRef.update(mapOf(
                 "displayName" to displayName,
                 "email" to email
-            )
-            userRef.update(userData).await()
+            )).await()
 
-            val currentUser = auth.currentUser
-            if (currentUser != null && currentUser.uid == userId) {
-                currentUser.updateProfile(
+            auth.currentUser?.takeIf { it.uid == userId }?.also { usr ->
+                usr.updateProfile(
                     UserProfileChangeRequest.Builder()
                         .setDisplayName(displayName)
                         .build()
-                ).await()
-
-                if (currentUser.email != email) {
-                    currentUser.updateEmail(email).await()
-                }
+                )?.await()
+                if (usr.email != email) usr.updateEmail(email).await()
             }
-
             true
         } catch (e: Exception) {
             Log.e("MoneyBase", "Update profile failed", e)
@@ -122,13 +144,11 @@ class FirebaseRepositories {
         return try {
             db.collection("users").document(userId)
                 .update("profilePictureUrl", profilePictureUrl).await()
-
             auth.currentUser?.takeIf { it.uid == userId }?.updateProfile(
                 UserProfileChangeRequest.Builder()
                     .setPhotoUri(profilePictureUrl.toUri())
                     .build()
             )?.await()
-
             true
         } catch (e: Exception) {
             Log.e("MoneyBase", "Profile picture update failed", e)
@@ -138,23 +158,22 @@ class FirebaseRepositories {
 
     suspend fun ensureGoogleUserInDatabase(user: com.google.firebase.auth.FirebaseUser): Boolean {
         return try {
-            val userDoc = db.collection("users").document(user.uid).get().await()
-
-            if (!userDoc.exists()) {
+            val docRef = db.collection("users").document(user.uid)
+            val snapshot = docRef.get().await()
+            val timestamp = System.currentTimeMillis().toString()
+            if (!snapshot.exists()) {
                 val newUser = User(
                     id = user.uid,
-                    displayName = user.displayName ?: "Google User",
+                    displayName = user.displayName.orEmpty(),
                     email = user.email.orEmpty(),
-                    createdAt = System.currentTimeMillis().toString(),
-                    lastLoginAt = System.currentTimeMillis().toString(),
+                    createdAt = timestamp,
+                    lastLoginAt = timestamp,
                     photoUrl = user.photoUrl?.toString()
                 )
-                db.collection("users").document(user.uid).set(newUser).await()
+                docRef.set(newUser).await()
             } else {
-                db.collection("users").document(user.uid)
-                    .update("lastLoginAt", System.currentTimeMillis().toString()).await()
+                docRef.update("lastLoginAt", timestamp).await()
             }
-
             true
         } catch (e: Exception) {
             Log.e("MoneyBase", "Failed to save Google user data", e)
@@ -170,9 +189,7 @@ class FirebaseRepositories {
         val listener = db.collection("users").document(userId)
             .collection("transactions")
             .addSnapshotListener { snap, err ->
-                if (err != null) {
-                    close(err); return@addSnapshotListener
-                }
+                if (err != null) { close(err); return@addSnapshotListener }
                 trySend(snap?.toObjects(Transaction::class.java).orEmpty())
             }
         awaitClose { listener.remove() }
@@ -180,21 +197,16 @@ class FirebaseRepositories {
 
     suspend fun addTransaction(userId: String, transaction: Transaction): Boolean {
         return try {
-            val userRef = db.collection("users").document(userId)
-            val txsRef = userRef.collection("transactions")
-            val walletsRef = userRef.collection("wallets")
-
-            db.runTransaction { ft ->
-                val walletRef = walletsRef.document(transaction.walletId)
-                val wallet = ft.get(walletRef).toObject(Wallet::class.java)
+            db.runTransaction { tx ->
+                val wallets = db.collection("users").document(userId).collection("wallets")
+                val walletRef = wallets.document(transaction.walletId)
+                val wallet = tx.get(walletRef).toObject(Wallet::class.java)
                     ?: throw IllegalStateException("Wallet not found")
-                val newBalance = wallet.balance + transaction.amount
-                ft.update(walletRef, "balance", newBalance)
-
-                val newDoc = txsRef.document()
-                ft.set(newDoc, transaction.copy(id = newDoc.id))
+                tx.update(walletRef, "balance", wallet.balance + transaction.amount)
+                val txRef = db.collection("users").document(userId)
+                    .collection("transactions").document()
+                tx.set(txRef, transaction.copy(id = txRef.id))
             }.await()
-
             true
         } catch (e: Exception) {
             Log.e("MoneyBase", "addTransaction failed", e)
@@ -202,32 +214,35 @@ class FirebaseRepositories {
         }
     }
 
-    suspend fun updateTransaction(userId: String, transaction: Transaction) {
-        try {
+    suspend fun updateTransaction(userId: String, transaction: Transaction): Boolean {
+        return try {
             db.collection("users").document(userId)
                 .collection("transactions").document(transaction.id)
                 .set(transaction).await()
-        } catch (_: Exception) {
+            true
+        } catch (e: Exception) {
+            false
         }
     }
 
-    suspend fun deleteTransaction(userId: String, transactionId: String) {
-        try {
-            db.collection("users").document(userId)
-                .collection("transactions").document(transactionId).delete().await()
-        } catch (_: Exception) {
-        }
-    }
-
-    suspend fun getAllTransactions(userId: String): List<Transaction> {
+    suspend fun deleteTransaction(userId: String, transactionId: String): Boolean {
         return try {
             db.collection("users").document(userId)
-                .collection("transactions").get().await()
-                .toObjects(Transaction::class.java)
-        } catch (e: Exception) {
-            Log.e("MoneyBase", "Failed to get all transactions", e)
-            emptyList()
+                .collection("transactions").document(transactionId)
+                .delete().await()
+            true
+        } catch (_: Exception) {
+            false
         }
+    }
+
+    suspend fun getAllTransactions(userId: String): List<Transaction> = try {
+        db.collection("users").document(userId)
+            .collection("transactions").get().await()
+            .toObjects(Transaction::class.java)
+    } catch (e: Exception) {
+        Log.e("MoneyBase", "Failed to get all transactions", e)
+        emptyList()
     }
 
     // ----------------------------
@@ -236,24 +251,18 @@ class FirebaseRepositories {
 
     suspend fun transferBalance(userId: String, sourceWalletId: String, amount: Double, targetWalletId: String): Boolean {
         return try {
-            val userRef = db.collection("users").document(userId)
-            val srcRef = userRef.collection("wallets").document(sourceWalletId)
-            val tgtRef = userRef.collection("wallets").document(targetWalletId)
-
-            db.runTransaction { ft ->
-                val src = ft.get(srcRef).toObject(Wallet::class.java)
+            db.runTransaction { tx ->
+                val base = db.collection("users").document(userId)
+                val srcRef = base.collection("wallets").document(sourceWalletId)
+                val tgtRef = base.collection("wallets").document(targetWalletId)
+                val src = tx.get(srcRef).toObject(Wallet::class.java)
                     ?: throw IllegalStateException("Source wallet not found")
-                val tgt = ft.get(tgtRef).toObject(Wallet::class.java)
+                val tgt = tx.get(tgtRef).toObject(Wallet::class.java)
                     ?: throw IllegalStateException("Target wallet not found")
-
-                if (src.balance < amount) {
-                    throw FirebaseFirestoreException("Insufficient funds", FirebaseFirestoreException.Code.ABORTED)
-                }
-
-                ft.update(srcRef, "balance", src.balance - amount)
-                ft.update(tgtRef, "balance", tgt.balance + amount)
+                if (src.balance < amount) throw FirebaseFirestoreException("Insufficient funds", FirebaseFirestoreException.Code.ABORTED)
+                tx.update(srcRef, "balance", src.balance - amount)
+                tx.update(tgtRef, "balance", tgt.balance + amount)
             }.await()
-
             true
         } catch (e: Exception) {
             Log.e("MoneyBase", "transferBalance failed", e)
@@ -264,9 +273,7 @@ class FirebaseRepositories {
     fun getWalletsFlow(userId: String): Flow<List<Wallet>> = callbackFlow {
         val listener = db.collection("users").document(userId).collection("wallets")
             .addSnapshotListener { snap, err ->
-                if (err != null) {
-                    close(err); return@addSnapshotListener
-                }
+                if (err != null) { close(err); return@addSnapshotListener }
                 trySend(snap?.toObjects(Wallet::class.java).orEmpty())
             }
         awaitClose { listener.remove() }
@@ -274,7 +281,8 @@ class FirebaseRepositories {
 
     suspend fun addWallet(userId: String, wallet: Wallet): String {
         return try {
-            val doc = db.collection("users").document(userId).collection("wallets").document()
+            val doc = db.collection("users").document(userId)
+                .collection("wallets").document()
             doc.set(wallet.copy(id = doc.id)).await()
             doc.id
         } catch (_: Exception) {
@@ -282,31 +290,35 @@ class FirebaseRepositories {
         }
     }
 
-    suspend fun updateWallet(userId: String, wallet: Wallet) {
-        try {
-            db.collection("users").document(userId).collection("wallets")
-                .document(wallet.id).set(wallet).await()
-        } catch (_: Exception) {
-        }
-    }
-
-    suspend fun deleteWallet(userId: String, walletId: String) {
-        try {
-            db.collection("users").document(userId).collection("wallets")
-                .document(walletId).delete().await()
-        } catch (_: Exception) {
-        }
-    }
-
-    suspend fun getAllWallets(userId: String): List<Wallet> {
+    suspend fun updateWallet(userId: String, wallet: Wallet): Boolean {
         return try {
             db.collection("users").document(userId)
-                .collection("wallets").get().await()
-                .toObjects(Wallet::class.java)
-        } catch (e: Exception) {
-            Log.e("MoneyBase", "Failed to get all wallets", e)
-            emptyList()
+                .collection("wallets").document(wallet.id)
+                .set(wallet).await()
+            true
+        } catch (_: Exception) {
+            false
         }
+    }
+
+    suspend fun deleteWallet(userId: String, walletId: String): Boolean {
+        return try {
+            db.collection("users").document(userId)
+                .collection("wallets").document(walletId)
+                .delete().await()
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    suspend fun getAllWallets(userId: String): List<Wallet> = try {
+        db.collection("users").document(userId)
+            .collection("wallets").get().await()
+            .toObjects(Wallet::class.java)
+    } catch (e: Exception) {
+        Log.e("MoneyBase", "Failed to get all wallets", e)
+        emptyList()
     }
 
     // ----------------------------
@@ -316,9 +328,7 @@ class FirebaseRepositories {
     fun getCategoriesFlow(userId: String): Flow<List<Category>> = callbackFlow {
         val listener = db.collection("users").document(userId).collection("categories")
             .addSnapshotListener { snap, err ->
-                if (err != null) {
-                    close(err); return@addSnapshotListener
-                }
+                if (err != null) { close(err); return@addSnapshotListener }
                 trySend(snap?.toObjects(Category::class.java).orEmpty())
             }
         awaitClose { listener.remove() }
@@ -326,7 +336,8 @@ class FirebaseRepositories {
 
     suspend fun addCategory(userId: String, category: Category): String {
         return try {
-            val doc = db.collection("users").document(userId).collection("categories").document()
+            val doc = db.collection("users").document(userId)
+                .collection("categories").document()
             doc.set(category.copy(id = doc.id)).await()
             doc.id
         } catch (_: Exception) {
@@ -334,30 +345,34 @@ class FirebaseRepositories {
         }
     }
 
-    suspend fun updateCategory(userId: String, category: Category) {
-        try {
-            db.collection("users").document(userId).collection("categories")
-                .document(category.id).set(category).await()
-        } catch (_: Exception) {
-        }
-    }
-
-    suspend fun deleteCategory(userId: String, categoryId: String) {
-        try {
-            db.collection("users").document(userId).collection("categories")
-                .document(categoryId).delete().await()
-        } catch (_: Exception) {
-        }
-    }
-
-    suspend fun getAllCategories(userId: String): List<Category> {
+    suspend fun updateCategory(userId: String, category: Category): Boolean {
         return try {
             db.collection("users").document(userId)
-                .collection("categories").get().await()
-                .toObjects(Category::class.java)
-        } catch (e: Exception) {
-            Log.e("MoneyBase", "Failed to get all categories", e)
-            emptyList()
+                .collection("categories").document(category.id)
+                .set(category).await()
+            true
+        } catch (_: Exception) {
+            false
         }
+    }
+
+    suspend fun deleteCategory(userId: String, categoryId: String): Boolean {
+        return try {
+            db.collection("users").document(userId)
+                .collection("categories").document(categoryId)
+                .delete().await()
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    suspend fun getAllCategories(userId: String): List<Category> = try {
+        db.collection("users").document(userId)
+            .collection("categories").get().await()
+            .toObjects(Category::class.java)
+    } catch (e: Exception) {
+        Log.e("MoneyBase", "Failed to get all categories", e)
+        emptyList()
     }
 }

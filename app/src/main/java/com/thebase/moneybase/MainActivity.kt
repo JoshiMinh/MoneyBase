@@ -1,5 +1,3 @@
-
-
 package com.thebase.moneybase
 
 import android.os.Build
@@ -60,7 +58,8 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(userId) {
                 if (userId.isNullOrEmpty()) {
                     navController.navigate(Routes.AUTH) {
-                        popUpTo(0) { inclusive = true }
+                        // pop everything under "app" off the back stack
+                        popUpTo(Routes.APP) { inclusive = true }
                     }
                 }
             }
@@ -73,7 +72,7 @@ class MainActivity : ComponentActivity() {
                         navController = navController,
                         userId = userId,
                         colorScheme = colorScheme,
-                        darkMode = darkMode,           // ← pass it here
+                        darkMode = darkMode,
                         onLogin = {
                             prefs.edit { putString(KEY_USER_ID, it) }
                             userId = it
@@ -110,7 +109,7 @@ private fun AppNavigation(
     navController: NavHostController,
     userId: String?,
     colorScheme: ColorScheme,
-    darkMode: Boolean,                            // ← add here
+    darkMode: Boolean,
     onLogin: (String) -> Unit,
     onLogout: () -> Unit,
     onColorSchemeChange: (ColorScheme) -> Unit,
@@ -127,7 +126,7 @@ private fun AppNavigation(
             navController,
             userId ?: "",
             colorScheme,
-            darkMode,                           // ← and here
+            darkMode,
             onLogout,
             onColorSchemeChange,
             onDarkModeToggle
@@ -143,7 +142,8 @@ private fun NavGraphBuilder.authGraph(
         AccountScreen(onLoginSuccess = {
             onLogin(it)
             navController.navigate(Routes.APP) {
-                popUpTo(0) { inclusive = true }
+                // pop everything under "auth" off the back stack
+                popUpTo(Routes.AUTH) { inclusive = true }
             }
         })
     }
@@ -153,8 +153,8 @@ private fun NavGraphBuilder.authGraph(
 private fun NavGraphBuilder.appGraph(
     navController: NavHostController,
     userId: String,
-    colorScheme: ColorScheme,                      // ← add here
-    darkMode: Boolean,                             // ← add here
+    colorScheme: ColorScheme,
+    darkMode: Boolean,
     onLogout: () -> Unit,
     onColorSchemeChange: (ColorScheme) -> Unit,
     onDarkModeToggle: (Boolean) -> Unit
@@ -169,7 +169,7 @@ private fun NavGraphBuilder.appGraph(
         SettingsScreen(
             userId              = userId,
             currentScheme       = colorScheme,
-            darkMode            = darkMode,          // ← and finally here
+            darkMode            = darkMode,
             onLogout            = onLogout,
             onColorSchemeChange = onColorSchemeChange,
             onDarkModeToggle    = onDarkModeToggle,
@@ -179,15 +179,12 @@ private fun NavGraphBuilder.appGraph(
     composable(Routes.ABOUT) {
         AboutScreen(navController)
     }
-
     composable(Routes.REPORT) {
         ReportScreen(userId)
     }
-
     composable(Routes.HISTORY) {
         HistoryScreen(userId, navController)
     }
-
     composable(Routes.ALL_TRANSACTION) {
         AllTransactionScreen(userId, navController)
     }

@@ -105,6 +105,7 @@ fun WalletAgent(
         )
     }
 }
+
 @Composable
 fun TransferBalance(
     wallet: Wallet,
