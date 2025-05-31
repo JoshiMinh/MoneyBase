@@ -28,6 +28,7 @@ import com.thebase.moneybase.R
 import com.thebase.moneybase.database.FirebaseRepositories
 import com.thebase.moneybase.screens.account.LoginScreen
 import com.thebase.moneybase.screens.account.RegisterScreen
+import android.util.Log
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,16 +57,22 @@ fun AccountScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var isLoading by remember { mutableStateOf(false) }
+    var hasTriggeredCallback by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val activity = context as? Activity
     val firebaseAuth = Firebase.auth
     val googleSignInClient = remember {
-        val webClientId = context.getString(R.string.default_web_client_id)
-        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(webClientId)
-            .requestEmail()
-            .build()
-        GoogleSignIn.getClient(context, gso)
+        try {
+            val webClientId = context.getString(R.string.default_web_client_id)
+            val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(webClientId)
+                .requestEmail()
+                .build()
+            GoogleSignIn.getClient(context, gso)
+        } catch (e: Exception) {
+            Log.e("AccountScreen", "Error creating GoogleSignInClient", e)
+            null
+        }
     }
 
     val googleSignInLauncher = rememberLauncherForActivityResult(
@@ -82,12 +89,15 @@ fun AccountScreen(
                     val authResult = firebaseAuth.signInWithCredential(credential).await()
                     val user = authResult.user
                     user?.let {
-                        val firebaseRepositories = FirebaseRepositories()
-                        val saved = firebaseRepositories.ensureGoogleUserInDatabase(it)
-                        snackbarHostState.showSnackbar(
-                            if (saved) "Logged in as ${it.displayName}" else "Failed to save user data"
-                        )
-                        onLoginSuccess(it.uid)
+                        if (!hasTriggeredCallback) {
+                            val firebaseRepositories = FirebaseRepositories()
+                            val saved = firebaseRepositories.ensureGoogleUserInDatabase(it)
+                            snackbarHostState.showSnackbar(
+                                if (saved) "Logged in as ${it.displayName}" else "Failed to save user data"
+                            )
+                            hasTriggeredCallback = true
+                            onLoginSuccess(it.uid)
+                        }
                     }
                 } catch (e: ApiException) {
                     val errorMessage = when (e.statusCode) {
@@ -116,7 +126,12 @@ fun AccountScreen(
     val handleGoogleSignIn: () -> Unit = {
         try {
             activity?.let {
-                googleSignInLauncher.launch(googleSignInClient.signInIntent)
+                googleSignInClient?.signInIntent?.let { intent ->
+                    hasTriggeredCallback = false
+                    googleSignInLauncher.launch(intent)
+                } ?: scope.launch {
+                    snackbarHostState.showSnackbar("Error: Google Sign-In not available")
+                }
             } ?: scope.launch {
                 snackbarHostState.showSnackbar("Error: Cannot access Activity")
             }
@@ -158,11 +173,21 @@ fun AccountScreen(
                     onGoogleSignIn = handleGoogleSignIn
                 )
                 AuthScreen.Login -> LoginScreen(
-                    onLoginSuccess = { userId -> onLoginSuccess(userId) },
+                    onLoginSuccess = { userId -> 
+                        if (!hasTriggeredCallback) {
+                            hasTriggeredCallback = true
+                            onLoginSuccess(userId) 
+                        }
+                    },
                     onNavigateToRegister = { currentScreen = AuthScreen.Register }
                 )
                 AuthScreen.Register -> RegisterScreen(
-                    onRegisterSuccess = { userId -> onLoginSuccess(userId) },
+                    onRegisterSuccess = { userId -> 
+                        if (!hasTriggeredCallback) {
+                            hasTriggeredCallback = true
+                            onLoginSuccess(userId) 
+                        }
+                    },
                     onNavigateToLogin = { currentScreen = AuthScreen.Login }
                 )
             }

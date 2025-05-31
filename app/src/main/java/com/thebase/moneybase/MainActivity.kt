@@ -43,7 +43,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             val prefs = remember { getSharedPreferences("moneybase_prefs", MODE_PRIVATE) }
 
-            var userId by rememberSaveable { mutableStateOf(prefs.getString(KEY_USER_ID, null)) }
+            // Load userId from SharedPreferences and ensure it's not blank
+            var rawUserId = prefs.getString(KEY_USER_ID, null)
+            // Filter out blank userIds to prevent Firestore errors
+            var userId by rememberSaveable { mutableStateOf(if (rawUserId.isNullOrBlank()) null else rawUserId) }
+            
             var colorScheme by rememberSaveable {
                 mutableStateOf(
                     ColorScheme.valueOf(
@@ -54,13 +58,27 @@ class MainActivity : ComponentActivity() {
             var darkMode by rememberSaveable { mutableStateOf(prefs.getBoolean(KEY_DARK_MODE, true)) }
 
             val navController = rememberNavController()
+            // Track if we're currently handling navigation to avoid duplicate navigations
+            var isNavigating by remember { mutableStateOf(false) }
 
+            // Only react to userId changes for navigation when not already in the process of navigating
             LaunchedEffect(userId) {
-                if (userId.isNullOrEmpty()) {
-                    navController.navigate(Routes.AUTH) {
-                        // pop everything under "app" off the back stack
-                        popUpTo(Routes.APP) { inclusive = true }
+                if (!isNavigating) {
+                    isNavigating = true
+                    if (userId.isNullOrEmpty()) {
+                        navController.navigate(Routes.AUTH) {
+                            popUpTo(Routes.APP) { inclusive = true }
+                        }
+                    } else {
+                        // Only navigate to APP if we're not already there
+                        val currentRoute = navController.currentBackStackEntry?.destination?.route
+                        if (currentRoute != Routes.APP && currentRoute?.startsWith(Routes.APP) != true) {
+                            navController.navigate(Routes.APP) {
+                                popUpTo(Routes.AUTH) { inclusive = true }
+                            }
+                        }
                     }
+                    isNavigating = false
                 }
             }
 
@@ -74,8 +92,10 @@ class MainActivity : ComponentActivity() {
                         colorScheme = colorScheme,
                         darkMode = darkMode,
                         onLogin = {
-                            prefs.edit { putString(KEY_USER_ID, it) }
-                            userId = it
+                            if (it.isNotBlank()) {
+                                prefs.edit { putString(KEY_USER_ID, it) }
+                                userId = it
+                            }
                         },
                         onLogout = {
                             prefs.edit { remove(KEY_USER_ID) }

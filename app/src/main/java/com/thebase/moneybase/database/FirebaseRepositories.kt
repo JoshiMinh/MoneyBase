@@ -186,13 +186,27 @@ class FirebaseRepositories {
     // ----------------------------
 
     fun getTransactionsFlow(userId: String): Flow<List<Transaction>> = callbackFlow {
-        val listener = db.collection("users").document(userId)
-            .collection("transactions")
-            .addSnapshotListener { snap, err ->
-                if (err != null) { close(err); return@addSnapshotListener }
-                trySend(snap?.toObjects(Transaction::class.java).orEmpty())
-            }
-        awaitClose { listener.remove() }
+        if (userId.isBlank()) {
+            trySend(emptyList())
+            return@callbackFlow
+        }
+        
+        val listener = try {
+            db.collection("users").document(userId)
+                .collection("transactions")
+                .addSnapshotListener { snap, err ->
+                    if (err != null) { close(err); return@addSnapshotListener }
+                    trySend(snap?.toObjects(Transaction::class.java).orEmpty())
+                }
+        } catch (e: Exception) {
+            Log.e("MoneyBase", "Error in getTransactionsFlow: ${e.message}", e)
+            trySend(emptyList())
+            null
+        }
+        
+        awaitClose { 
+            listener?.remove() 
+        }
     }
 
     suspend fun addTransaction(userId: String, transaction: Transaction): Boolean {
@@ -249,6 +263,29 @@ class FirebaseRepositories {
     // Wallet Management Functions
     // ----------------------------
 
+    fun getWalletsFlow(userId: String): Flow<List<Wallet>> = callbackFlow {
+        if (userId.isBlank()) {
+            trySend(emptyList())
+            return@callbackFlow
+        }
+        
+        val listener = try {
+            db.collection("users").document(userId).collection("wallets")
+                .addSnapshotListener { snap, err ->
+                    if (err != null) { close(err); return@addSnapshotListener }
+                    trySend(snap?.toObjects(Wallet::class.java).orEmpty())
+                }
+        } catch (e: Exception) {
+            Log.e("MoneyBase", "Error in getWalletsFlow: ${e.message}", e)
+            trySend(emptyList())
+            null
+        }
+        
+        awaitClose { 
+            listener?.remove() 
+        }
+    }
+
     suspend fun transferBalance(userId: String, sourceWalletId: String, amount: Double, targetWalletId: String): Boolean {
         return try {
             db.runTransaction { tx ->
@@ -268,15 +305,6 @@ class FirebaseRepositories {
             Log.e("MoneyBase", "transferBalance failed", e)
             false
         }
-    }
-
-    fun getWalletsFlow(userId: String): Flow<List<Wallet>> = callbackFlow {
-        val listener = db.collection("users").document(userId).collection("wallets")
-            .addSnapshotListener { snap, err ->
-                if (err != null) { close(err); return@addSnapshotListener }
-                trySend(snap?.toObjects(Wallet::class.java).orEmpty())
-            }
-        awaitClose { listener.remove() }
     }
 
     suspend fun addWallet(userId: String, wallet: Wallet): String {
@@ -326,12 +354,26 @@ class FirebaseRepositories {
     // ----------------------------
 
     fun getCategoriesFlow(userId: String): Flow<List<Category>> = callbackFlow {
-        val listener = db.collection("users").document(userId).collection("categories")
-            .addSnapshotListener { snap, err ->
-                if (err != null) { close(err); return@addSnapshotListener }
-                trySend(snap?.toObjects(Category::class.java).orEmpty())
-            }
-        awaitClose { listener.remove() }
+        if (userId.isBlank()) {
+            trySend(emptyList())
+            return@callbackFlow
+        }
+        
+        val listener = try {
+            db.collection("users").document(userId).collection("categories")
+                .addSnapshotListener { snap, err ->
+                    if (err != null) { close(err); return@addSnapshotListener }
+                    trySend(snap?.toObjects(Category::class.java).orEmpty())
+                }
+        } catch (e: Exception) {
+            Log.e("MoneyBase", "Error in getCategoriesFlow: ${e.message}", e)
+            trySend(emptyList())
+            null
+        }
+        
+        awaitClose { 
+            listener?.remove() 
+        }
     }
 
     suspend fun addCategory(userId: String, category: Category): String {

@@ -56,6 +56,20 @@ import kotlin.math.abs
 fun HomeScreen(userId: String, navController: NavController) {
     val repo = remember { FirebaseRepositories() }
 
+    // If userId is empty or blank, show a placeholder
+    if (userId.isBlank()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "Please log in to view your transactions",
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
+        return
+    }
+
     val transactions by repo.getTransactionsFlow(userId).collectAsState(initial = emptyList())
     val categories by repo.getCategoriesFlow(userId).collectAsState(initial = emptyList())
     val wallets by repo.getWalletsFlow(userId).collectAsState(initial = emptyList())

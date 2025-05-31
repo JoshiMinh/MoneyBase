@@ -22,6 +22,7 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     var isLoading by remember { mutableStateOf(false) }
+    var hasTriggeredCallback by remember { mutableStateOf(false) }
     val firebaseRepositories = remember { FirebaseRepositories() }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -68,6 +69,7 @@ fun LoginScreen(
             onClick = {
                 scope.launch {
                     isLoading = true
+                    hasTriggeredCallback = false
                     try {
                         if (email.isBlank() || password.isBlank()) {
                             errorMessage = "Email and password are required"
@@ -77,9 +79,10 @@ fun LoginScreen(
                         val success = firebaseRepositories.loginUser(email, password)
                         if (success) {
                             val userId = Firebase.auth.currentUser?.uid.orEmpty()
-                            if (userId.isNotEmpty()) {
+                            if (userId.isNotEmpty() && !hasTriggeredCallback) {
+                                hasTriggeredCallback = true
                                 onLoginSuccess(userId)
-                            } else {
+                            } else if (userId.isEmpty()) {
                                 errorMessage = "Login successful but failed to get user ID"
                             }
                         } else {

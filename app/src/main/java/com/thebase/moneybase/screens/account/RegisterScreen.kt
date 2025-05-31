@@ -30,6 +30,7 @@ fun RegisterScreen(
     var confirmPasswordError by remember { mutableStateOf<String?>(null) }
     var generalError by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
+    var hasTriggeredCallback by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val firebaseRepositories = remember { FirebaseRepositories() }
     val emailRegex = remember { Regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$") }
@@ -138,14 +139,16 @@ fun RegisterScreen(
                 if (isValid) {
                     scope.launch {
                         isLoading = true
+                        hasTriggeredCallback = false
                         try {
                             val success = firebaseRepositories.registerUser(email, password, username)
                             if (success) {
                                 val user = Firebase.auth.currentUser
                                 val userId = user?.uid ?: ""
-                                if (userId.isNotEmpty()) {
+                                if (userId.isNotEmpty() && !hasTriggeredCallback) {
+                                    hasTriggeredCallback = true
                                     onRegisterSuccess(userId)
-                                } else {
+                                } else if (userId.isEmpty()) {
                                     generalError = "Registration successful but failed to get user ID"
                                 }
                             } else {
