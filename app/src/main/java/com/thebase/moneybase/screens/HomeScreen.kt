@@ -1,36 +1,15 @@
-@file:Suppress("unused")
+@file:Suppress("unused", "DEPRECATION")
 
 package com.thebase.moneybase.screens
 
-import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -38,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.core.graphics.toColorInt
 import androidx.navigation.NavController
+import com.google.accompanist.pager.*
 import com.thebase.moneybase.database.Category
 import com.thebase.moneybase.database.FirebaseRepositories
 import com.thebase.moneybase.database.Transaction
@@ -47,16 +27,14 @@ import io.github.dautovicharis.charts.PieChart
 import io.github.dautovicharis.charts.model.toChartDataSet
 import io.github.dautovicharis.charts.style.PieChartDefaults
 import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Date
-import java.util.Locale
+import java.util.*
 import kotlin.math.abs
+import kotlin.math.max
 
 @Composable
 fun HomeScreen(userId: String, navController: NavController) {
     val repo = remember { FirebaseRepositories() }
 
-    // If userId is empty or blank, show a placeholder
     if (userId.isBlank()) {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -73,16 +51,18 @@ fun HomeScreen(userId: String, navController: NavController) {
     val transactions by repo.getTransactionsFlow(userId).collectAsState(initial = emptyList())
     val categories by repo.getCategoriesFlow(userId).collectAsState(initial = emptyList())
     val wallets by repo.getWalletsFlow(userId).collectAsState(initial = emptyList())
+    var selectedMonth by remember { mutableStateOf(Calendar.getInstance()) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(8.dp)
     ) {
-        AddCustomPieChart(
+        GraphsCard(
             transactions = transactions,
             categories = categories,
-            onClick = { navController.navigate("report") },
+            selectedMonth = selectedMonth,
+            onClick = {},
             modifier = Modifier
                 .fillMaxWidth()
                 .height(320.dp)
@@ -102,55 +82,47 @@ fun HomeScreen(userId: String, navController: NavController) {
     }
 }
 
-@Suppress("DEPRECATION")
 @Composable
-fun AddCustomPieChart(
+fun GraphsCard(
     transactions: List<Transaction>,
     categories: List<Category>,
+    selectedMonth: Calendar,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val calendar = remember { Calendar.getInstance() }
-    val currentMonth = calendar.get(Calendar.MONTH)
-    val currentYear = calendar.get(Calendar.YEAR)
-
-    val (currentMonthExpense, sortedCategories) = remember(transactions to categories) {
-        val expenses = transactions.filter { !it.isIncome && it.amount < 0 }
-        val filtered = expenses.filter {
-            runCatching {
-                val date = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault()).parse(it.date)
-                Calendar.getInstance().apply { time = date!! }.let { cal ->
-                    cal.get(Calendar.MONTH) == currentMonth && cal.get(Calendar.YEAR) == currentYear
-                }
-            }.getOrDefault(false)
+    val monthlyTransactions = remember(transactions, selectedMonth) {
+        val start = Calendar.getInstance().apply {
+            time = selectedMonth.time
+            set(Calendar.DAY_OF_MONTH, 1)
         }
+        val end = Calendar.getInstance().apply {
+            time = selectedMonth.time
+            set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))
+        }
+        val df = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
+        transactions.filter {
+            runCatching { df.parse(it.date) }.getOrNull()?.let { d -> d >= start.time && d <= end.time } == true
+        }
+    }
 
+    val monthlyExpenses = remember(monthlyTransactions) {
+        monthlyTransactions.filter { !it.isIncome }
+    }
+
+    val sortedCategories = remember(monthlyExpenses, categories) {
         val categoryMap = categories.associateBy { it.id }
-        val categoryAmountMap = mutableMapOf<String, Triple<String, Float, String>>()
-
-        filtered.forEach { expense ->
-            categoryMap[expense.categoryId]?.let { category ->
-                val amount = abs(expense.amount).toFloat()
-                val current = categoryAmountMap[category.id]?.second ?: 0f
-                categoryAmountMap[category.id] = Triple(category.name, current + amount, category.color)
+        val amountByCat = mutableMapOf<String, Triple<String, Float, String>>()
+        monthlyExpenses.forEach { expense ->
+            categoryMap[expense.categoryId]?.let { cat ->
+                val amt = if (expense.amount < 0) -expense.amount.toFloat() else expense.amount.toFloat()
+                val prev = amountByCat[cat.id]?.second ?: 0f
+                amountByCat[cat.id] = Triple(cat.name, prev + amt, cat.color)
             }
         }
-
-        filtered to categoryAmountMap.values.sortedByDescending { it.second }
+        amountByCat.values.sortedByDescending { it.second }
     }
 
-    if (currentMonthExpense.isEmpty()) {
-        Box(
-            modifier = Modifier.fillMaxWidth(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "No expenses found for this month",
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
-        return
-    }
+    val pagerState = rememberPagerState(initialPage = 0)
 
     Card(
         modifier = modifier
@@ -162,96 +134,203 @@ fun AddCustomPieChart(
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
                 .padding(16.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = SimpleDateFormat("MMM yyyy", Locale.getDefault()).format(Date()),
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            Text(
+                text = SimpleDateFormat("MMM yyyy", Locale.getDefault()).format(selectedMonth.time),
+                style = MaterialTheme.typography.bodyLarge
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
+
+            HorizontalPager(
+                count = 2,
+                state = pagerState,
+                modifier = Modifier.weight(1f)
+            ) { page ->
+                when (page) {
+                    0 -> ExpensePieChart(monthlyExpenses, sortedCategories)
+                    1 -> IncomeExpenseBarChart(monthlyTransactions)
+                }
+            }
+
+            HorizontalPagerIndicator(
+                pagerState = pagerState,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
+        }
+    }
+}
+
+@Composable
+fun ExpensePieChart(
+    expenses: List<Transaction>,
+    sortedCategories: List<Triple<String, Float, String>>
+) {
+    if (expenses.isEmpty()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "No expenses found for this month",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+    } else {
+        Row(modifier = Modifier.fillMaxSize()) {
+            val names = sortedCategories.map { it.first }
+            val amounts = sortedCategories.map { it.second }
+            val colors = sortedCategories.map { Color(it.third.toColorInt()) }
+            val total = amounts.sum()
+
+            val dataSet = amounts.toChartDataSet(
+                title = "",
+                postfix = "$",
+                labels = names
+            )
+
+            val style = PieChartDefaults.style(
+                borderColor = Color.White,
+                donutPercentage = 40f,
+                borderWidth = 6f,
+                pieColors = colors
+            )
+
+            Box(
+                modifier = Modifier
+                    .width(200.dp)
+                    .fillMaxHeight(),
+                contentAlignment = Alignment.Center
+            ) {
+                PieChart(dataSet = dataSet, style = style)
+            }
+
+            Spacer(modifier = Modifier.width(1.dp).background(Color.Gray))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(1.dp)
+                    .background(Color.White.copy(alpha = 0.3f))
+            )
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .padding(start = 8.dp),
+                verticalArrangement = Arrangement.Top
+            ) {
+                sortedCategories.take(3).forEachIndexed { index, (label, value, _) ->
+                    val percent = (value / total * 100).toInt()
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .background(colors[index], shape = CircleShape)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = "$label - $${value.toInt()} ($percent%)",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+
+                if (sortedCategories.size > 3) {
+                    Text(
+                        text = "+${sortedCategories.size - 3} more",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun IncomeExpenseBarChart(transactions: List<Transaction>) {
+    if (transactions.isEmpty()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "No transactions found for this month",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+    } else {
+        val income = transactions.filter { it.isIncome }.sumOf { it.amount }.toFloat()
+        val expense = transactions.filter { !it.isIncome }.sumOf { -it.amount }.toFloat()
+
+        val minBarHeight = 20.dp
+
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("Income vs Expenses", style = MaterialTheme.typography.titleMedium)
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(250.dp)
+                    .height(150.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.Bottom
             ) {
-                val names = sortedCategories.map { it.first }
-                val amounts = sortedCategories.map { it.second }
-                val colors = sortedCategories.map { Color(it.third.toColorInt()) }
-                val total = amounts.sum()
-
-                val dataSet = amounts.toChartDataSet(
-                    title = "",
-                    postfix = "$",
-                    labels = names
-                )
-                val style = PieChartDefaults.style(
-                    borderColor = Color.White,
-                    donutPercentage = 40f,
-                    borderWidth = 6f,
-                    pieColors = colors
+                val barData = listOf(
+                    Triple("Income", income, Color.Green),
+                    Triple("Expenses", expense, Color.Red)
                 )
 
-                Box(
-                    modifier = Modifier
-                        .width(200.dp)
-                        .fillMaxHeight(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    PieChart(dataSet = dataSet, style = style)
+                barData.forEach { (label, value, color) ->
+                    val maxVal = max(income, expense).coerceAtLeast(1f)
+                    val calculatedHeight = if (value > 0) (value / maxVal * 150) else 0f
+                    val height = calculatedHeight.dp.coerceAtLeast(minBarHeight)
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Bottom,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(60.dp)
+                                .height(height)
+                                .background(color)
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(label, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(horizontalAlignment = Alignment.Start) {
+                    Text("Income", style = MaterialTheme.typography.bodyMedium)
+                    Text("$${income.toInt()}", style = MaterialTheme.typography.bodyLarge, color = Color.Green)
                 }
 
-                Divider(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .width(1.dp)
-                        .background(Color.White.copy(alpha = 0.3f))
-                )
-
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .padding(start = 8.dp),
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    sortedCategories.take(3).forEachIndexed { index, (label, value, _) ->
-                        val percent = (value / total * 100).toInt()
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(12.dp)
-                                    .background(colors[index], shape = CircleShape)
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                text = "$label - $${value.toInt()} ($percent%)",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                    }
-
-                    if (sortedCategories.size > 3) {
-                        Text(
-                            text = "+${sortedCategories.size - 3} more",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.7f),
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
-                    }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("Expenses", style = MaterialTheme.typography.bodyMedium)
+                    Text("$${expense.toInt()}", style = MaterialTheme.typography.bodyLarge, color = Color.Red)
                 }
             }
         }
@@ -264,7 +343,7 @@ fun RecentTransactionWidget(
     categories: List<Category>,
     wallets: List<Wallet>,
     onClick: () -> Unit = {},
-    @SuppressLint("ModifierParameter") modifier: Modifier = Modifier
+    modifier: Modifier = Modifier
 ) {
     val categoryMap = remember(categories) { categories.associateBy { it.id } }
     val walletMap = remember(wallets) { wallets.associateBy { it.id } }
@@ -318,7 +397,7 @@ fun RecentTransactionWidget(
 
             Box(
                 modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.TopStart
             ) {
                 if (recentTransactions.isEmpty()) {
                     Text(

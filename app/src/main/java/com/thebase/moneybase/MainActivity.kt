@@ -17,7 +17,6 @@ import androidx.navigation.compose.*
 import com.thebase.moneybase.screens.*
 import com.thebase.moneybase.screens.home.AllTransactionScreen
 import com.thebase.moneybase.screens.home.HistoryScreen
-import com.thebase.moneybase.screens.home.ReportScreen
 import com.thebase.moneybase.ui.ColorScheme
 import com.thebase.moneybase.ui.MoneyBaseTheme
 
@@ -28,7 +27,6 @@ object Routes {
     const val HOME = "home"
     const val ADD = "add"
     const val SETTINGS = "settings"
-    const val ABOUT = "about"
     const val REPORT = "report"
     const val HISTORY = "history"
     const val ALL_TRANSACTION = "all_transaction"
@@ -51,7 +49,7 @@ class MainActivity : ComponentActivity() {
             var colorScheme by rememberSaveable {
                 mutableStateOf(
                     ColorScheme.valueOf(
-                        prefs.getString(KEY_COLOR_SCHEME, ColorScheme.Purple.name).orEmpty()
+                        prefs.getString(KEY_COLOR_SCHEME, ColorScheme.Default.name).orEmpty()
                     )
                 )
             }
@@ -195,12 +193,6 @@ private fun NavGraphBuilder.appGraph(
             onDarkModeToggle    = onDarkModeToggle,
             navController       = navController
         )
-    }
-    composable(Routes.ABOUT) {
-        AboutScreen(navController)
-    }
-    composable(Routes.REPORT) {
-        ReportScreen(userId)
     }
     composable(Routes.HISTORY) {
         HistoryScreen(userId, navController)

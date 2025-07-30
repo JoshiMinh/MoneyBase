@@ -830,21 +830,7 @@ fun SettingsScreen(
                                 }
                             }
                         }
-                        Spacer(Modifier.height(16.dp))
-                        
-                        // About Button
-                        OutlinedButton(
-                            onClick = { navController.navigate(Routes.ABOUT) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = null
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text("About MoneyBase")
-                        }
-                        
+
                         Spacer(Modifier.height(16.dp))
                     }
                 }

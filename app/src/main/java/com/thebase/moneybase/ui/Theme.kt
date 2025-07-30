@@ -4,78 +4,87 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
+// Core light/dark overrides
 private val LightTheme = lightColorScheme(
     onPrimary = Color.White,
     onSecondary = Color.White,
-    onBackground = Color(0xFF1C1C1C)
+    onBackground = Color(0xFF1C1C1C) // deep charcoal for content
 )
 
 private val DarkTheme = darkColorScheme(
     onPrimary = Color(0xFF1C1C1C),
     onSecondary = Color(0xFF2C2C2C),
-    onBackground = Color(0xFFF5F5F5)
+    onBackground = Color(0xFFF5F5F5) // near-white for content on dark
 )
 
 private data class Palette(val primary: Color, val secondary: Color, val background: Color)
 
-private val PurplePalette = Palette(
-    primary = Color(0xFF7E57C2),
-    secondary = Color(0xFFB39DDB),
-    background = Color(0xFFF3E5F5)
+private val DefaultPalette = Palette(
+    primary   = Color(0xFF9575CD), // Lighter Purple (Purple 300)
+    secondary = Color(0xFFB0BEC5), // Blue Grey 200 – cool, modern
+    background= Color(0xFFF5F5F5)  // Neutral light background
 )
 
 private val BluePalette = Palette(
-    primary = Color(0xFF42A5F5),
-    secondary = Color(0xFF90CAF9),
-    background = Color(0xFFE3F2FD)
+    primary   = Color(0xFF1E88E5), // Blue 600
+    secondary = Color(0xFF90CAF9), // Blue 200
+    background= Color(0xFFE3F2FD)  // light sky
 )
 
 private val GreenPalette = Palette(
-    primary = Color(0xFF66BB6A),
-    secondary = Color(0xFFA5D6A7),
-    background = Color(0xFFE8F5E9)
+    primary   = Color(0xFF43A047), // Green 600
+    secondary = Color(0xFFA5D6A7), // Green 200
+    background= Color(0xFFE8F5E9)  // minty fresh
 )
 
 private val RedPalette = Palette(
-    primary = Color(0xFFEF5350),
-    secondary = Color(0xFFEF9A9A),
-    background = Color(0xFFFFEBEE)
+    primary   = Color(0xFFE53935), // Red 600
+    secondary = Color(0xFFEF9A9A), // Red 200
+    background= Color(0xFFFFEBEE)  // blush
 )
 
-enum class ColorScheme { Purple, Blue, Green, Red }
+enum class ColorScheme { Default, Blue, Green, Red }
 
 @Composable
 fun MoneyBaseTheme(
-    colorScheme: ColorScheme,
-    darkMode: Boolean,
+    colorScheme: ColorScheme = ColorScheme.Default,
+    darkMode: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val base = if (darkMode) DarkTheme else LightTheme
+    // base on light/dark
+    val baseScheme = if (darkMode) DarkTheme else LightTheme
+
+    // pick the palette
     val palette = when (colorScheme) {
-        ColorScheme.Purple -> PurplePalette
-        ColorScheme.Blue   -> BluePalette
-        ColorScheme.Green  -> GreenPalette
-        ColorScheme.Red    -> RedPalette
+        ColorScheme.Default -> DefaultPalette
+        ColorScheme.Blue    -> BluePalette
+        ColorScheme.Green   -> GreenPalette
+        ColorScheme.Red     -> RedPalette
     }
+
+    // merge in primary, secondary, (and background if light)
     val colors = if (darkMode) {
-        base.copy(
-            primary = palette.primary,
+        baseScheme.copy(
+            primary   = palette.primary,
             secondary = palette.secondary
         )
     } else {
-        base.copy(
-            primary = palette.primary,
-            secondary = palette.secondary,
+        baseScheme.copy(
+            primary    = palette.primary,
+            secondary  = palette.secondary,
             background = palette.background
         )
     }
 
-    MaterialTheme(colorScheme = colors, content = content)
+    MaterialTheme(
+        colorScheme = colors,
+        content = content
+    )
 }
 
 fun getIconColorForScheme(scheme: ColorScheme): Color = when (scheme) {
-    ColorScheme.Purple -> PurplePalette.primary
-    ColorScheme.Blue   -> BluePalette.primary
-    ColorScheme.Green  -> GreenPalette.primary
-    ColorScheme.Red    -> RedPalette.primary
+    ColorScheme.Default -> DefaultPalette.primary
+    ColorScheme.Blue    -> BluePalette.primary
+    ColorScheme.Green   -> GreenPalette.primary
+    ColorScheme.Red     -> RedPalette.primary
 }

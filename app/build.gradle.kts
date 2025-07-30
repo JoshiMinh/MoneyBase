@@ -106,6 +106,9 @@ dependencies {
     // Charts & Graphs
     implementation(libs.charts.android)
 
+    implementation(libs.accompanist.pager)
+    implementation(libs.accompanist.pager.indicators)
+
     // Unit Testing
     testImplementation(libs.junit)
 
