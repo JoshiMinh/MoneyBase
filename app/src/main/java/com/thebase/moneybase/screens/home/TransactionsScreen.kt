@@ -5,6 +5,7 @@ package com.thebase.moneybase.screens.home
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -141,48 +142,20 @@ fun TransactionsScreen(
                 actions = {
                     IconButton(
                         onClick = {
-                            val current = Calendar.getInstance()
-                            selectedDate = Calendar.getInstance().apply {
-                                when (selectedPeriod) {
-                                    PeriodType.DAY -> {
-                                        time = current.time
-                                        set(Calendar.HOUR_OF_DAY, 0)
-                                        set(Calendar.MINUTE, 0)
-                                        set(Calendar.SECOND, 0)
-                                        set(Calendar.MILLISECOND, 0)
-                                    }
-                                    PeriodType.WEEK -> {
-                                        time = current.time
-                                        set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-                                        if (time.after(current.time)) add(Calendar.WEEK_OF_YEAR, -1)
-                                    }
-                                    PeriodType.MONTH -> {
-                                        time = current.time
-                                        set(Calendar.DAY_OF_MONTH, 1)
-                                        set(Calendar.HOUR_OF_DAY, 0)
-                                        set(Calendar.MINUTE, 0)
-                                        set(Calendar.SECOND, 0)
-                                        set(Calendar.MILLISECOND, 0)
-                                    }
-                                    PeriodType.YEAR -> {
-                                        time = current.time
-                                        set(Calendar.MONTH, Calendar.JANUARY)
-                                        set(Calendar.DAY_OF_MONTH, 1)
-                                        set(Calendar.HOUR_OF_DAY, 0)
-                                        set(Calendar.MINUTE, 0)
-                                        set(Calendar.SECOND, 0)
-                                        set(Calendar.MILLISECOND, 0)
-                                    }
-                                    PeriodType.CUSTOM -> {
-                                        time = current.time
-                                        customStartDate = time
-                                        customEndDate = time
-                                        set(Calendar.HOUR_OF_DAY, 0)
-                                        set(Calendar.MINUTE, 0)
-                                        set(Calendar.SECOND, 0)
-                                        set(Calendar.MILLISECOND, 0)
-                                    }
-                                }
+                            // Set selectedDate to today at midnight
+                            val todayCal = Calendar.getInstance().apply {
+                                set(Calendar.HOUR_OF_DAY, 0)
+                                set(Calendar.MINUTE, 0)
+                                set(Calendar.SECOND, 0)
+                                set(Calendar.MILLISECOND, 0)
+                            }
+                            selectedDate = todayCal
+
+                            // If custom range, also reset customStartDate and customEndDate to today
+                            if (selectedPeriod == PeriodType.CUSTOM) {
+                                val todayDate = todayCal.time
+                                customStartDate = todayDate
+                                customEndDate = todayDate
                             }
                         }
                     ) {
@@ -362,9 +335,16 @@ fun TransactionsScreen(
                                 }
                             }
                             Spacer(modifier = Modifier.height(16.dp))
+                            val listState = rememberLazyListState()
+
+                            LaunchedEffect(filteredTransactions) {
+                                listState.animateScrollToItem(0)
+                            }
+
                             LazyColumn(
                                 modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(16.dp)
+                                contentPadding = PaddingValues(16.dp),
+                                state = listState
                             ) {
                                 items(filteredTransactions) { transaction ->
                                     TransactionItem(
@@ -439,46 +419,63 @@ fun CustomDateRangePickerDialog(
     onConfirm: (start: Date, end: Date) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val startDatePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = initialStartDate.time
+    var step by remember { mutableStateOf(0) } // 0 = picking start, 1 = picking end
+    var selectedStartMillis by remember { mutableStateOf(initialStartDate.time) }
+    var selectedEndMillis by remember { mutableStateOf(initialEndDate.time) }
+
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = if (step == 0) selectedStartMillis else selectedEndMillis
     )
-    val endDatePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = initialEndDate.time
-    )
+
+    val isEndValid = selectedEndMillis >= selectedStartMillis
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Select Date Range") },
+        title = {
+            Text(if (step == 0) "Select Start Date" else "Select End Date")
+        },
         text = {
-            Column {
-                DatePicker(
-                    state = startDatePickerState,
-                    modifier = Modifier.padding(bottom = 8.dp),
-                    title = { Text("Start Date") }
-                )
-                DatePicker(
-                    state = endDatePickerState,
-                    modifier = Modifier.padding(top = 8.dp),
-                    title = { Text("End Date") }
-                )
-            }
+            DatePicker(state = datePickerState)
         },
         confirmButton = {
-            TextButton(
-                onClick = {
-                    val startMillis = startDatePickerState.selectedDateMillis
-                    val endMillis = endDatePickerState.selectedDateMillis
-                    if (startMillis != null && endMillis != null && endMillis >= startMillis) {
-                        onConfirm(Date(startMillis), Date(endMillis))
+            when (step) {
+                0 -> {
+                    TextButton(onClick = {
+                        datePickerState.selectedDateMillis?.let {
+                            selectedStartMillis = it
+                            step = 1 // Go to end date selection
+                        }
+                    }) {
+                        Text("Next")
                     }
                 }
-            ) {
-                Text("Confirm")
+                1 -> {
+                    val isValid = datePickerState.selectedDateMillis != null &&
+                            datePickerState.selectedDateMillis!! >= selectedStartMillis
+                    TextButton(
+                        onClick = {
+                            datePickerState.selectedDateMillis?.let {
+                                selectedEndMillis = it
+                                onConfirm(Date(selectedStartMillis), Date(selectedEndMillis))
+                            }
+                        },
+                        enabled = isValid
+                    ) {
+                        Text("Confirm")
+                    }
+                }
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+            Row {
+                if (step == 1) {
+                    TextButton(onClick = { step = 0 }) {
+                        Text("Back")
+                    }
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel")
+                }
             }
         }
     )
