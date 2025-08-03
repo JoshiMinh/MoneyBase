@@ -2,34 +2,13 @@ package com.thebase.moneybase.utils.dialogs
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -37,8 +16,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.launch
 
-
-// Time Picker Dialog
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimePickerDialog(
@@ -54,63 +31,78 @@ fun TimePickerDialog(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            shape = MaterialTheme.shapes.medium
+                .padding(24.dp),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.background
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
             Column(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Select reminder time",
-                    style = MaterialTheme.typography.titleLarge
+                    text = "Set Reminder Time",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onBackground
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(180.dp),
+                        .height(200.dp),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Hours
                     ScrollWheel(
                         items = (0..23).map { it.toString().padStart(2, '0') },
                         initialIndex = hour,
-                        onValueChange = { selectedIndex -> hour = selectedIndex },
-                        modifier = Modifier.weight(1f)
+                        onValueChange = { hour = it },
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = 8.dp)
                     )
 
                     Text(
                         text = ":",
                         style = MaterialTheme.typography.headlineLarge,
-                        modifier = Modifier.padding(horizontal = 8.dp)
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 4.dp)
                     )
 
-                    // Minutes
                     ScrollWheel(
                         items = (0..59).map { it.toString().padStart(2, '0') },
                         initialIndex = minute,
-                        onValueChange = { selectedIndex -> minute = selectedIndex },
-                        modifier = Modifier.weight(1f)
+                        onValueChange = { minute = it },
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 8.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(32.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancel")
+                        Text(
+                            text = "Cancel",
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Button(onClick = { onConfirm(hour, minute) }) {
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Button(
+                        onClick = { onConfirm(hour, minute) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    ) {
                         Text("Confirm")
                     }
                 }
@@ -118,7 +110,6 @@ fun TimePickerDialog(
         }
     }
 }
-
 
 @Composable
 fun ScrollWheel(
@@ -130,47 +121,37 @@ fun ScrollWheel(
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialIndex)
     val coroutineScope = rememberCoroutineScope()
 
-    // Detect when scrolling stops and snap to the center item
     LaunchedEffect(listState.isScrollInProgress) {
         if (!listState.isScrollInProgress) {
             val firstVisibleIndex = listState.firstVisibleItemIndex
-            val firstVisibleOffset = listState.firstVisibleItemScrollOffset
-
-            // Calculate which item is closer to the center
-            val itemHeight = 60 // approximate item height
-            val index = if (firstVisibleOffset > itemHeight / 2) {
-                firstVisibleIndex + 1
-            } else {
-                firstVisibleIndex
-            }
-
-            // Snap to the center item
+            val offset = listState.firstVisibleItemScrollOffset
+            val itemHeight = 60
+            val index = if (offset > itemHeight / 2) firstVisibleIndex + 1 else firstVisibleIndex
+            val target = index.coerceIn(0, items.size - 1)
             coroutineScope.launch {
-                listState.animateScrollToItem(index.coerceIn(0, items.size - 1))
+                listState.animateScrollToItem(target)
             }
-
-            // Notify about the value change
-            onValueChange(index.coerceIn(0, items.size - 1))
+            onValueChange(target)
         }
     }
 
     Box(
         modifier = modifier
-            .height(180.dp)
+            .height(200.dp)
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                        MaterialTheme.colorScheme.primaryContainer,
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f),
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f)
                     )
                 ),
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(12.dp)
             )
     ) {
         LazyColumn(
             state = listState,
-            contentPadding = PaddingValues(vertical = 60.dp),
+            contentPadding = PaddingValues(vertical = 70.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxSize()
         ) {
@@ -178,29 +159,27 @@ fun ScrollWheel(
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .padding(vertical = 6.dp)
-                        .height(48.dp)
+                        .height(60.dp)
                         .fillMaxWidth()
                 ) {
                     Text(
                         text = item,
-                        style = MaterialTheme.typography.headlineMedium
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
         }
 
-        // Highlight for selection
         Box(
             modifier = Modifier
-                .padding(horizontal = 16.dp)
                 .align(Alignment.Center)
                 .height(60.dp)
                 .fillMaxWidth()
                 .border(
                     width = 2.dp,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(8.dp)
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                    shape = RoundedCornerShape(12.dp)
                 )
         )
     }
