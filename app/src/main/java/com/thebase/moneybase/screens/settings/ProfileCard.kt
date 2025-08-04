@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package com.thebase.moneybase.screens.settings
 
 import android.net.Uri
@@ -73,7 +75,7 @@ fun ProfileCard(
     var confirmPwd by remember { mutableStateOf("") }
     var isSaving by remember { mutableStateOf(false) }
 
-    // Launcher for image picking
+    // Image picker
     val pickImageLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -90,94 +92,14 @@ fun ProfileCard(
         }
     }
 
-    // Profile card with elevated surfaceVariant background
-    Card(
+    // Use the extracted layout
+    ProfileCardLayout(
+        user = user,
+        onClick = { showDialog = true },
+        onAvatarClick = { pickImageLauncher.launch("image/*") },
         modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
-            .clickable { showDialog = true },
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        shape = MaterialTheme.shapes.medium
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Avatar
-            Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surface)
-                    .clickable { pickImageLauncher.launch("image/*") },
-                contentAlignment = Alignment.Center
-            ) {
-                user?.profilePictureUrl
-                    .takeIf { !it.isNullOrEmpty() }
-                    ?.let { url ->
-                        Image(
-                            painter = rememberAsyncImagePainter(url),
-                            contentDescription = "Profile picture",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                    ?: Icon(
-                        Icons.Default.AccountCircle,
-                        contentDescription = "Avatar placeholder",
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-            }
+    )
 
-            Spacer(Modifier.width(16.dp))
-
-            // Name & email
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = user?.displayName.orEmpty(),
-                    style = MaterialTheme.typography.headlineSmall
-                )
-                Text(
-                    text = user?.email.orEmpty(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        // Premium badge
-        if (user?.premium == true) {
-            Divider()
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFFFFF8E1), shape = MaterialTheme.shapes.small)
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Default.Star,
-                    contentDescription = "Premium badge",
-                    tint = Color(0xFFFFB300)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = "Premium Account",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF7A5C00)
-                )
-            }
-        }
-    }
-
-    // Account Info + Change Password Dialog
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { if (!isSaving) showDialog = false },
@@ -190,7 +112,7 @@ fun ProfileCard(
             },
             text = {
                 Column {
-                    // Large avatar picker
+                    // Avatar again in dialog
                     Box(
                         modifier = Modifier
                             .size(90.dp)
@@ -202,10 +124,10 @@ fun ProfileCard(
                         contentAlignment = Alignment.Center
                     ) {
                         user?.profilePictureUrl
-                            .takeIf { !it.isNullOrEmpty() }
-                            ?.let { url ->
+                            ?.takeIf { it.isNotEmpty() }
+                            ?.let {
                                 Image(
-                                    painter = rememberAsyncImagePainter(url),
+                                    painter = rememberAsyncImagePainter(it),
                                     contentDescription = "Profile picture",
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize()
@@ -221,7 +143,6 @@ fun ProfileCard(
 
                     Spacer(Modifier.height(16.dp))
 
-                    // Name field
                     OutlinedTextField(
                         value = nameField,
                         onValueChange = { nameField = it },
@@ -232,7 +153,6 @@ fun ProfileCard(
 
                     Spacer(Modifier.height(8.dp))
 
-                    // Email display (read-only)
                     OutlinedTextField(
                         value = user?.email.orEmpty(),
                         onValueChange = {},
@@ -245,7 +165,6 @@ fun ProfileCard(
                     Divider()
                     Spacer(Modifier.height(8.dp))
 
-                    // Change Password
                     Text("Change Password", style = MaterialTheme.typography.labelLarge)
                     Spacer(Modifier.height(8.dp))
 
@@ -323,5 +242,98 @@ fun ProfileCard(
                 }
             }
         )
+    }
+}
+
+@Composable
+fun ProfileCardLayout(
+    user: User?,
+    onClick: () -> Unit,
+    onAvatarClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .clickable { onClick() },
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        shape = MaterialTheme.shapes.medium
+    ) {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surface)
+                        .clickable { onAvatarClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    user?.profilePictureUrl
+                        ?.takeIf { it.isNotEmpty() }
+                        ?.let {
+                            Image(
+                                painter = rememberAsyncImagePainter(it),
+                                contentDescription = "Profile picture",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                        ?: Icon(
+                            Icons.Default.AccountCircle,
+                            contentDescription = "Avatar placeholder",
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                }
+
+                Spacer(Modifier.width(16.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = user?.displayName.orEmpty(),
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                    Text(
+                        text = user?.email.orEmpty(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            if (user?.premium == true) {
+                Divider()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFFFF8E1), shape = MaterialTheme.shapes.small)
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = "Premium badge",
+                        tint = Color(0xFFFFB300)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "Premium Account",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF7A5C00)
+                    )
+                }
+            }
+        }
     }
 }

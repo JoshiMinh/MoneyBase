@@ -87,7 +87,7 @@ fun HomeScreen(userId: String, navController: NavController) {
             transactions = transactions,
             categories = categories,
             selectedMonth = selectedMonth,
-            onClick = {},
+            onClick = { navController.navigate("report") },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(320.dp)

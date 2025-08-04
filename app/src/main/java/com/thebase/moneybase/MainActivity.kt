@@ -7,14 +7,26 @@ import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.edit
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.*
-import com.thebase.moneybase.screens.*
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.navigation
+import androidx.navigation.compose.rememberNavController
+import com.thebase.moneybase.screens.AccountScreen
+import com.thebase.moneybase.screens.AddScreen
+import com.thebase.moneybase.screens.HomeScreen
+import com.thebase.moneybase.screens.SettingsScreen
+import com.thebase.moneybase.screens.home.ReportScreen
 import com.thebase.moneybase.screens.home.TransactionsScreen
 import com.thebase.moneybase.ui.ColorScheme
 import com.thebase.moneybase.ui.MoneyBaseTheme
@@ -195,5 +207,8 @@ private fun NavGraphBuilder.appGraph(
     }
     composable(Routes.ALL_TRANSACTION) {
         TransactionsScreen(userId, navController)
+    }
+    composable(Routes.REPORT) {
+        ReportScreen(userId = userId, navController = navController)
     }
 }
