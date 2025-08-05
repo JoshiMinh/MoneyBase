@@ -1,10 +1,13 @@
-@file:Suppress("unused")
+@file:Suppress("unused", "DEPRECATION")
 
 package com.thebase.moneybase.screens.home
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -38,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.HorizontalPager
 import com.google.accompanist.pager.HorizontalPagerIndicator
 import com.google.accompanist.pager.rememberPagerState
@@ -47,13 +51,24 @@ import com.thebase.moneybase.database.Transaction
 import com.thebase.moneybase.database.Wallet
 import com.thebase.moneybase.screens.home.charts.ExpensePieChart
 import com.thebase.moneybase.screens.home.charts.IncomeExpenseBarChart
+import com.thebase.moneybase.screens.home.charts.LineChart
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
 
-@OptIn(ExperimentalMaterial3Api::class)
+@SuppressLint("ConstantLocale")
+private val storageDateFormat = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
+@SuppressLint("ConstantLocale")
+private val readableDateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+@SuppressLint("ConstantLocale")
+private val monthYearFormat = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
+
+private fun parseDateSafe(dateStr: String): Date? =
+    runCatching { storageDateFormat.parse(dateStr) }.getOrNull()
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPagerApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun ReportScreen(
     userId: String,
@@ -61,7 +76,6 @@ fun ReportScreen(
 ) {
     val repo = remember { FirebaseRepositories() }
 
-    // State management
     var transactions by remember { mutableStateOf<List<Transaction>>(emptyList()) }
     var categories by remember { mutableStateOf<List<Category>>(emptyList()) }
     var wallets by remember { mutableStateOf<List<Wallet>>(emptyList()) }
@@ -73,7 +87,6 @@ fun ReportScreen(
     var customStartDate by remember { mutableStateOf<Date?>(null) }
     var customEndDate by remember { mutableStateOf<Date?>(null) }
 
-    // Fetch data from Firebase
     LaunchedEffect(userId) {
         if (userId.isBlank()) return@LaunchedEffect
         isLoading = true
@@ -89,26 +102,17 @@ fun ReportScreen(
         }
     }
 
-    // Handle empty userId
     if (userId.isBlank()) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "Please log in to view reports",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.error,
-                textAlign = TextAlign.Center
-            )
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Please log in to view reports", color = MaterialTheme.colorScheme.error)
         }
         return
     }
 
-    // Calculate date range for selected period
     val (startDate, endDate) = remember(selectedPeriod, selectedDate, customStartDate, customEndDate, transactions) {
         val start = Calendar.getInstance()
         val end = Calendar.getInstance().apply { time = selectedDate.time }
+
         when (selectedPeriod) {
             ChartPeriodType.DAY -> start.time = end.time
             ChartPeriodType.WEEK -> {
@@ -135,57 +139,66 @@ fun ReportScreen(
                 end.time = customEndDate ?: start.time
             }
             ChartPeriodType.ALL -> {
-                val df = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
-                val allDates = transactions.mapNotNull {
-                    runCatching { df.parse(it.date) }.getOrNull()
-                }
-                val min = allDates.minOrNull() ?: Date()
-                val max = allDates.maxOrNull() ?: Date()
+                val dates = transactions.mapNotNull { parseDateSafe(it.date) }
+                val min = dates.minOrNull() ?: Date()
+                val max = dates.maxOrNull() ?: Date()
                 start.time = min
                 end.time = max
             }
         }
+
         start.apply {
             set(Calendar.HOUR_OF_DAY, 0)
             set(Calendar.MINUTE, 0)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }
+
         end.apply {
             set(Calendar.HOUR_OF_DAY, 23)
             set(Calendar.MINUTE, 59)
             set(Calendar.SECOND, 59)
             set(Calendar.MILLISECOND, 999)
         }
+
         start.time to end.time
     }
 
-    // Format display date
     val displayDate = remember(selectedPeriod, startDate, endDate) {
-        val df = when (selectedPeriod) {
-            ChartPeriodType.DAY -> SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-            ChartPeriodType.WEEK, ChartPeriodType.CUSTOM -> SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-            ChartPeriodType.MONTH -> SimpleDateFormat("MMMM yyyy", Locale.getDefault())
-            ChartPeriodType.YEAR -> SimpleDateFormat("yyyy", Locale.getDefault())
-            ChartPeriodType.ALL -> null
-        }
         when (selectedPeriod) {
-            ChartPeriodType.WEEK, ChartPeriodType.CUSTOM -> "${df?.format(startDate)} - ${df?.format(endDate)}"
+            ChartPeriodType.WEEK, ChartPeriodType.CUSTOM -> "${readableDateFormat.format(startDate)} - ${readableDateFormat.format(endDate)}"
+            ChartPeriodType.MONTH -> monthYearFormat.format(selectedDate.time)
+            ChartPeriodType.DAY -> readableDateFormat.format(selectedDate.time)
+            ChartPeriodType.YEAR -> SimpleDateFormat("yyyy", Locale.getDefault()).format(selectedDate.time)
             ChartPeriodType.ALL -> "All Time"
-            else -> df?.format(selectedDate.time) ?: ""
         }
+    }
+
+    val periodTxns = remember(transactions, startDate, endDate) {
+        transactions.filter {
+            parseDateSafe(it.date)?.let { d ->
+                !d.before(startDate) && !d.after(endDate)
+            } == true
+        }
+    }
+
+    val sortedCategories = remember(periodTxns, categories) {
+        val categoryMap = categories.associateBy { it.id }
+        val amountByCat = mutableMapOf<String, Triple<String, Float, String>>()
+        periodTxns.filter { !it.isIncome }.forEach { txn ->
+            categoryMap[txn.categoryId]?.let { cat ->
+                val amt = abs(txn.amount.toFloat())
+                val prev = amountByCat[cat.id]?.second ?: 0f
+                amountByCat[cat.id] = Triple(cat.name, prev + amt, cat.color)
+            }
+        }
+        amountByCat.values.sortedByDescending { it.second }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        text = "Financial Reports",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Medium
-                    )
-                },
+                title = { Text("Financial Reports", fontWeight = FontWeight.Medium) },
                 navigationIcon = {
                     IconButton(onClick = { navController?.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -205,27 +218,23 @@ fun ReportScreen(
                             customEndDate = today.time
                         }
                     }) {
-                        Icon(Icons.Filled.Today, contentDescription = "Reset to Today")
+                        Icon(Icons.Filled.Today, contentDescription = "Today")
                     }
                 }
             )
-        },
-        containerColor = MaterialTheme.colorScheme.background
+        }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 8.dp, vertical = 8.dp),
+                .padding(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Date navigation card
+            // Date navigation
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                colors = CardDefaults.cardColors(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f))
             ) {
                 Row(
                     modifier = Modifier
@@ -250,15 +259,14 @@ fun ReportScreen(
                         },
                         enabled = selectedPeriod != ChartPeriodType.ALL
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous Period")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous")
                     }
 
                     Text(
                         text = displayDate,
                         style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        textAlign = TextAlign.Center
                     )
 
                     IconButton(
@@ -277,111 +285,53 @@ fun ReportScreen(
                         },
                         enabled = selectedPeriod != ChartPeriodType.ALL
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next Period")
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next")
                     }
                 }
             }
 
-            // Content area
+            // Charts or messages
             when {
-                isLoading -> {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
+                isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
-                errorMessage != null -> {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = errorMessage!!,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyLarge,
-                            textAlign = TextAlign.Center
-                        )
-                    }
+
+                errorMessage != null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(errorMessage ?: "", color = MaterialTheme.colorScheme.error)
                 }
-                transactions.isEmpty() -> {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "No transactions available",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                            textAlign = TextAlign.Center
-                        )
-                    }
+
+                transactions.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No transactions available.")
                 }
+
                 else -> {
-                    val df = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
-                    val periodTxns = remember(transactions, startDate, endDate) {
-                        transactions.filter {
-                            runCatching { df.parse(it.date) }.getOrNull()?.let { d ->
-                                !d.before(startDate) && !d.after(endDate)
-                            } ?: false
-                        }
-                    }
-
-                    val sortedCategories = remember(periodTxns, categories) {
-                        val categoryMap = categories.associateBy { it.id }
-                        val amountByCat = mutableMapOf<String, Triple<String, Float, String>>()
-                        periodTxns.filter { !it.isIncome }.forEach { expense ->
-                            categoryMap[expense.categoryId]?.let { cat ->
-                                val amt = abs(expense.amount.toFloat())
-                                val prev = amountByCat[cat.id]?.second ?: 0f
-                                amountByCat[cat.id] = Triple(cat.name, prev + amt, cat.color)
-                            }
-                        }
-                        amountByCat.values.sortedByDescending { it.second }
-                    }
-
                     val pagerState = rememberPagerState(initialPage = 0)
 
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                    ) {
+                    Column(modifier = Modifier.weight(1f)) {
                         Card(
                             modifier = Modifier
-                                .fillMaxSize()
+                                .fillMaxWidth()
                                 .padding(horizontal = 8.dp, vertical = 4.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
-                            ),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                            colors = CardDefaults.cardColors(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f))
                         ) {
                             HorizontalPager(
-                                count = 2,
+                                count = 3,
                                 state = pagerState,
-                                modifier = Modifier.fillMaxSize()
+                                modifier = Modifier.fillMaxWidth()
                             ) { page ->
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(16.dp)
-                                ) {
+                                Box(modifier = Modifier.fillMaxSize()) {
                                     when (page) {
                                         0 -> ExpensePieChart(
                                             expenses = periodTxns.filter { !it.isIncome },
                                             sortedCategories = sortedCategories
                                         )
-                                        1 -> IncomeExpenseBarChart(
-                                            transactions = periodTxns
+
+                                        1 -> IncomeExpenseBarChart(transactions = periodTxns)
+
+                                        2 -> LineChart(
+                                            transactions = periodTxns,
+                                            startDate = startDate,
+                                            endDate = endDate
                                         )
                                     }
                                 }
@@ -392,30 +342,25 @@ fun ReportScreen(
 
                         HorizontalPagerIndicator(
                             pagerState = pagerState,
-                            modifier = Modifier.align(Alignment.CenterHorizontally),
-                            activeColor = MaterialTheme.colorScheme.primary,
-                            inactiveColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
                         )
                     }
                 }
             }
 
-            // Period selection card
+            // Period selection
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                colors = CardDefaults.cardColors(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f))
             ) {
-                Row(
+                FlowRow(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Display all periods except ALL first
-                    ChartPeriodType.values().filter { it != ChartPeriodType.ALL }.forEach { period ->
+                    ChartPeriodType.entries.forEach { period ->
                         FilterChip(
                             selected = selectedPeriod == period,
                             onClick = {
@@ -436,27 +381,10 @@ fun ReportScreen(
                             modifier = Modifier.padding(horizontal = 4.dp)
                         )
                     }
-                    // Display ALL period last
-                    FilterChip(
-                        selected = selectedPeriod == ChartPeriodType.ALL,
-                        onClick = {
-                            selectedPeriod = ChartPeriodType.ALL
-                            customStartDate = null
-                            customEndDate = null
-                        },
-                        label = {
-                            Text(
-                                text = "All",
-                                style = MaterialTheme.typography.labelLarge
-                            )
-                        },
-                        modifier = Modifier.padding(horizontal = 4.dp)
-                    )
                 }
             }
         }
 
-        // Custom date picker dialog
         if (showCustomDatePicker) {
             CustomDateRangePickerDialog(
                 initialStartDate = customStartDate ?: Date(),

@@ -29,7 +29,8 @@ import io.github.dautovicharis.charts.style.PieChartDefaults
 @Composable
 fun ExpensePieChart(
     expenses: List<Transaction>,
-    sortedCategories: List<Triple<String, Float, String>>
+    sortedCategories: List<Triple<String, Float, String>>,
+    showAllLegends: Boolean = false // Optional param for full legend
 ) {
     if (expenses.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -38,22 +39,22 @@ fun ExpensePieChart(
         return
     }
 
-    val names   = sortedCategories.map { it.first }
+    val names = sortedCategories.map { it.first }
     val amounts = sortedCategories.map { it.second }
-    val colors  = sortedCategories.map { Color(it.third.toColorInt()) }
-    val total   = amounts.sum().takeIf { it > 0f } ?: 1f
+    val colors = sortedCategories.map { Color(it.third.toColorInt()) }
+    val total = amounts.sum().takeIf { it > 0f } ?: 1f
 
     val dataSet = amounts.toChartDataSet(
-        title   = "",
+        title = "",
         postfix = "$",
-        labels  = names
+        labels = names
     )
 
     val style = PieChartDefaults.style(
-        borderColor     = Color.White,
+        borderColor = Color.White,
         donutPercentage = 40f,
-        borderWidth     = 6f,
-        pieColors       = colors
+        borderWidth = 6f,
+        pieColors = colors
     )
 
     Row(Modifier.fillMaxSize()) {
@@ -80,7 +81,9 @@ fun ExpensePieChart(
                 .padding(start = 8.dp),
             verticalArrangement = Arrangement.Top
         ) {
-            sortedCategories.take(3).forEachIndexed { index, (label, value, _) ->
+            val visibleCategories = if (showAllLegends) sortedCategories else sortedCategories.take(3)
+
+            visibleCategories.forEachIndexed { index, (label, value, _) ->
                 val percent = ((value / total) * 100).toInt()
                 Row(
                     Modifier
@@ -95,12 +98,13 @@ fun ExpensePieChart(
                     )
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        "$label - $${value.toInt()} ($percent%)",
+                        "$label - $${"%.2f".format(value)} ($percent%)",
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
             }
-            if (sortedCategories.size > 3) {
+
+            if (!showAllLegends && sortedCategories.size > 3) {
                 Text(
                     text = "+${sortedCategories.size - 3} more",
                     style = MaterialTheme.typography.bodySmall,

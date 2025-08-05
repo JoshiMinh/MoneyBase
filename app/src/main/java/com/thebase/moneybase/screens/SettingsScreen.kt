@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package com.thebase.moneybase.screens
 
 import android.os.Build
@@ -15,22 +17,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -93,46 +91,32 @@ fun SettingsScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Settings") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                }
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { padding ->
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             when {
                 isLoading -> {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(top = 64.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        CircularProgressIndicator()
                     }
                 }
+
                 errorMsg != null -> {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(top = 64.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -143,139 +127,87 @@ fun SettingsScreen(
                         )
                     }
                 }
+
                 else -> {
-                    // PROFILE CARD
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
-                        ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        ProfileCard(
-                            user = user,
-                            userId = userId,
-                            repo = repo,
-                            snackbarHostState = snackbarHostState,
-                            onUserUpdated = { updated -> user = updated },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp)
-                        )
-                    }
-
-                    // NOTIFICATION SETTINGS
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
-                        ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Column(Modifier.padding(16.dp)) {
-                            NotificationSettings(
-                                notificationEnabled = notificationEnabled,
-                                notificationHour = notificationHour,
-                                notificationMinute = notificationMinute,
-                                onNotificationToggle = {
-                                    notificationEnabled = it
-                                    notificationHelper.setNotificationEnabled(it)
-                                },
-                                onTimeChanged = { h, m ->
-                                    notificationHour = h
-                                    notificationMinute = m
-                                    notificationHelper.setNotificationTime(h, m)
-                                },
-                                snackbarHostState = snackbarHostState,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
-
-                    // THEME SETTINGS
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
-                        ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Column(Modifier.padding(16.dp)) {
-                            AppThemeSection(
-                                selectedScheme = selectedScheme,
-                                onSchemeChange = {
-                                    selectedScheme = it
-                                    onColorSchemeChange(it)
-                                },
-                                darkMode = darkMode,
-                                onDarkModeToggle = onDarkModeToggle,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
-
-                    // EXPORT DATA
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
-                        ),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        ExportDataButton(
-                            userId = userId,
-                            repo = repo,
-                            snackbarHostState = snackbarHostState,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp)
-                        )
-                    }
-                }
-            }
-
-            // LOGOUT + FOOTER
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(
-                        onClick = onLogout,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                            contentColor = MaterialTheme.colorScheme.onErrorContainer
-                        ),
-                        shape = MaterialTheme.shapes.medium
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Logout")
-                            Spacer(Modifier.width(8.dp))
-                            Text("Log out")
-                        }
-                    }
-
-                    Text(
-                        "© 2025 MoneyBase",
-                        modifier = Modifier.fillMaxWidth(),
-                        style = MaterialTheme.typography.bodySmall,
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    ProfileCard(
+                        user = user,
+                        userId = userId,
+                        repo = repo,
+                        snackbarHostState = snackbarHostState,
+                        onUserUpdated = { updated -> user = updated },
+                        modifier = Modifier.fillMaxWidth()
                     )
+
+                    NotificationSettings(
+                        notificationEnabled = notificationEnabled,
+                        notificationHour = notificationHour,
+                        notificationMinute = notificationMinute,
+                        onNotificationToggle = {
+                            notificationEnabled = it
+                            notificationHelper.setNotificationEnabled(it)
+                        },
+                        onTimeChanged = { h, m ->
+                            notificationHour = h
+                            notificationMinute = m
+                            notificationHelper.setNotificationTime(h, m)
+                        },
+                        snackbarHostState = snackbarHostState,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    AppThemeSection(
+                        selectedScheme = selectedScheme,
+                        onSchemeChange = {
+                            selectedScheme = it
+                            onColorSchemeChange(it)
+                        },
+                        darkMode = darkMode,
+                        onDarkModeToggle = onDarkModeToggle,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Divider(modifier = Modifier.padding(top = 16.dp))
+
+                    ExportDataButton(
+                        userId = userId,
+                        repo = repo,
+                        snackbarHostState = snackbarHostState,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Button(
+                            onClick = onLogout,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                contentColor = MaterialTheme.colorScheme.onErrorContainer
+                            ),
+                            shape = MaterialTheme.shapes.medium
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Logout")
+                                Spacer(Modifier.width(8.dp))
+                                Text("Log out")
+                            }
+                        }
+
+                        Text(
+                            text = "© 2025 MoneyBase",
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    }
                 }
             }
         }
