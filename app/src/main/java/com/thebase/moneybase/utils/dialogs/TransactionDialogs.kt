@@ -24,6 +24,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import com.google.firebase.Timestamp
 import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,11 +48,7 @@ fun EditTransaction(
     var isIncome by remember(transaction.id) { mutableStateOf(transaction.isIncome) }
 
     val dateFormatter = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
-    var selectedDate by remember {
-        mutableStateOf(
-            runCatching { dateFormatter.parse(transaction.date) }.getOrNull() ?: Date()
-        )
-    }
+    var selectedDate by remember { mutableStateOf(transaction.date.toDate()) }
 
     var categoryExpanded by remember { mutableStateOf(false) }
     var walletExpanded by remember { mutableStateOf(false) }
@@ -280,7 +277,7 @@ fun EditTransaction(
                                             description = description,
                                             categoryId = selectedCategory!!.id,
                                             walletId = selectedWallet!!.id,
-                                            date = dateFormatter.format(selectedDate),
+                                            date = Timestamp(selectedDate),
                                             isIncome = isIncome
                                         )
 

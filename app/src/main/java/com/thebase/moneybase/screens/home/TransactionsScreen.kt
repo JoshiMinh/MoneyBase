@@ -254,24 +254,11 @@ fun TransactionsScreen(
                         CircularProgressIndicator(color = Color.White)
                     }
                 } else {
-                    val dateFormat = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
                     val filteredTransactions = remember(transactions, startDate, endDate) {
                         transactions.filter { transaction ->
-                            try {
-                                val transactionDate = dateFormat.parse(transaction.date)
-                                transactionDate != null &&
-                                        !transactionDate.before(startDate) &&
-                                        !transactionDate.after(endDate)
-                            } catch (e: Exception) {
-                                false
-                            }
-                        }.sortedByDescending { transaction ->
-                            try {
-                                dateFormat.parse(transaction.date)?.time ?: 0L
-                            } catch (e: Exception) {
-                                0L
-                            }
-                        }
+                            val transactionDate = transaction.date.toDate()
+                            !transactionDate.before(startDate) && !transactionDate.after(endDate)
+                        }.sortedByDescending { it.date.toDate().time }
                     }
 
                     if (errorMessage != null) {

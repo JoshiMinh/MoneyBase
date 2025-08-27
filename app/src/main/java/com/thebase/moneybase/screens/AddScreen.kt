@@ -40,6 +40,7 @@ import com.thebase.moneybase.ui.Icon.getIcon
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+import com.google.firebase.Timestamp
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun AddScreen(
@@ -136,7 +137,7 @@ fun AddScreen(
                             walletId = selectedWalletId!!,
                             userId = userId,
                             description = note,
-                            date = dateText,
+                            date = Timestamp(calendar.time),
                             amount = if (isIncome) amt else -amt,
                             currencyCode = wallets.first { it.id == selectedWalletId }.currencyCode,
                             isIncome = isIncome,

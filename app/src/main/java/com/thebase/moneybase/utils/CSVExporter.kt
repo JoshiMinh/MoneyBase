@@ -47,6 +47,7 @@ class CSVExporter {
                 val fileName = "moneybase_transactions_$timestamp.csv"
 
                 val header = "ID,Date,Description,Amount,Currency,Wallet,Category,Type\n"
+                val dateFormatter = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
                 val content = buildString {
                     append(header)
                     transactions.forEach { transaction ->
@@ -58,7 +59,7 @@ class CSVExporter {
                         appendLine(
                             listOf(
                                 transaction.id,
-                                transaction.date,
+                                dateFormatter.format(transaction.date.toDate()),
                                 transaction.description.replace("\"", "\"\""),
                                 formattedAmount,
                                 transaction.currencyCode,

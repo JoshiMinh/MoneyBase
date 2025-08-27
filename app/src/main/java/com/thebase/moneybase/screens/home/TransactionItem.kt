@@ -23,7 +23,6 @@ import com.thebase.moneybase.utils.dialogs.EditTransaction
 import java.text.SimpleDateFormat
 import java.util.*
 
-private val inputFormatter = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
 private val outputFormatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
 
 @Composable
@@ -88,9 +87,7 @@ fun TransactionItem(
                 )
 
                 val dateText = runCatching {
-                    transaction.date
-                        .let(inputFormatter::parse)
-                        ?.let(outputFormatter::format)
+                    outputFormatter.format(transaction.date.toDate())
                 }.getOrNull() ?: "Invalid Date"
 
                 Text(

@@ -59,14 +59,9 @@ import java.util.Locale
 import kotlin.math.abs
 
 @SuppressLint("ConstantLocale")
-private val storageDateFormat = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
-@SuppressLint("ConstantLocale")
 private val readableDateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
 @SuppressLint("ConstantLocale")
 private val monthYearFormat = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
-
-private fun parseDateSafe(dateStr: String): Date? =
-    runCatching { storageDateFormat.parse(dateStr) }.getOrNull()
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPagerApi::class, ExperimentalLayoutApi::class)
 @Composable
@@ -139,7 +134,7 @@ fun ReportScreen(
                 end.time = customEndDate ?: start.time
             }
             ChartPeriodType.ALL -> {
-                val dates = transactions.mapNotNull { parseDateSafe(it.date) }
+                val dates = transactions.map { it.date.toDate() }
                 val min = dates.minOrNull() ?: Date()
                 val max = dates.maxOrNull() ?: Date()
                 start.time = min
@@ -176,9 +171,8 @@ fun ReportScreen(
 
     val periodTxns = remember(transactions, startDate, endDate) {
         transactions.filter {
-            parseDateSafe(it.date)?.let { d ->
-                !d.before(startDate) && !d.after(endDate)
-            } == true
+            val d = it.date.toDate()
+            !d.before(startDate) && !d.after(endDate)
         }
     }
 

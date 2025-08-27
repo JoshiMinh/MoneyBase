@@ -3,9 +3,11 @@ package com.thebase.moneybase.database
 
 import android.util.Log
 import androidx.core.net.toUri
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -13,6 +15,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import java.util.Date
 
 @Suppress("unused")
 class FirebaseRepositories {
@@ -29,13 +32,13 @@ class FirebaseRepositories {
             val result = auth.createUserWithEmailAndPassword(email, password).await()
             val user = result.user ?: return false
             val userId = user.uid
-            val timestamp = System.currentTimeMillis()
+            val timestamp = Timestamp.now()
             val newUser = User(
                 id = userId,
                 displayName = username,
                 email = email,
-                createdAt = timestamp.toString(),
-                lastLoginAt = timestamp.toString()
+                createdAt = timestamp,
+                lastLoginAt = timestamp
             )
             db.collection("users").document(userId).set(newUser).await()
 
@@ -111,8 +114,8 @@ class FirebaseRepositories {
     // ----------------------------
 
     suspend fun getUser(userId: String): User? = try {
-        db.collection("users").document(userId)
-            .get().await().toObject(User::class.java)
+        val snap = db.collection("users").document(userId).get().await()
+        if (snap.exists()) snap.toUserSafe() else null
     } catch (_: Exception) {
         null
     }
@@ -160,7 +163,7 @@ class FirebaseRepositories {
         return try {
             val docRef = db.collection("users").document(user.uid)
             val snapshot = docRef.get().await()
-            val timestamp = System.currentTimeMillis().toString()
+            val timestamp = Timestamp.now()
             if (!snapshot.exists()) {
                 val newUser = User(
                     id = user.uid,
@@ -190,22 +193,23 @@ class FirebaseRepositories {
             trySend(emptyList())
             return@callbackFlow
         }
-        
+
         val listener = try {
             db.collection("users").document(userId)
                 .collection("transactions")
                 .addSnapshotListener { snap, err ->
                     if (err != null) { close(err); return@addSnapshotListener }
-                    trySend(snap?.toObjects(Transaction::class.java).orEmpty())
+                    val list = snap?.documents?.map { it.toTransactionSafe() }.orEmpty()
+                    trySend(list)
                 }
         } catch (e: Exception) {
             Log.e("MoneyBase", "Error in getTransactionsFlow: ${e.message}", e)
             trySend(emptyList())
             null
         }
-        
-        awaitClose { 
-            listener?.remove() 
+
+        awaitClose {
+            listener?.remove()
         }
     }
 
@@ -233,8 +237,9 @@ class FirebaseRepositories {
             db.runTransaction { tx ->
                 val userRef = db.collection("users").document(userId)
                 val txRef = userRef.collection("transactions").document(transaction.id)
-                val original = tx.get(txRef).toObject(Transaction::class.java)
-                    ?: throw IllegalStateException("Transaction not found")
+                val originalSnap = tx.get(txRef)
+                if (!originalSnap.exists()) throw IllegalStateException("Transaction not found")
+                val original = originalSnap.toTransactionSafe()
 
                 val oldWalletRef = userRef.collection("wallets").document(original.walletId)
                 val oldWallet = tx.get(oldWalletRef).toObject(Wallet::class.java)
@@ -259,8 +264,9 @@ class FirebaseRepositories {
             db.runTransaction { tx ->
                 val userRef = db.collection("users").document(userId)
                 val txRef = userRef.collection("transactions").document(transactionId)
-                val original = tx.get(txRef).toObject(Transaction::class.java)
-                    ?: throw IllegalStateException("Transaction not found")
+                val originalSnap = tx.get(txRef)
+                if (!originalSnap.exists()) throw IllegalStateException("Transaction not found")
+                val original = originalSnap.toTransactionSafe()
 
                 val walletRef = userRef.collection("wallets").document(original.walletId)
                 val wallet = tx.get(walletRef).toObject(Wallet::class.java)
@@ -277,8 +283,8 @@ class FirebaseRepositories {
 
     suspend fun getAllTransactions(userId: String): List<Transaction> = try {
         db.collection("users").document(userId)
-            .collection("transactions").get().await()
-            .toObjects(Transaction::class.java)
+            .collection("transactions").get().await().documents
+            .map { it.toTransactionSafe() }
     } catch (e: Exception) {
         Log.e("MoneyBase", "Failed to get all transactions", e)
         emptyList()
@@ -441,5 +447,57 @@ class FirebaseRepositories {
     } catch (e: Exception) {
         Log.e("MoneyBase", "Failed to get all categories", e)
         emptyList()
+    }
+
+    // ----------------------------
+    // Parsing Helpers
+    // ----------------------------
+
+    private fun DocumentSnapshot.getTimestampField(name: String): Timestamp {
+        val raw = get(name)
+        return when (raw) {
+            is Timestamp -> raw
+            is String -> raw.toLongOrNull()?.let {
+                Timestamp(Date(it)).also { ts -> reference.update(name, ts) }
+            } ?: Timestamp.now()
+            is Number -> Timestamp(Date(raw.toLong())).also { ts -> reference.update(name, ts) }
+            else -> Timestamp.now()
+        }
+    }
+
+    private fun DocumentSnapshot.toUserSafe(): User {
+        val createdAtTs = getTimestampField("createdAt")
+        val lastLoginTs = getTimestampField("lastLoginAt")
+        return User(
+            id = id,
+            displayName = getString("displayName").orEmpty(),
+            email = getString("email").orEmpty(),
+            createdAt = createdAtTs,
+            lastLoginAt = lastLoginTs,
+            premium = getBoolean("premium") ?: false,
+            profilePictureUrl = getString("profilePictureUrl").orEmpty(),
+            photoUrl = getString("photoUrl")
+        )
+    }
+
+    private fun DocumentSnapshot.toTransactionSafe(): Transaction {
+        val amountAny = get("amount")
+        val amount = when (amountAny) {
+            is Number -> amountAny.toDouble()
+            is String -> amountAny.toDoubleOrNull() ?: 0.0
+            else -> 0.0
+        }
+        return Transaction(
+            id = id,
+            userId = getString("userId").orEmpty(),
+            description = getString("description").orEmpty(),
+            amount = amount,
+            currencyCode = getString("currencyCode") ?: "USD",
+            isIncome = getBoolean("isIncome") ?: false,
+            categoryId = getString("categoryId") ?: "",
+            walletId = getString("walletId") ?: "",
+            date = getTimestampField("date"),
+            createdAt = getTimestampField("createdAt")
+        )
     }
 }

@@ -28,10 +28,6 @@ import kotlin.math.max
 @SuppressLint("ConstantLocale")
 private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
-private fun parseDateSafe(dateStr: String): Date? {
-    return runCatching { dateFormat.parse(dateStr) }.getOrNull()
-}
-
 @Composable
 fun LineChart(
     transactions: List<Transaction>,
@@ -45,8 +41,8 @@ fun LineChart(
     // Aggregate daily totals
     val dailyTotals = mutableMapOf<String, Float>()
     for (tx in transactions) {
-        val txDate = parseDateSafe(tx.date)
-        if (txDate != null && !txDate.before(startDate) && !txDate.after(endDate)) {
+        val txDate = tx.date.toDate()
+        if (!txDate.before(startDate) && !txDate.after(endDate)) {
             val key = dateFormat.format(txDate)
             val value = if (tx.isIncome) tx.amount.toFloat() else -tx.amount.toFloat()
             dailyTotals[key] = dailyTotals.getOrDefault(key, 0f) + value

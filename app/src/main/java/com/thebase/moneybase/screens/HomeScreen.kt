@@ -124,9 +124,9 @@ fun GraphsCard(
             time = selectedMonth.time
             set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))
         }
-        val df = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
         transactions.filter {
-            runCatching { df.parse(it.date) }.getOrNull()?.let { d -> d >= start.time && d <= end.time } == true
+            val d = it.date.toDate()
+            d >= start.time && d <= end.time
         }
     }
 
@@ -370,11 +370,7 @@ fun RecentTransactionWidget(
     val walletMap = remember(wallets) { wallets.associateBy { it.id } }
 
     val recentTransactions = remember(transactions) {
-        transactions.sortedByDescending {
-            runCatching {
-                SimpleDateFormat("MM/dd/yyyy", Locale.getDefault()).parse(it.date)
-            }.getOrNull() ?: Date(0)
-        }.take(3)
+        transactions.sortedByDescending { it.date.toDate() }.take(3)
     }
 
     Card(
