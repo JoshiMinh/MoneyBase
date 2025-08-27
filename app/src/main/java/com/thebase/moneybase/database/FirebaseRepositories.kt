@@ -230,9 +230,24 @@ class FirebaseRepositories {
 
     suspend fun updateTransaction(userId: String, transaction: Transaction): Boolean {
         return try {
-            db.collection("users").document(userId)
-                .collection("transactions").document(transaction.id)
-                .set(transaction).await()
+            db.runTransaction { tx ->
+                val userRef = db.collection("users").document(userId)
+                val txRef = userRef.collection("transactions").document(transaction.id)
+                val original = tx.get(txRef).toObject(Transaction::class.java)
+                    ?: throw IllegalStateException("Transaction not found")
+
+                val oldWalletRef = userRef.collection("wallets").document(original.walletId)
+                val oldWallet = tx.get(oldWalletRef).toObject(Wallet::class.java)
+                    ?: throw IllegalStateException("Wallet not found")
+                tx.update(oldWalletRef, "balance", oldWallet.balance - original.amount)
+
+                val newWalletRef = userRef.collection("wallets").document(transaction.walletId)
+                val newWallet = tx.get(newWalletRef).toObject(Wallet::class.java)
+                    ?: throw IllegalStateException("Wallet not found")
+                tx.update(newWalletRef, "balance", newWallet.balance + transaction.amount)
+
+                tx.set(txRef, transaction)
+            }.await()
             true
         } catch (e: Exception) {
             false
@@ -241,9 +256,19 @@ class FirebaseRepositories {
 
     suspend fun deleteTransaction(userId: String, transactionId: String): Boolean {
         return try {
-            db.collection("users").document(userId)
-                .collection("transactions").document(transactionId)
-                .delete().await()
+            db.runTransaction { tx ->
+                val userRef = db.collection("users").document(userId)
+                val txRef = userRef.collection("transactions").document(transactionId)
+                val original = tx.get(txRef).toObject(Transaction::class.java)
+                    ?: throw IllegalStateException("Transaction not found")
+
+                val walletRef = userRef.collection("wallets").document(original.walletId)
+                val wallet = tx.get(walletRef).toObject(Wallet::class.java)
+                    ?: throw IllegalStateException("Wallet not found")
+                tx.update(walletRef, "balance", wallet.balance - original.amount)
+
+                tx.delete(txRef)
+            }.await()
             true
         } catch (_: Exception) {
             false
