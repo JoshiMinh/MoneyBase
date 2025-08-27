@@ -1,6 +1,7 @@
 package com.thebase.moneybase.database
 
 import androidx.annotation.Keep
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentId
 
 @Keep
@@ -8,8 +9,8 @@ data class User(
     @DocumentId val id: String = "",
     val displayName: String = "",
     val email: String = "",
-    val createdAt: String = "",
-    val lastLoginAt: String = "",
+    val createdAt: Timestamp = Timestamp.now(),
+    val lastLoginAt: Timestamp = Timestamp.now(),
     val premium: Boolean = false,
     val profilePictureUrl: String = "",
     val photoUrl: String? = null
@@ -58,6 +59,6 @@ data class Transaction(
     val isIncome: Boolean = false,
     val categoryId: String = "",
     val walletId: String = "",
-    val date: String = "",
-    val createdAt: String = ""
+    val date: Timestamp = Timestamp.now(),
+    val createdAt: Timestamp = Timestamp.now()
 )
