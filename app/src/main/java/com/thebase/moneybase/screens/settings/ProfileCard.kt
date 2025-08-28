@@ -38,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,10 +69,10 @@ fun ProfileCard(
 
     // Dialog visibility & form state
     var showDialog by remember { mutableStateOf(false) }
-    var nameField by remember { mutableStateOf(user?.displayName.orEmpty()) }
-    var currentPwd by remember { mutableStateOf("") }
-    var newPwd by remember { mutableStateOf("") }
-    var confirmPwd by remember { mutableStateOf("") }
+    var nameField by rememberSaveable { mutableStateOf(user?.displayName.orEmpty()) }
+    var currentPwd by rememberSaveable { mutableStateOf("") }
+    var newPwd by rememberSaveable { mutableStateOf("") }
+    var confirmPwd by rememberSaveable { mutableStateOf("") }
     var isSaving by remember { mutableStateOf(false) }
 
     // Image picker

@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -42,11 +43,11 @@ fun TransactionsScreen(
     var wallets by remember { mutableStateOf<Map<String, Wallet>>(emptyMap()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var selectedPeriod by remember { mutableStateOf(PeriodType.MONTH) }
-    var selectedDate by remember { mutableStateOf(Calendar.getInstance()) }
-    var showCustomDatePicker by remember { mutableStateOf(false) }
-    var customStartDate by remember { mutableStateOf<Date?>(null) }
-    var customEndDate by remember { mutableStateOf<Date?>(null) }
+    var selectedPeriod by rememberSaveable { mutableStateOf(PeriodType.MONTH) }
+    var selectedDate by rememberSaveable { mutableStateOf(Calendar.getInstance()) }
+    var showCustomDatePicker by rememberSaveable { mutableStateOf(false) }
+    var customStartDate by rememberSaveable { mutableStateOf<Date?>(null) }
+    var customEndDate by rememberSaveable { mutableStateOf<Date?>(null) }
 
     // Fetch data when userId changes
     LaunchedEffect(userId) {
@@ -406,9 +407,9 @@ fun CustomDateRangePickerDialog(
     onConfirm: (start: Date, end: Date) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var step by remember { mutableStateOf(0) } // 0 = picking start, 1 = picking end
-    var selectedStartMillis by remember { mutableStateOf(initialStartDate.time) }
-    var selectedEndMillis by remember { mutableStateOf(initialEndDate.time) }
+    var step by rememberSaveable { mutableStateOf(0) } // 0 = picking start, 1 = picking end
+    var selectedStartMillis by rememberSaveable { mutableStateOf(initialStartDate.time) }
+    var selectedEndMillis by rememberSaveable { mutableStateOf(initialEndDate.time) }
 
     val datePickerState = rememberDatePickerState(
         initialSelectedDateMillis = if (step == 0) selectedStartMillis else selectedEndMillis

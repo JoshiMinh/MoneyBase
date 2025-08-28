@@ -31,6 +31,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,7 +77,7 @@ fun HomeScreen(userId: String, navController: NavController) {
     val transactions by repo.getTransactionsFlow(userId).collectAsState(initial = emptyList())
     val categories by repo.getCategoriesFlow(userId).collectAsState(initial = emptyList())
     val wallets by repo.getWalletsFlow(userId).collectAsState(initial = emptyList())
-    var selectedMonth by remember { mutableStateOf(Calendar.getInstance()) }
+    var selectedMonth by rememberSaveable { mutableStateOf(Calendar.getInstance()) }
 
     Column(
         modifier = Modifier
