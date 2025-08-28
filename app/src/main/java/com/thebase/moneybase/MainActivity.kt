@@ -30,6 +30,7 @@ import com.thebase.moneybase.screens.home.ReportScreen
 import com.thebase.moneybase.screens.home.TransactionsScreen
 import com.thebase.moneybase.ui.ColorScheme
 import com.thebase.moneybase.ui.MoneyBaseTheme
+import kotlinx.coroutines.flow.first
 
 object Routes {
     const val AUTH = "auth"
@@ -67,27 +68,16 @@ class MainActivity : ComponentActivity() {
             var darkMode by rememberSaveable { mutableStateOf(prefs.getBoolean(KEY_DARK_MODE, true)) }
 
             val navController = rememberNavController()
-            // Track if we're currently handling navigation to avoid duplicate navigations
-            var isNavigating by remember { mutableStateOf(false) }
 
-            // Only react to userId changes for navigation when not already in the process of navigating
+            // React to userId changes and navigate accordingly without duplicate destinations
             LaunchedEffect(userId) {
-                if (!isNavigating) {
-                    isNavigating = true
-                    if (userId.isNullOrEmpty()) {
-                        navController.navigate(Routes.AUTH) {
-                            popUpTo(Routes.APP) { inclusive = true }
-                        }
-                    } else {
-                        // Only navigate to APP if we're not already there
-                        val currentRoute = navController.currentBackStackEntry?.destination?.route
-                        if (currentRoute != Routes.APP && currentRoute?.startsWith(Routes.APP) != true) {
-                            navController.navigate(Routes.APP) {
-                                popUpTo(Routes.AUTH) { inclusive = true }
-                            }
-                        }
+                val targetRoute = if (userId.isNullOrEmpty()) Routes.AUTH else Routes.APP
+                val currentRoute = navController.currentBackStackEntryFlow.first().destination.route
+                if (currentRoute != targetRoute) {
+                    navController.navigate(targetRoute) {
+                        popUpTo(navController.graph.id) { inclusive = true }
+                        launchSingleTop = true
                     }
-                    isNavigating = false
                 }
             }
 
@@ -173,6 +163,7 @@ private fun NavGraphBuilder.authGraph(
             navController.navigate(Routes.APP) {
                 // pop everything under "auth" off the back stack
                 popUpTo(Routes.AUTH) { inclusive = true }
+                launchSingleTop = true
             }
         })
     }
