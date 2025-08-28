@@ -113,9 +113,9 @@ fun TransferBalance(
     onTransfer: (Double, String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var amount by remember { mutableStateOf("") }
+    var amount by rememberSaveable { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
-    var selectedWalletId by remember { mutableStateOf("") }
+    var selectedWalletId by rememberSaveable { mutableStateOf("") }
 
     // Filter out the source wallet
     val targetWallets = allWallets.filter { it.id != wallet.id }

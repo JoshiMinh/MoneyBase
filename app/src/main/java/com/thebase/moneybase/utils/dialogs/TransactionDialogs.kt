@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,35 +42,38 @@ fun EditTransaction(
     var isLoading by remember { mutableStateOf(true) }
     var isSaving by remember { mutableStateOf(false) }
 
-    var amount by remember { mutableStateOf(abs(transaction.amount).toString()) }
-    var description by remember { mutableStateOf(transaction.description) }
-    var selectedCategory by remember { mutableStateOf<Category?>(null) }
-    var selectedWallet by remember { mutableStateOf<Wallet?>(null) }
-    var isIncome by remember(transaction.id) { mutableStateOf(transaction.isIncome) }
+    var amount by rememberSaveable { mutableStateOf(abs(transaction.amount).toString()) }
+    var description by rememberSaveable { mutableStateOf(transaction.description) }
+    var selectedCategoryId by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedWalletId by rememberSaveable { mutableStateOf<String?>(null) }
+    var isIncome by rememberSaveable(transaction.id) { mutableStateOf(transaction.isIncome) }
 
     val dateFormatter = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
-    var selectedDate by remember { mutableStateOf(transaction.date.toDate()) }
+    var selectedDate by rememberSaveable { mutableStateOf(transaction.date.toDate()) }
 
-    var categoryExpanded by remember { mutableStateOf(false) }
-    var walletExpanded by remember { mutableStateOf(false) }
-    var showDatePicker by remember { mutableStateOf(false) }
+    var categoryExpanded by rememberSaveable { mutableStateOf(false) }
+    var walletExpanded by rememberSaveable { mutableStateOf(false) }
+    var showDatePicker by rememberSaveable { mutableStateOf(false) }
 
-    var amountError by remember { mutableStateOf<String?>(null) }
-    var descriptionError by remember { mutableStateOf<String?>(null) }
-    var categoryError by remember { mutableStateOf<String?>(null) }
-    var walletError by remember { mutableStateOf<String?>(null) }
+    var amountError by rememberSaveable { mutableStateOf<String?>(null) }
+    var descriptionError by rememberSaveable { mutableStateOf<String?>(null) }
+    var categoryError by rememberSaveable { mutableStateOf<String?>(null) }
+    var walletError by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         try {
             categories = repo.getAllCategories(transaction.userId)
             wallets = repo.getAllWallets(transaction.userId)
-            selectedCategory = categories.find { it.id == transaction.categoryId }
-            selectedWallet = wallets.find { it.id == transaction.walletId }
+            selectedCategoryId = transaction.categoryId
+            selectedWalletId = transaction.walletId
         } catch (_: Exception) {
         } finally {
             isLoading = false
         }
     }
+
+    val selectedCategory = categories.find { it.id == selectedCategoryId }
+    val selectedWallet = wallets.find { it.id == selectedWalletId }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -193,7 +197,7 @@ fun EditTransaction(
                                         DropdownMenuItem(
                                             text = { Text(category.name) },
                                             onClick = {
-                                                selectedCategory = category
+                                                selectedCategoryId = category.id
                                                 categoryExpanded = false
                                                 categoryError = null
                                             }
@@ -227,7 +231,7 @@ fun EditTransaction(
                                         DropdownMenuItem(
                                             text = { Text(wallet.name) },
                                             onClick = {
-                                                selectedWallet = wallet
+                                                selectedWalletId = wallet.id
                                                 walletExpanded = false
                                                 walletError = null
                                             }
@@ -259,12 +263,12 @@ fun EditTransaction(
                                         hasError = true
                                     }
 
-                                    if (selectedCategory == null) {
+                                    if (selectedCategoryId == null) {
                                         categoryError = "Please select a category"
                                         hasError = true
                                     }
 
-                                    if (selectedWallet == null) {
+                                    if (selectedWalletId == null) {
                                         walletError = "Please select a wallet"
                                         hasError = true
                                     }
@@ -275,8 +279,8 @@ fun EditTransaction(
                                         val updatedTransaction = transaction.copy(
                                             amount = (if (isIncome) 1 else -1) * amountValue,
                                             description = description,
-                                            categoryId = selectedCategory!!.id,
-                                            walletId = selectedWallet!!.id,
+                                            categoryId = selectedCategoryId!!,
+                                            walletId = selectedWalletId!!,
                                             date = Timestamp(selectedDate),
                                             isIncome = isIncome
                                         )

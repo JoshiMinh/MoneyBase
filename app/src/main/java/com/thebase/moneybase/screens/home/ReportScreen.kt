@@ -34,6 +34,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,11 +77,11 @@ fun ReportScreen(
     var wallets by remember { mutableStateOf<List<Wallet>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var selectedPeriod by remember { mutableStateOf(ChartPeriodType.MONTH) }
-    var selectedDate by remember { mutableStateOf(Calendar.getInstance()) }
-    var showCustomDatePicker by remember { mutableStateOf(false) }
-    var customStartDate by remember { mutableStateOf<Date?>(null) }
-    var customEndDate by remember { mutableStateOf<Date?>(null) }
+    var selectedPeriod by rememberSaveable { mutableStateOf(ChartPeriodType.MONTH) }
+    var selectedDate by rememberSaveable { mutableStateOf(Calendar.getInstance()) }
+    var showCustomDatePicker by rememberSaveable { mutableStateOf(false) }
+    var customStartDate by rememberSaveable { mutableStateOf<Date?>(null) }
+    var customEndDate by rememberSaveable { mutableStateOf<Date?>(null) }
 
     LaunchedEffect(userId) {
         if (userId.isBlank()) return@LaunchedEffect

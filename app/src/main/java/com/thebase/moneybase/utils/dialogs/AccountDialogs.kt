@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -31,8 +32,8 @@ fun EditProfileDialog(
     onDismiss: () -> Unit,
     onSave: (name: String) -> Unit
 ) {
-    var displayName by remember { mutableStateOf(user?.displayName ?: "") }
-    var nameError by remember { mutableStateOf<String?>(null) }
+    var displayName by rememberSaveable { mutableStateOf(user?.displayName ?: "") }
+    var nameError by rememberSaveable { mutableStateOf<String?>(null) }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -114,13 +115,13 @@ fun ChangePasswordDialog(
     onDismiss: () -> Unit,
     onSave: (currentPassword: String, newPassword: String) -> Unit
 ) {
-    var currentPassword by remember { mutableStateOf("") }
-    var newPassword by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
+    var currentPassword by rememberSaveable { mutableStateOf("") }
+    var newPassword by rememberSaveable { mutableStateOf("") }
+    var confirmPassword by rememberSaveable { mutableStateOf("") }
 
-    var currentPasswordError by remember { mutableStateOf<String?>(null) }
-    var newPasswordError by remember { mutableStateOf<String?>(null) }
-    var confirmPasswordError by remember { mutableStateOf<String?>(null) }
+    var currentPasswordError by rememberSaveable { mutableStateOf<String?>(null) }
+    var newPasswordError by rememberSaveable { mutableStateOf<String?>(null) }
+    var confirmPasswordError by rememberSaveable { mutableStateOf<String?>(null) }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(

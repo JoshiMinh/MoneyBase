@@ -35,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,12 +72,12 @@ fun SettingsScreen(
     var errorMsg by remember { mutableStateOf<String?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
-    var selectedScheme by remember { mutableStateOf(currentScheme) }
+    var selectedScheme by rememberSaveable { mutableStateOf(currentScheme) }
 
     val notificationHelper = remember { NotificationHelper(context) }
-    var notificationEnabled by remember { mutableStateOf(notificationHelper.isNotificationEnabled()) }
-    var notificationHour by remember { mutableIntStateOf(notificationHelper.getNotificationHour()) }
-    var notificationMinute by remember { mutableIntStateOf(notificationHelper.getNotificationMinute()) }
+    var notificationEnabled by rememberSaveable { mutableStateOf(notificationHelper.isNotificationEnabled()) }
+    var notificationHour by rememberSaveable { mutableIntStateOf(notificationHelper.getNotificationHour()) }
+    var notificationMinute by rememberSaveable { mutableIntStateOf(notificationHelper.getNotificationMinute()) }
 
     LaunchedEffect(userId) {
         isLoading = true

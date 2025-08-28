@@ -34,6 +34,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,9 +62,9 @@ fun NotificationSettings(
     val notificationHelper = remember { NotificationHelper(context) }
     val scope = rememberCoroutineScope()
 
-    var localEnabled by remember { mutableStateOf(notificationEnabled) }
-    var localHour by remember { mutableIntStateOf(notificationHour) }
-    var localMinute by remember { mutableIntStateOf(notificationMinute) }
+    var localEnabled by rememberSaveable { mutableStateOf(notificationEnabled) }
+    var localHour by rememberSaveable { mutableIntStateOf(notificationHour) }
+    var localMinute by rememberSaveable { mutableIntStateOf(notificationMinute) }
     var showTimePickerDialog by remember { mutableStateOf(false) }
     var showPermissionDialog by remember { mutableStateOf(false) }
 

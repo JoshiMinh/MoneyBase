@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -56,16 +57,16 @@ fun AddScreen(
     val categories by repo.getCategoriesFlow(userId).collectAsState(initial = emptyList())
     val wallets by repo.getWalletsFlow(userId).collectAsState(initial = emptyList())
 
-    var isIncome by remember { mutableStateOf(false) }
-    var calendar by remember { mutableStateOf(Calendar.getInstance()) }
+    var isIncome by rememberSaveable { mutableStateOf(false) }
+    var calendar by rememberSaveable { mutableStateOf(Calendar.getInstance()) }
     val dateText = remember(calendar) {
         SimpleDateFormat("MM/dd/yyyy", Locale.getDefault()).format(calendar.time)
     }
-    var note by remember { mutableStateOf("") }
-    var amount by remember { mutableStateOf("") }
+    var note by rememberSaveable { mutableStateOf("") }
+    var amount by rememberSaveable { mutableStateOf("") }
 
-    var selectedCategory by remember { mutableStateOf<Category?>(null) }
-    var selectedWalletId by remember { mutableStateOf<String?>(null) }
+    var selectedCategoryId by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedWalletId by rememberSaveable { mutableStateOf<String?>(null) }
 
     var showDatePicker by remember { mutableStateOf(false) }
     var showCategorySheet by remember { mutableStateOf(false) }
@@ -74,9 +75,11 @@ fun AddScreen(
     var showAddWallet by remember { mutableStateOf(false) }
     var editingWallet by remember { mutableStateOf<Wallet?>(null) }
 
+    val selectedCategory = categories.firstOrNull { it.id == selectedCategoryId }
+
     LaunchedEffect(categories) {
-        if (categories.isNotEmpty() && selectedCategory == null) {
-            selectedCategory = categories[0]
+        if (categories.isNotEmpty() && selectedCategoryId == null) {
+            selectedCategoryId = categories[0].id
         }
     }
 
@@ -124,7 +127,7 @@ fun AddScreen(
                 onLongPress = { editingWallet = it }
             )
 
-            val isValid = selectedCategory != null &&
+            val isValid = selectedCategoryId != null &&
                     selectedWalletId != null &&
                     amount.isValidDecimal()
 
@@ -141,7 +144,7 @@ fun AddScreen(
                             amount = if (isIncome) amt else -amt,
                             currencyCode = wallets.first { it.id == selectedWalletId }.currencyCode,
                             isIncome = isIncome,
-                            categoryId = selectedCategory!!.id
+                            categoryId = selectedCategoryId!!
                         )
                         repo.addTransaction(userId, tx)
                         snackbarHostState.showSnackbar("Transaction added")
@@ -157,7 +160,7 @@ fun AddScreen(
         CategorySelector(
             categories = categories,
             onCategorySelected = { cat ->
-                selectedCategory = cat
+                selectedCategoryId = cat.id
                 showCategorySheet = false
             },
             onCategoryReparent = { moved, newParentId ->
