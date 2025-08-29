@@ -42,10 +42,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.google.accompanist.pager.ExperimentalPagerApi
-import com.google.accompanist.pager.HorizontalPager
-import com.google.accompanist.pager.HorizontalPagerIndicator
-import com.google.accompanist.pager.rememberPagerState
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.HorizontalPagerIndicator
+import androidx.compose.foundation.pager.rememberPagerState
 import com.thebase.moneybase.database.Category
 import com.thebase.moneybase.database.FirebaseRepositories
 import com.thebase.moneybase.database.Transaction
@@ -64,7 +64,7 @@ private val readableDateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefa
 @SuppressLint("ConstantLocale")
 private val monthYearFormat = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalPagerApi::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun ReportScreen(
     userId: String,
@@ -300,7 +300,7 @@ fun ReportScreen(
                 }
 
                 else -> {
-                    val pagerState = rememberPagerState(initialPage = 0)
+                    val pagerState = rememberPagerState(initialPage = 0) { 3 }
 
                     Column(modifier = Modifier.weight(1f)) {
                         Card(
@@ -310,7 +310,6 @@ fun ReportScreen(
                             colors = CardDefaults.cardColors(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f))
                         ) {
                             HorizontalPager(
-                                count = 3,
                                 state = pagerState,
                                 modifier = Modifier.fillMaxWidth()
                             ) { page ->

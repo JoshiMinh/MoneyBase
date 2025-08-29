@@ -40,9 +40,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.core.graphics.toColorInt
 import androidx.navigation.NavController
-import com.google.accompanist.pager.HorizontalPager
-import com.google.accompanist.pager.HorizontalPagerIndicator
-import com.google.accompanist.pager.rememberPagerState
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.HorizontalPagerIndicator
+import androidx.compose.foundation.pager.rememberPagerState
 import com.thebase.moneybase.database.Category
 import com.thebase.moneybase.database.FirebaseRepositories
 import com.thebase.moneybase.database.Transaction
@@ -108,6 +109,7 @@ fun HomeScreen(userId: String, navController: NavController) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun GraphsCard(
     transactions: List<Transaction>,
@@ -148,7 +150,7 @@ fun GraphsCard(
         amountByCat.values.sortedByDescending { it.second }
     }
 
-    val pagerState = rememberPagerState(initialPage = 0)
+    val pagerState = rememberPagerState(initialPage = 0) { 2 }
 
     Card(
         modifier = modifier
@@ -171,7 +173,6 @@ fun GraphsCard(
             Spacer(modifier = Modifier.height(12.dp))
 
             HorizontalPager(
-                count = 2,
                 state = pagerState,
                 modifier = Modifier.weight(1f)
             ) { page ->
