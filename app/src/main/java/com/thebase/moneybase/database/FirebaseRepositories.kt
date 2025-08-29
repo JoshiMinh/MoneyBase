@@ -197,6 +197,7 @@ class FirebaseRepositories {
         val listener = try {
             db.collection("users").document(userId)
                 .collection("transactions")
+                .orderBy("date")
                 .addSnapshotListener { snap, err ->
                     if (err != null) { close(err); return@addSnapshotListener }
                     val list = snap?.documents?.map { it.toTransactionSafe() }.orEmpty()
