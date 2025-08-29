@@ -93,9 +93,6 @@ dependencies {
     implementation(libs.cloudinary.android)
     implementation(libs.cloudinary.core)
 
-    implementation(libs.accompanist.flowlayout)
-    implementation(libs.accompanist.pager)
-    implementation(libs.accompanist.pager.indicators)
 
     implementation(libs.charts.android)
 
