@@ -44,7 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.HorizontalPagerIndicator
+import com.thebase.moneybase.utils.components.HorizontalPagerIndicator
 import androidx.compose.foundation.pager.rememberPagerState
 import com.thebase.moneybase.database.Category
 import com.thebase.moneybase.database.FirebaseRepositories
