@@ -23,6 +23,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.thebase.moneybase.ui.ColorScheme
 import com.thebase.moneybase.ui.getIconColorForScheme
+import com.thebase.moneybase.ui.toColorOrNull
 
 @Composable
 fun AppThemeSection(
@@ -37,6 +39,8 @@ fun AppThemeSection(
     onSchemeChange: (ColorScheme) -> Unit,
     darkMode: Boolean,
     onDarkModeToggle: (Boolean) -> Unit,
+    customColorHex: String,
+    onCustomColorChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
@@ -79,7 +83,7 @@ fun AppThemeSection(
         ) {
             ColorScheme.entries.forEach { scheme ->
                 val isSelected = scheme == selectedScheme
-                val baseColor = getIconColorForScheme(scheme)
+                val baseColor = getIconColorForScheme(scheme, customColorHex)
                 val displayColor = if (isSelected) baseColor.copy(alpha = 0.5f) else baseColor
 
                 IconButton(
@@ -112,5 +116,38 @@ fun AppThemeSection(
                 }
             }
         }
+
+        if (selectedScheme == ColorScheme.Custom) {
+            Spacer(Modifier.height(16.dp))
+            HexColorPicker(hex = customColorHex, onHexChange = onCustomColorChange)
+        }
     }
 }
+
+@Composable
+private fun HexColorPicker(hex: String, onHexChange: (String) -> Unit) {
+    val display = hex
+    val previewColor = display.toColorOrNull() ?: Color.Transparent
+
+    OutlinedTextField(
+        value = display,
+        onValueChange = {
+            if (it.length <= 7 && it.matches(Regex("#?[0-9a-fA-F]*"))) {
+                val formatted = if (it.startsWith("#")) it else "#" + it
+                onHexChange(formatted)
+            }
+        },
+        label = { Text("Hex Color") },
+        leadingIcon = {
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .background(
+                        previewColor.takeIf { it != Color.Transparent } ?: Color.Gray,
+                        CircleShape
+                    )
+            )
+        }
+    )
+}
+

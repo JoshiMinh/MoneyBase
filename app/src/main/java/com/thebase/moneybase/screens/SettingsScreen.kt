@@ -62,6 +62,8 @@ fun SettingsScreen(
     onLogout: () -> Unit,
     onColorSchemeChange: (ColorScheme) -> Unit,
     onDarkModeToggle: (Boolean) -> Unit,
+    customColorHex: String,
+    onCustomColorChange: (String) -> Unit,
     navController: NavController
 ) {
     val context = LocalContext.current
@@ -73,6 +75,7 @@ fun SettingsScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     var selectedScheme by rememberSaveable { mutableStateOf(currentScheme) }
+    var customColor by rememberSaveable { mutableStateOf(customColorHex) }
 
     val notificationHelper = remember { NotificationHelper(context) }
     var notificationEnabled by rememberSaveable { mutableStateOf(notificationHelper.isNotificationEnabled()) }
@@ -164,6 +167,11 @@ fun SettingsScreen(
                         },
                         darkMode = darkMode,
                         onDarkModeToggle = onDarkModeToggle,
+                        customColorHex = customColor,
+                        onCustomColorChange = {
+                            customColor = it
+                            onCustomColorChange(it)
+                        },
                         modifier = Modifier.fillMaxWidth()
                     )
 

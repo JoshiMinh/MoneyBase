@@ -1,6 +1,7 @@
 package com.thebase.moneybase.ui
 
 import androidx.compose.ui.graphics.Color
+import androidx.core.graphics.toColorInt
 
 object ColorPalette {
 
@@ -51,3 +52,8 @@ fun Color.toHexString(): String {
     val blue = (blue * 255).toInt()
     return String.format("#%02X%02X%02X", red, green, blue)
 }
+
+/**
+ * Converts a hex string (e.g. "#FF0000") to a [Color] or returns null if invalid.
+ */
+fun String.toColorOrNull(): Color? = runCatching { Color(this.toColorInt()) }.getOrNull()
