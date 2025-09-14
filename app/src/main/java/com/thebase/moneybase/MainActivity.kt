@@ -30,6 +30,8 @@ import com.thebase.moneybase.screens.home.ReportScreen
 import com.thebase.moneybase.screens.home.TransactionsScreen
 import com.thebase.moneybase.ui.ColorScheme
 import com.thebase.moneybase.ui.MoneyBaseTheme
+import com.thebase.moneybase.ui.ColorPalette
+import com.thebase.moneybase.ui.toHexString
 import kotlinx.coroutines.flow.first
 
 object Routes {
@@ -66,6 +68,12 @@ class MainActivity : ComponentActivity() {
                 )
             }
             var darkMode by rememberSaveable { mutableStateOf(prefs.getBoolean(KEY_DARK_MODE, true)) }
+            var customHex by rememberSaveable {
+                mutableStateOf(
+                    prefs.getString(KEY_CUSTOM_COLOR, ColorPalette.defaultColor.toHexString())
+                        ?: ColorPalette.defaultColor.toHexString()
+                )
+            }
 
             val navController = rememberNavController()
 
@@ -81,7 +89,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            MoneyBaseTheme(colorScheme = colorScheme, darkMode = darkMode) {
+            MoneyBaseTheme(colorScheme = colorScheme, darkMode = darkMode, customColorHex = customHex) {
                 Scaffold(
                     bottomBar = { if (userId != null) Navigation(navController) }
                 ) { padding ->
@@ -108,6 +116,11 @@ class MainActivity : ComponentActivity() {
                             prefs.edit { putBoolean(KEY_DARK_MODE, it) }
                             darkMode = it
                         },
+                        customColorHex = customHex,
+                        onCustomColorChange = {
+                            prefs.edit { putString(KEY_CUSTOM_COLOR, it) }
+                            customHex = it
+                        },
                         modifier = Modifier.padding(padding)
                     )
                 }
@@ -119,6 +132,7 @@ class MainActivity : ComponentActivity() {
         const val KEY_USER_ID = "userId"
         const val KEY_COLOR_SCHEME = "colorScheme"
         const val KEY_DARK_MODE = "darkMode"
+        const val KEY_CUSTOM_COLOR = "customColorHex"
     }
 }
 
@@ -133,6 +147,8 @@ private fun AppNavigation(
     onLogout: () -> Unit,
     onColorSchemeChange: (ColorScheme) -> Unit,
     onDarkModeToggle: (Boolean) -> Unit,
+    customColorHex: String,
+    onCustomColorChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -148,7 +164,9 @@ private fun AppNavigation(
             darkMode,
             onLogout,
             onColorSchemeChange,
-            onDarkModeToggle
+            onDarkModeToggle,
+            customColorHex,
+            onCustomColorChange
         )
     }
 }
@@ -177,7 +195,9 @@ private fun NavGraphBuilder.appGraph(
     darkMode: Boolean,
     onLogout: () -> Unit,
     onColorSchemeChange: (ColorScheme) -> Unit,
-    onDarkModeToggle: (Boolean) -> Unit
+    onDarkModeToggle: (Boolean) -> Unit,
+    customColorHex: String,
+    onCustomColorChange: (String) -> Unit
 ) = navigation(startDestination = Routes.HOME, route = Routes.APP) {
     composable(Routes.ADD) {
         AddScreen(userId, onBack = { navController.popBackStack() })
@@ -193,6 +213,8 @@ private fun NavGraphBuilder.appGraph(
             onLogout            = onLogout,
             onColorSchemeChange = onColorSchemeChange,
             onDarkModeToggle    = onDarkModeToggle,
+            customColorHex      = customColorHex,
+            onCustomColorChange = onCustomColorChange,
             navController       = navController
         )
     }

@@ -8,12 +8,14 @@ import androidx.compose.ui.graphics.Color
 private val LightTheme = lightColorScheme(
     onPrimary = Color.White,
     onSecondary = Color.White,
+    background = Color.White,
     onBackground = Color(0xFF1C1C1C) // deep charcoal for content
 )
 
 private val DarkTheme = darkColorScheme(
     onPrimary = Color(0xFF1C1C1C),
     onSecondary = Color(0xFF2C2C2C),
+    background = Color.Black,
     onBackground = Color(0xFFF5F5F5) // near-white for content on dark
 )
 
@@ -43,12 +45,13 @@ private val RedPalette = Palette(
     background= Color(0xFFFFEBEE)  // blush
 )
 
-enum class ColorScheme { Default, Blue, Green, Red }
+enum class ColorScheme { Default, Blue, Green, Red, Custom }
 
 @Composable
 fun MoneyBaseTheme(
     colorScheme: ColorScheme = ColorScheme.Default,
     darkMode: Boolean = false,
+    customColorHex: String? = null,
     content: @Composable () -> Unit
 ) {
     // base on light/dark
@@ -60,21 +63,22 @@ fun MoneyBaseTheme(
         ColorScheme.Blue    -> BluePalette
         ColorScheme.Green   -> GreenPalette
         ColorScheme.Red     -> RedPalette
+        ColorScheme.Custom  -> {
+            val customColor = customColorHex?.toColorOrNull() ?: ColorPalette.defaultColor
+            Palette(
+                primary = customColor,
+                secondary = customColor,
+                background = if (darkMode) Color.Black else Color.White
+            )
+        }
     }
 
-    // merge in primary, secondary, (and background if light)
-    val colors = if (darkMode) {
-        baseScheme.copy(
-            primary   = palette.primary,
-            secondary = palette.secondary
-        )
-    } else {
-        baseScheme.copy(
-            primary    = palette.primary,
-            secondary  = palette.secondary,
-            background = palette.background
-        )
-    }
+    // merge in primary, secondary, and background
+    val colors = baseScheme.copy(
+        primary   = palette.primary,
+        secondary = palette.secondary,
+        background = if (darkMode) Color.Black else palette.background
+    )
 
     MaterialTheme(
         colorScheme = colors,
@@ -82,9 +86,10 @@ fun MoneyBaseTheme(
     )
 }
 
-fun getIconColorForScheme(scheme: ColorScheme): Color = when (scheme) {
+fun getIconColorForScheme(scheme: ColorScheme, customHex: String? = null): Color = when (scheme) {
     ColorScheme.Default -> DefaultPalette.primary
     ColorScheme.Blue    -> BluePalette.primary
     ColorScheme.Green   -> GreenPalette.primary
     ColorScheme.Red     -> RedPalette.primary
+    ColorScheme.Custom  -> customHex?.toColorOrNull() ?: ColorPalette.defaultColor
 }

@@ -439,6 +439,7 @@ private fun MoveDialog(
                     Row(
                         Modifier
                             .fillMaxWidth()
+                            .padding(start = (depth * 16).dp, vertical = 4.dp)
                             .selectable(
                                 selected = parentId == c.id,
                                 onClick = { parentId = c.id },
