@@ -96,6 +96,7 @@ dependencies {
 
     implementation(libs.charts.android)
     implementation(libs.material3)
+    implementation(libs.androidx.compose.foundation.layout)
 
     testImplementation(libs.junit)
 
