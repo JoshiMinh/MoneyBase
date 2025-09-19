@@ -236,7 +236,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           ),
                           alignment: Alignment.center,
                           child: Text(
-                            '$',
+                            String.fromCharCode(36),
                             style: textTheme.titleMedium?.copyWith(
                               color: Colors.white,
                               fontWeight: FontWeight.w700,
@@ -386,7 +386,7 @@ class _GlassField extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(24),
           child: Container(
-            padding=
+            padding:
                 const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(24),
@@ -431,7 +431,7 @@ class _CategoryChip extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color=
+            color:
                 selected ? Colors.white : Colors.white.withOpacity(0.18),
           ),
           color: selected
