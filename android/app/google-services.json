@@ -7,6 +7,35 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:284259483635:android:2e81e8bc1d4d4648715c86",
+        "android_client_info": {
+          "package_name": "com.thebase.moneybase"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "284259483635-geruaub92vfh6k2bvp4n9t700cprj6tt.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlSvIofvMWvZ8L1bzYY8jMQCbEoP5YLjo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "284259483635-dtrfo9v6coasusc0sfjrk8jd9m4s463o.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:284259483635:android:dcbb41da3b4f7a7c715c86",
         "android_client_info": {
           "package_name": "com.thebase.moneybase"
