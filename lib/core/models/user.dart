@@ -1,5 +1,5 @@
 class MoneyBaseUser {
-  const MoneyBaseUser({
+  MoneyBaseUser({
     this.id = '',
     this.displayName = '',
     this.email = '',
@@ -59,16 +59,14 @@ class MoneyBaseUser {
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'displayName': displayName,
-      'email': email,
-      'createdAt': createdAt.toIso8601String(),
-      'lastLoginAt': lastLoginAt.toIso8601String(),
-      'premium': premium,
-      'profilePictureUrl': profilePictureUrl,
-      'photoUrl': photoUrl,
-    };
-  }
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'displayName': displayName,
+    'email': email,
+    'createdAt': createdAt.toIso8601String(),
+    'lastLoginAt': lastLoginAt.toIso8601String(),
+    'premium': premium,
+    'profilePictureUrl': profilePictureUrl,
+    'photoUrl': photoUrl,
+  };
 }

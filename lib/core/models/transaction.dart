@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MoneyBaseTransaction {
-  const MoneyBaseTransaction({
+  MoneyBaseTransaction({
     this.id = '',
     this.userId = '',
     this.description = '',
@@ -12,8 +12,8 @@ class MoneyBaseTransaction {
     this.walletId = '',
     DateTime? date,
     DateTime? createdAt,
-  })  : date = date ?? DateTime.now(),
-        createdAt = createdAt ?? DateTime.now();
+  }) : date = date ?? DateTime.now(),
+       createdAt = createdAt ?? DateTime.now();
 
   final String id;
   final String userId;
@@ -54,15 +54,9 @@ class MoneyBaseTransaction {
 
   factory MoneyBaseTransaction.fromJson(Map<String, dynamic> json) {
     DateTime parseDate(dynamic value) {
-      if (value is Timestamp) {
-        return value.toDate();
-      }
-      if (value is DateTime) {
-        return value;
-      }
-      if (value is String) {
-        return DateTime.tryParse(value) ?? DateTime.now();
-      }
+      if (value is Timestamp) return value.toDate();
+      if (value is DateTime) return value;
+      if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
       return DateTime.now();
     }
 
@@ -80,18 +74,16 @@ class MoneyBaseTransaction {
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'userId': userId,
-      'description': description,
-      'amount': amount,
-      'currencyCode': currencyCode,
-      'isIncome': isIncome,
-      'categoryId': categoryId,
-      'walletId': walletId,
-      'date': Timestamp.fromDate(date),
-      'createdAt': Timestamp.fromDate(createdAt),
-    };
-  }
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'userId': userId,
+    'description': description,
+    'amount': amount,
+    'currencyCode': currencyCode,
+    'isIncome': isIncome,
+    'categoryId': categoryId,
+    'walletId': walletId,
+    'date': Timestamp.fromDate(date),
+    'createdAt': Timestamp.fromDate(createdAt),
+  };
 }
