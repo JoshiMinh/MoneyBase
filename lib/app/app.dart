@@ -22,6 +22,7 @@ class _MoneyBaseAppState extends State<MoneyBaseApp> {
   void initState() {
     super.initState();
     _themeController = ThemeController();
+    unawaited(googleSignInService.ensureInitialized());
   }
 
   @override
@@ -32,7 +33,7 @@ class _MoneyBaseAppState extends State<MoneyBaseApp> {
 
   void _onLogout() {
     FirebaseAuth.instance.signOut();
-    unawaited(googleSignIn.signOut());
+    unawaited(googleSignInService.signOut());
   }
 
   @override
