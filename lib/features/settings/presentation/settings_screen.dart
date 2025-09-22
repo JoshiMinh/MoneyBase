@@ -417,85 +417,6 @@ class _WalletSection extends StatelessWidget {
   final String userId;
   final WalletRepository repository;
 
-  Future<void> _showWalletDialog(BuildContext context, {Wallet? wallet}) async {
-    final result = await showDialog<Wallet>(
-      context: context,
-      builder: (context) => _WalletDialog(initial: wallet),
-    );
-
-    if (result == null) {
-      return;
-    }
-
-    final messenger = ScaffoldMessenger.of(context);
-
-    try {
-      if (wallet == null) {
-        await repository.addWallet(userId, result);
-        if (!context.mounted) return;
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Wallet added successfully.')),
-        );
-      } else {
-        await repository.updateWallet(userId, result);
-        if (!context.mounted) return;
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Wallet updated successfully.')),
-        );
-      }
-    } catch (error) {
-      if (!context.mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('Failed to save wallet: $error')),
-      );
-    }
-  }
-
-  Future<void> _confirmDeleteWallet(BuildContext context, Wallet wallet) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete wallet?'),
-        content: Text(
-          'This will remove "${wallet.name.isEmpty ? 'Untitled wallet' : wallet.name}" and any linked balances.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFE54C4C),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) {
-      return;
-    }
-
-    final messenger = ScaffoldMessenger.of(context);
-
-    try {
-      await repository.deleteWallet(userId, wallet.id);
-      if (!context.mounted) return;
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Wallet removed.')),
-      );
-    } catch (error) {
-      if (!context.mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('Failed to delete wallet: $error')),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -512,13 +433,14 @@ class _WalletSection extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const Spacer(),
-            FilledButton.icon(
-              onPressed: () => _showWalletDialog(context),
-              icon: const Icon(Icons.account_balance_wallet_outlined),
-              label: const Text('Add wallet'),
-            ),
           ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Create or edit wallets from the Add tab while recording transactions.',
+          style: textTheme.bodySmall?.copyWith(
+            color: Colors.white.withOpacity(0.72),
+          ),
         ),
         const SizedBox(height: 16),
         StreamBuilder<List<Wallet>>(
@@ -538,7 +460,8 @@ class _WalletSection extends StatelessWidget {
 
             if (wallets.isEmpty) {
               return const _EmptyNotice(
-                message: 'No wallets yet. Add one to begin tracking balances.',
+                message:
+                    'No wallets yet. Use the Add tab to create one and track balances.',
               );
             }
 
@@ -570,8 +493,6 @@ class _WalletSection extends StatelessWidget {
                         Colors.white.withOpacity(0.08),
                     child: Icon(iconData, color: accent ?? Colors.white),
                   ),
-                  onEdit: () => _showWalletDialog(context, wallet: wallet),
-                  onDelete: () => _confirmDeleteWallet(context, wallet),
                 );
               },
             );
@@ -587,54 +508,6 @@ class _CategorySection extends StatelessWidget {
 
   final String userId;
   final CategoryRepository repository;
-
-  Future<void> _confirmDeleteCategory(
-    BuildContext context,
-    Category category,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete category?'),
-        content: Text(
-          'This will remove "${category.name.isEmpty ? 'Untitled category' : category.name}" from your library.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFE54C4C),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) {
-      return;
-    }
-
-    final messenger = ScaffoldMessenger.of(context);
-
-    try {
-      await repository.deleteCategory(userId, category.id);
-      if (!context.mounted) return;
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Category removed.')),
-      );
-    } catch (error) {
-      if (!context.mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('Failed to delete category: $error')),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -690,20 +563,22 @@ class _CategorySection extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const Spacer(),
-                FilledButton.icon(
-                  onPressed: () => openDialog(),
-                  icon: const Icon(Icons.category_outlined),
-                  label: const Text('Add category'),
-                ),
               ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Manage your category library from the Add tab to keep selections in sync.',
+              style: textTheme.bodySmall?.copyWith(
+                color: Colors.white.withOpacity(0.72),
+              ),
             ),
             const SizedBox(height: 16),
             if (loading)
               const Center(child: CircularProgressIndicator())
             else if (categories.isEmpty)
               const _EmptyNotice(
-                message: 'No categories yet. Create one to organise transactions.',
+                message:
+                    'No categories yet. Use the Add tab to create one to organise transactions.',
               )
             else
               ListView.separated(
@@ -743,8 +618,6 @@ class _CategorySection extends StatelessWidget {
                           accent?.withOpacity(0.2) ?? Colors.white.withOpacity(0.08),
                       child: Icon(iconData, color: accent ?? Colors.white),
                     ),
-                    onEdit: () => openDialog(category: category),
-                    onDelete: () => _confirmDeleteCategory(context, category),
                   );
                 },
               ),
@@ -753,62 +626,21 @@ class _CategorySection extends StatelessWidget {
       },
     );
   }
-
-  Future<void> _openCategoryDialog(
-    BuildContext context, {
-    required List<Category> categories,
-    Category? category,
-  }) async {
-    final result = await showDialog<Category>(
-      context: context,
-      builder: (context) => _CategoryDialog(
-        initial: category,
-        categories: categories,
-      ),
-    );
-
-    if (result == null) {
-      return;
-    }
-
-    final messenger = ScaffoldMessenger.of(context);
-
-    try {
-      if (category == null) {
-        await repository.addCategory(userId, result);
-        if (!context.mounted) return;
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Category added successfully.')),
-        );
-      } else {
-        await repository.updateCategory(userId, result);
-        if (!context.mounted) return;
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Category updated successfully.')),
-        );
-      }
-    } catch (error) {
-      if (!context.mounted) return;
-      messenger.showSnackBar(
-        SnackBar(content: Text('Failed to save category: $error')),
-      );
-    }
-  }
 }
 
 class _SettingsListTile extends StatelessWidget {
   const _SettingsListTile({
     required this.title,
     required this.metadata,
-    required this.onEdit,
-    required this.onDelete,
+    this.onEdit,
+    this.onDelete,
     this.leading,
   });
 
   final String title;
   final List<String> metadata;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
   final Widget? leading;
 
   @override
@@ -853,131 +685,31 @@ class _SettingsListTile extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 12),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                tooltip: 'Edit',
-                onPressed: onEdit,
-                icon: const Icon(Icons.edit_outlined),
-                color: Colors.white,
-              ),
-              const SizedBox(width: 4),
-              IconButton(
-                tooltip: 'Delete',
-                onPressed: onDelete,
-                icon: const Icon(Icons.delete_outline),
-                color: Colors.white,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _IconChooser extends StatelessWidget {
-  const _IconChooser({
-    required this.label,
-    required this.options,
-    required this.selected,
-    required this.onSelected,
-  });
-
-  final String label;
-  final Iterable<MapEntry<String, IconData>> options;
-  final String selected;
-  final ValueChanged<String> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final selectedLabel = selected.replaceAll('_', ' ');
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            label,
-            style: textTheme.bodySmall?.copyWith(
-              color: Colors.white.withOpacity(0.72),
-              fontWeight: FontWeight.w600,
+          if (onEdit != null || onDelete != null) ...[
+            const SizedBox(width: 12),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (onEdit != null)
+                  IconButton(
+                    tooltip: 'Edit',
+                    onPressed: onEdit,
+                    icon: const Icon(Icons.edit_outlined),
+                    color: Colors.white,
+                  ),
+                if (onEdit != null && onDelete != null)
+                  const SizedBox(width: 4),
+                if (onDelete != null)
+                  IconButton(
+                    tooltip: 'Delete',
+                    onPressed: onDelete,
+                    icon: const Icon(Icons.delete_outline),
+                    color: Colors.white,
+                  ),
+              ],
             ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          selectedLabel,
-          style: textTheme.bodyMedium?.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            for (final entry in options)
-              _IconChoice(
-                name: entry.key,
-                icon: entry.value,
-                selected: entry.key == selected,
-                onTap: () => onSelected(entry.key),
-              ),
           ],
-        ),
-      ],
-    );
-  }
-}
-
-class _IconChoice extends StatelessWidget {
-  const _IconChoice({
-    required this.name,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String name;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final background = selected
-        ? Colors.white.withOpacity(0.24)
-        : Colors.white.withOpacity(0.08);
-    final borderColor = selected
-        ? colorScheme.primary
-        : Colors.white.withOpacity(0.16);
-
-    return Tooltip(
-      message: name.replaceAll('_', ' '),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: borderColor, width: selected ? 2 : 1),
-            color: background,
-          ),
-          child: Icon(
-            icon,
-            color: selected ? colorScheme.primary : Colors.white,
-          ),
-        ),
+        ],
       ),
     );
   }
@@ -1035,319 +767,6 @@ class _ErrorNotice extends StatelessWidget {
   }
 }
 
-class _WalletDialog extends StatefulWidget {
-  const _WalletDialog({this.initial});
-
-  final Wallet? initial;
-
-  @override
-  State<_WalletDialog> createState() => _WalletDialogState();
-}
-
-class _WalletDialogState extends State<_WalletDialog> {
-  late final TextEditingController _nameController;
-  late final TextEditingController _balanceController;
-  late final TextEditingController _colorController;
-  late final TextEditingController _currencyController;
-  late WalletType _selectedType;
-  late String _selectedIconName;
-  final _formKey = GlobalKey<FormState>();
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController(text: widget.initial?.name ?? '');
-    final initialBalance = widget.initial?.balance ?? 0;
-    _balanceController = TextEditingController(
-      text: initialBalance == 0 ? '' : initialBalance.toString(),
-    );
-    _colorController = TextEditingController(text: widget.initial?.color ?? '');
-    _currencyController =
-        TextEditingController(text: widget.initial?.currencyCode ?? 'USD');
-    _selectedType = widget.initial?.type ?? WalletType.physical;
-    final initialIcon = widget.initial?.iconName ?? 'account_balance_wallet';
-    _selectedIconName =
-        IconLibrary.walletIcons.containsKey(initialIcon) ? initialIcon : IconLibrary.walletIcons.keys.first;
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _balanceController.dispose();
-    _colorController.dispose();
-    _currencyController.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    final name = _nameController.text.trim();
-    final balanceText = _balanceController.text.trim();
-    final balance = balanceText.isEmpty ? 0.0 : double.parse(balanceText);
-    final iconName = _selectedIconName;
-    final color = _colorController.text.trim();
-    final currency = _currencyController.text.trim().isEmpty
-        ? 'USD'
-        : _currencyController.text.trim().toUpperCase();
-
-    final wallet = (widget.initial ?? const Wallet()).copyWith(
-      name: name,
-      balance: balance,
-      iconName: iconName,
-      color: color,
-      type: _selectedType,
-      currencyCode: currency,
-    );
-
-    Navigator.of(context).pop(wallet);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isEditing = widget.initial != null;
-
-    return AlertDialog(
-      title: Text(isEditing ? 'Edit wallet' : 'New wallet'),
-      content: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
-                autofocus: true,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Enter a wallet name';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<WalletType>(
-                value: _selectedType,
-                decoration: const InputDecoration(labelText: 'Type'),
-                items: [
-                  for (final type in WalletType.values)
-                    DropdownMenuItem(
-                      value: type,
-                      child: Text(_walletTypeLabel(type)),
-                    ),
-                ],
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() => _selectedType = value);
-                  }
-                },
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _currencyController,
-                textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(labelText: 'Currency code'),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Enter a currency code';
-                  }
-                  if (value.trim().length != 3) {
-                    return 'Currency codes are 3 letters (e.g. USD)';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _balanceController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: 'Balance (optional)',
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return null;
-                  }
-                  if (double.tryParse(value.trim()) == null) {
-                    return 'Enter a valid number';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              _IconChooser(
-                label: 'Icon',
-                options: IconLibrary.walletOptions(),
-                selected: _selectedIconName,
-                onSelected: (value) => setState(() => _selectedIconName = value),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _colorController,
-                decoration: const InputDecoration(
-                  labelText: 'Color hex (optional)',
-                  hintText: '#7B5BFF',
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: _submit,
-          child: Text(isEditing ? 'Save changes' : 'Create'),
-        ),
-      ],
-    );
-  }
-}
-
-class _CategoryDialog extends StatefulWidget {
-  const _CategoryDialog({this.initial, required this.categories});
-
-  final Category? initial;
-  final List<Category> categories;
-
-  @override
-  State<_CategoryDialog> createState() => _CategoryDialogState();
-}
-
-class _CategoryDialogState extends State<_CategoryDialog> {
-  late final TextEditingController _nameController;
-  late final TextEditingController _colorController;
-  late String _selectedIconName;
-  String? _parentCategoryId;
-  final _formKey = GlobalKey<FormState>();
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController(text: widget.initial?.name ?? '');
-    _colorController = TextEditingController(text: widget.initial?.color ?? '');
-    _parentCategoryId = widget.initial?.parentCategoryId;
-    final initialIcon = widget.initial?.iconName ?? 'shopping_bag';
-    _selectedIconName = IconLibrary.categoryIcons.containsKey(initialIcon)
-        ? initialIcon
-        : IconLibrary.categoryIcons.keys.first;
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _colorController.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    final name = _nameController.text.trim();
-    final iconName = _selectedIconName;
-    final color = _colorController.text.trim();
-
-    final category = (widget.initial ?? const Category()).copyWith(
-      name: name,
-      iconName: iconName,
-      color: color,
-      parentCategoryId: _parentCategoryId,
-    );
-
-    Navigator.of(context).pop(category);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isEditing = widget.initial != null;
-
-    final parentOptions = widget.categories
-        .where((category) => category.id != widget.initial?.id)
-        .toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
-
-    return AlertDialog(
-      title: Text(isEditing ? 'Edit category' : 'New category'),
-      content: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
-                autofocus: true,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Enter a category name';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              _IconChooser(
-                label: 'Icon',
-                options: IconLibrary.categoryOptions(),
-                selected: _selectedIconName,
-                onSelected: (value) => setState(() => _selectedIconName = value),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _colorController,
-                decoration: const InputDecoration(
-                  labelText: 'Color hex (optional)',
-                  hintText: '#FF6D8D',
-                ),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String?>(
-                value: _parentCategoryId,
-                decoration: const InputDecoration(
-                  labelText: 'Parent category (optional)',
-                ),
-                items: [
-                  const DropdownMenuItem<String?>(
-                    value: null,
-                    child: Text('None'),
-                  ),
-                  for (final category in parentOptions)
-                    DropdownMenuItem<String?>(
-                      value: category.id,
-                      child: Text(
-                        category.name.isNotEmpty
-                            ? category.name
-                            : 'Untitled category',
-                      ),
-                    ),
-                ],
-                onChanged: (value) => setState(() => _parentCategoryId = value),
-              ),
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: _submit,
-          child: Text(isEditing ? 'Save changes' : 'Create'),
-        ),
-      ],
-    );
-  }
-}
 
 class _SettingsToggleTile extends StatelessWidget {
   const _SettingsToggleTile({

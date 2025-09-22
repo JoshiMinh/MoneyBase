@@ -1,7 +1,13 @@
 import 'dart:math' as math;
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/models/category.dart';
+import '../../../core/models/transaction.dart';
+import '../../../core/repositories/category_repository.dart';
+import '../../../core/repositories/transaction_repository.dart';
+import '../../../core/utils/color_utils.dart';
 import '../../common/presentation/moneybase_shell.dart';
 
 class ReportsScreen extends StatefulWidget {
@@ -12,38 +18,342 @@ class ReportsScreen extends StatefulWidget {
 }
 
 class _ReportsScreenState extends State<ReportsScreen> {
-  static const _segments = [
-    _ReportSegment(
-      label: 'Income',
-      amount: '\$5000.00 (76%)',
-      ratio: 0.76,
-      color: Color(0xFFFFC300),
-    ),
-    _ReportSegment(
-      label: 'Shopping',
-      amount: '\$1050.00 (16%)',
-      ratio: 0.16,
-      color: Color(0xFF7B61FF),
-    ),
-    _ReportSegment(
-      label: 'Car Fix',
-      amount: '\$500.00 (7%)',
-      ratio: 0.07,
-      color: Color(0xFFFF6D8D),
-    ),
+  static const _uncategorizedKey = '__uncategorized__';
+  static const _monthNames = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
 
+  late final TransactionRepository _transactionRepository;
+  late final CategoryRepository _categoryRepository;
   _ReportPeriod _selectedPeriod = _ReportPeriod.month;
 
   @override
+  void initState() {
+    super.initState();
+    _transactionRepository = TransactionRepository();
+    _categoryRepository = CategoryRepository();
+  }
+
+  DateTimeRange? _periodRange(_ReportPeriod period) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    switch (period) {
+      case _ReportPeriod.day:
+        return DateTimeRange(
+          start: today,
+          end: today.add(const Duration(days: 1)),
+        );
+      case _ReportPeriod.week:
+        final start = today.subtract(Duration(days: today.weekday - 1));
+        return DateTimeRange(
+          start: start,
+          end: start.add(const Duration(days: 7)),
+        );
+      case _ReportPeriod.month:
+        final start = DateTime(now.year, now.month);
+        final end = DateTime(now.year, now.month + 1);
+        return DateTimeRange(start: start, end: end);
+      case _ReportPeriod.quarter:
+        final quarterIndex = (now.month - 1) ~/ 3;
+        final startMonth = quarterIndex * 3 + 1;
+        final start = DateTime(now.year, startMonth);
+        final end = DateTime(now.year, startMonth + 3);
+        return DateTimeRange(start: start, end: end);
+      case _ReportPeriod.custom:
+      case _ReportPeriod.all:
+        return null;
+    }
+  }
+
+  List<MoneyBaseTransaction> _filterTransactions(
+    List<MoneyBaseTransaction> transactions,
+    DateTimeRange? range,
+  ) {
+    if (range == null) {
+      return transactions;
+    }
+
+    return transactions
+        .where(
+          (transaction) =>
+              !transaction.date.isBefore(range.start) &&
+              transaction.date.isBefore(range.end),
+        )
+        .toList();
+  }
+
+  String _resolveCurrency(List<MoneyBaseTransaction> transactions) {
+    for (final transaction in transactions) {
+      final code = transaction.currencyCode.trim();
+      if (code.isNotEmpty) {
+        return code.toUpperCase();
+      }
+    }
+    return 'USD';
+  }
+
+  String _formatSegmentAmount(double amount, double ratio, String currency) {
+    final percent = (ratio * 100).clamp(0, 100);
+    final percentText = percent >= 10
+        ? percent.toStringAsFixed(0)
+        : percent.toStringAsFixed(1);
+    return '$currency ${amount.toStringAsFixed(2)} ($percentText%)';
+  }
+
+  _ReportBreakdown _buildBreakdown(
+    List<MoneyBaseTransaction> transactions,
+    Map<String, Category> categories,
+    _ReportPeriod period,
+  ) {
+    final range = _periodRange(period);
+    final scoped = _filterTransactions(transactions, range);
+    if (scoped.isEmpty) {
+      return _ReportBreakdown(
+        segments: const [],
+        total: 0,
+        currency: _resolveCurrency(transactions),
+        range: range,
+      );
+    }
+
+    final currency = _resolveCurrency(scoped);
+    double total = 0;
+    double incomeTotal = 0;
+    final expenseTotals = <String, double>{};
+
+    for (final transaction in scoped) {
+      final amount = transaction.amount.abs();
+      if (amount == 0) {
+        continue;
+      }
+
+      total += amount;
+      if (transaction.isIncome) {
+        incomeTotal += amount;
+      } else {
+        final key = transaction.categoryId.isNotEmpty
+            ? transaction.categoryId
+            : _uncategorizedKey;
+        expenseTotals[key] = (expenseTotals[key] ?? 0) + amount;
+      }
+    }
+
+    if (total == 0) {
+      return _ReportBreakdown(
+        segments: const [],
+        total: 0,
+        currency: currency,
+        range: range,
+      );
+    }
+
+    final segments = <_ReportSegment>[];
+    if (incomeTotal > 0) {
+      final ratio = incomeTotal / total;
+      segments.add(
+        _ReportSegment(
+          label: 'Income',
+          amount: _formatSegmentAmount(incomeTotal, ratio, currency),
+          ratio: ratio,
+          color: const Color(0xFF4FF3B2),
+        ),
+      );
+    }
+
+    final fallbackColors = const [
+      Color(0xFFFF6D8D),
+      Color(0xFF7B61FF),
+      Color(0xFFFFC857),
+      Color(0xFF4DD4FF),
+      Color(0xFF5CE1E6),
+      Color(0xFFF991CC),
+    ];
+    var fallbackIndex = 0;
+    final expenseEntries = expenseTotals.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    for (final entry in expenseEntries) {
+      final category = categories[entry.key];
+      final label = category != null && category.name.isNotEmpty
+          ? category.name
+          : 'Other';
+      final color = parseHexColor(category?.color) ??
+          fallbackColors[fallbackIndex % fallbackColors.length];
+      fallbackIndex++;
+      final ratio = entry.value / total;
+      segments.add(
+        _ReportSegment(
+          label: label,
+          amount: _formatSegmentAmount(entry.value, ratio, currency),
+          ratio: ratio,
+          color: color,
+        ),
+      );
+    }
+
+    return _ReportBreakdown(
+      segments: segments,
+      total: total,
+      currency: currency,
+      range: range,
+    );
+  }
+
+  String _periodTitle(DateTimeRange? range, _ReportPeriod period) {
+    if (period == _ReportPeriod.all) {
+      return 'All activity';
+    }
+    if (period == _ReportPeriod.custom) {
+      return 'Custom range';
+    }
+    if (range == null) {
+      return period.label;
+    }
+
+    final start = range.start;
+    final end = range.end.subtract(const Duration(seconds: 1));
+    switch (period) {
+      case _ReportPeriod.day:
+        return '${_monthNames[start.month - 1]} ${start.day}, ${start.year}';
+      case _ReportPeriod.week:
+        final startLabel =
+            '${_monthNames[start.month - 1]} ${start.day}, ${start.year}';
+        final endLabel =
+            '${_monthNames[end.month - 1]} ${end.day}, ${end.year}';
+        return '$startLabel – $endLabel';
+      case _ReportPeriod.month:
+        return '${_monthNames[start.month - 1]} ${start.year}';
+      case _ReportPeriod.quarter:
+        final quarter = ((start.month - 1) ~/ 3) + 1;
+        return 'Q$quarter ${start.year}';
+      case _ReportPeriod.custom:
+      case _ReportPeriod.all:
+        return 'All activity';
+    }
+  }
+
+  String _comparisonSubtitle(_ReportPeriod period) {
+    switch (period) {
+      case _ReportPeriod.day:
+        return 'Compared to yesterday';
+      case _ReportPeriod.week:
+        return 'Compared to last week';
+      case _ReportPeriod.month:
+        return 'Compared to last month';
+      case _ReportPeriod.quarter:
+        return 'Compared to last quarter';
+      case _ReportPeriod.custom:
+        return 'Custom insights';
+      case _ReportPeriod.all:
+        return 'Lifetime summary';
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return MoneyBaseScaffold(
+        builder: (context, layout) {
+          return Center(
+            child: Text(
+              'Sign in to view your MoneyBase activity reports.',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(color: Colors.white),
+              textAlign: TextAlign.center,
+            ),
+          );
+        },
+      );
+    }
+
     return MoneyBaseScaffold(
       builder: (context, layout) {
-        return _ReportsContent(
-          segments: _segments,
-          selectedPeriod: _selectedPeriod,
-          onPeriodChanged: (period) {
-            setState(() => _selectedPeriod = period);
+        return StreamBuilder<List<MoneyBaseTransaction>>(
+          stream: _transactionRepository.watchTransactions(user.uid),
+          builder: (context, transactionSnapshot) {
+            if (transactionSnapshot.hasError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    'Unable to load transactions: ${transactionSnapshot.error}',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyLarge
+                        ?.copyWith(color: Colors.white),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              );
+            }
+
+            final transactions =
+                transactionSnapshot.data ?? const <MoneyBaseTransaction>[];
+            final transactionLoading = transactionSnapshot.connectionState ==
+                    ConnectionState.waiting &&
+                transactions.isEmpty;
+
+            return StreamBuilder<List<Category>>(
+              stream: _categoryRepository.watchCategories(user.uid),
+              builder: (context, categorySnapshot) {
+                if (categorySnapshot.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        'Unable to load categories: ${categorySnapshot.error}',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyLarge
+                            ?.copyWith(color: Colors.white),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  );
+                }
+
+                final categories = {
+                  for (final category
+                      in categorySnapshot.data ?? const <Category>[])
+                    category.id: category,
+                };
+                final categoryLoading =
+                    categorySnapshot.connectionState == ConnectionState.waiting &&
+                        categories.isEmpty;
+
+                final breakdown =
+                    _buildBreakdown(transactions, categories, _selectedPeriod);
+                final loading = transactionLoading || categoryLoading;
+
+                return _ReportsContent(
+                  segments: breakdown.segments,
+                  selectedPeriod: _selectedPeriod,
+                  onPeriodChanged: (period) {
+                    setState(() => _selectedPeriod = period);
+                  },
+                  totalAmount: breakdown.total,
+                  currencyCode: breakdown.currency,
+                  loading: loading,
+                  periodLabel: _periodTitle(breakdown.range, _selectedPeriod),
+                  periodSubtitle: _comparisonSubtitle(_selectedPeriod),
+                  hasTransactions: transactions.isNotEmpty,
+                );
+              },
+            );
           },
         );
       },
@@ -51,20 +361,107 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 }
 
+class _ReportBreakdown {
+  const _ReportBreakdown({
+    required this.segments,
+    required this.total,
+    required this.currency,
+    required this.range,
+  });
+
+  final List<_ReportSegment> segments;
+  final double total;
+  final String currency;
+  final DateTimeRange? range;
+}
+
 class _ReportsContent extends StatelessWidget {
   const _ReportsContent({
     required this.segments,
     required this.selectedPeriod,
     required this.onPeriodChanged,
+    required this.totalAmount,
+    required this.currencyCode,
+    required this.loading,
+    required this.periodLabel,
+    required this.periodSubtitle,
+    required this.hasTransactions,
   });
 
   final List<_ReportSegment> segments;
   final _ReportPeriod selectedPeriod;
   final ValueChanged<_ReportPeriod> onPeriodChanged;
+  final double totalAmount;
+  final String currencyCode;
+  final bool loading;
+  final String periodLabel;
+  final String periodSubtitle;
+  final bool hasTransactions;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final totalLabel =
+        '${currencyCode.toUpperCase()} ${totalAmount.toStringAsFixed(2)}';
+
+    Widget visualization;
+    if (loading) {
+      visualization = const SizedBox(
+        height: 280,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    } else if (segments.isEmpty) {
+      final message = hasTransactions
+          ? 'No transactions match this period yet. Try selecting a different range.'
+          : 'Add your first transaction to unlock MoneyBase spending insights.';
+      visualization = Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 16),
+        alignment: Alignment.center,
+        child: Text(
+          message,
+          style: textTheme.bodyLarge?.copyWith(
+            color: Colors.white.withOpacity(0.7),
+          ),
+          textAlign: TextAlign.center,
+        ),
+      );
+    } else {
+      visualization = LayoutBuilder(
+        builder: (context, constraints) {
+          final isStacked = constraints.maxWidth < 720;
+
+          return Flex(
+            direction: isStacked ? Axis.vertical : Axis.horizontal,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: isStacked ? double.infinity : 280,
+                height: 280,
+                child: _DonutChart(
+                  segments: segments,
+                  totalLabel: totalLabel,
+                  subtitle: 'Total activity',
+                ),
+              ),
+              SizedBox(height: isStacked ? 32 : 0, width: isStacked ? 0 : 32),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final segment in segments) ...[
+                      _LegendRow(segment: segment),
+                      if (segment != segments.last)
+                        const SizedBox(height: 18),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,7 +487,7 @@ class _ReportsContent extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'August 2025 snapshot across your connected wallets.',
+                    'Real-time insights across your connected wallets.',
                     style: textTheme.bodyMedium?.copyWith(
                       color: Colors.white.withOpacity(0.68),
                     ),
@@ -116,7 +513,7 @@ class _ReportsContent extends StatelessWidget {
                 children: [
                   MoneyBaseGlassIconButton(
                     icon: Icons.arrow_back,
-                    tooltip: 'Previous month',
+                    tooltip: 'Previous period',
                     onPressed: () {},
                   ),
                   const SizedBox(width: 16),
@@ -125,7 +522,7 @@ class _ReportsContent extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(
-                          'August 2025',
+                          periodLabel,
                           style: textTheme.titleLarge?.copyWith(
                             color: Colors.white,
                             fontWeight: FontWeight.w600,
@@ -133,7 +530,7 @@ class _ReportsContent extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Compared to last month',
+                          periodSubtitle,
                           style: textTheme.bodySmall?.copyWith(
                             color: Colors.white.withOpacity(0.6),
                           ),
@@ -144,46 +541,13 @@ class _ReportsContent extends StatelessWidget {
                   const SizedBox(width: 16),
                   MoneyBaseGlassIconButton(
                     icon: Icons.arrow_forward,
-                    tooltip: 'Next month',
+                    tooltip: 'Next period',
                     onPressed: () {},
                   ),
                 ],
               ),
               const SizedBox(height: 32),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final isStacked = constraints.maxWidth < 720;
-
-                  return Flex(
-                    direction: isStacked ? Axis.vertical : Axis.horizontal,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: isStacked ? double.infinity : 280,
-                        height: 280,
-                        child: _DonutChart(
-                          segments: segments,
-                          totalLabel: '\$6,550',
-                          subtitle: 'Total activity',
-                        ),
-                      ),
-                      SizedBox(height: isStacked ? 32 : 0, width: isStacked ? 0 : 32),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            for (final segment in segments) ...[
-                              _LegendRow(segment: segment),
-                              if (segment != segments.last)
-                                const SizedBox(height: 18),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
+              visualization,
               const SizedBox(height: 32),
               Wrap(
                 spacing: 12,
