@@ -22,14 +22,14 @@ class MoneyBaseTheme {
     return ThemeData(
       colorScheme: colorScheme,
       useMaterial3: true,
-      scaffoldBackgroundColor: colorScheme.background,
+      scaffoldBackgroundColor: colorScheme.surface,
       appBarTheme: AppBarTheme(
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: darkMode
-            ? colorScheme.surfaceVariant
+            ? colorScheme.surfaceContainerHighest
             : colorScheme.surface,
         indicatorColor: colorScheme.secondaryContainer,
       ),

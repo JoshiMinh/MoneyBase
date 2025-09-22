@@ -6,16 +6,12 @@ class GoogleSignInService {
   GoogleSignInService._();
 
   static final GoogleSignInService instance = GoogleSignInService._();
-  static const List<String> defaultScopes = <String>[
-    'email',
-    'profile',
-  ];
+  static const List<String> defaultScopes = <String>['email', 'profile'];
 
   Future<void>? _initialization;
 
   Future<void> ensureInitialized() {
-    return _initialization ??=
-        GoogleSignIn.instance.initialize(scopes: defaultScopes);
+    return _initialization ??= GoogleSignIn.instance.initialize();
   }
 
   GoogleSignIn get client => GoogleSignIn.instance;

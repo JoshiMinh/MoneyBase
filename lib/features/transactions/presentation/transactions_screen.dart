@@ -36,12 +36,11 @@ class TransactionsScreen extends StatelessWidget {
                   child: Card(
                     clipBehavior: Clip.antiAlias,
                     child: DataTable(
-                      headingRowColor:
-                          MaterialStateProperty.resolveWith<Color?>(
-                            (_) => Theme.of(
-                              context,
-                            ).colorScheme.surfaceVariant.withOpacity(0.4),
-                          ),
+                      headingRowColor: WidgetStateProperty.resolveWith<Color?>(
+                        (_) => Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest.withOpacity(0.4),
+                      ),
                       columns: const [
                         DataColumn(label: Text('Date')),
                         DataColumn(label: Text('Description')),

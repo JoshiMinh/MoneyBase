@@ -311,7 +311,7 @@ class _AuthCardState extends State<_AuthCard> {
         final account = await googleSignInService.authenticate(
           scopeHint: GoogleSignInService.defaultScopes,
         );
-        final authentication = await account.authentication;
+        final authentication = account.authentication;
         final idToken = authentication.idToken;
         if (idToken == null) {
           throw FirebaseAuthException(
@@ -319,8 +319,7 @@ class _AuthCardState extends State<_AuthCard> {
             message: 'Google sign-in did not return a valid ID token.',
           );
         }
-        final authorization =
-            await account.authorizationClient.authorizeScopes(
+        final authorization = await account.authorizationClient.authorizeScopes(
           GoogleSignInService.defaultScopes,
         );
         final authCredential = GoogleAuthProvider.credential(

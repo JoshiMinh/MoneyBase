@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
 import '../../common/presentation/moneybase_shell.dart';
@@ -30,14 +28,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       label: 'Groceries',
       icon: Icons.local_grocery_store_outlined,
     ),
-    _CategoryChipData(
-      label: 'Dining',
-      icon: Icons.restaurant_outlined,
-    ),
-    _CategoryChipData(
-      label: 'Travel',
-      icon: Icons.flight_takeoff_outlined,
-    ),
+    _CategoryChipData(label: 'Dining', icon: Icons.restaurant_outlined),
+    _CategoryChipData(label: 'Travel', icon: Icons.flight_takeoff_outlined),
   ];
 
   static const _wallets = <_WalletCardData>[
@@ -171,8 +163,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       backgroundColor: Colors.white.withOpacity(0.08),
                       foregroundColor: Colors.white.withOpacity(0.72),
                       selectedForegroundColor: Colors.white,
-                      selectedBackgroundColor:
-                          const Color(0xFF7B5BFF).withOpacity(0.65),
+                      selectedBackgroundColor: const Color(
+                        0xFF7B5BFF,
+                      ).withOpacity(0.65),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 14,
@@ -247,8 +240,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         Expanded(
                           child: TextField(
                             controller: _amountController,
-                            keyboardType:
-                                const TextInputType.numberWithOptions(
+                            keyboardType: const TextInputType.numberWithOptions(
                               decimal: true,
                             ),
                             style: textTheme.headlineSmall?.copyWith(
@@ -319,9 +311,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       Expanded(
                         child: FilledButton(
                           style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 18,
-                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 18),
                             backgroundColor: const Color(0xFF7B5BFF),
                             foregroundColor: Colors.white,
                             textStyle: textTheme.titleMedium?.copyWith(
@@ -356,11 +346,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 }
 
 class _GlassField extends StatelessWidget {
-  const _GlassField({
-    required this.label,
-    required this.child,
-    this.onTap,
-  });
+  const _GlassField({required this.label, required this.child, this.onTap});
 
   final String label;
   final Widget child;
@@ -386,8 +372,7 @@ class _GlassField extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(24),
           child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(24),
               border: Border.all(color: Colors.white.withOpacity(0.12)),
@@ -431,8 +416,7 @@ class _CategoryChip extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color:
-                selected ? Colors.white : Colors.white.withOpacity(0.18),
+            color: selected ? Colors.white : Colors.white.withOpacity(0.18),
           ),
           color: selected
               ? Colors.white.withOpacity(0.14)
@@ -443,9 +427,7 @@ class _CategoryChip extends StatelessWidget {
           children: [
             Icon(
               data.icon,
-              color: selected
-                  ? Colors.white
-                  : Colors.white.withOpacity(0.75),
+              color: selected ? Colors.white : Colors.white.withOpacity(0.75),
             ),
             const SizedBox(width: 10),
             Text(
@@ -505,9 +487,7 @@ class _WalletCard extends StatelessWidget {
             colors: data.gradient,
           ),
           border: Border.all(
-            color: selected
-                ? Colors.white
-                : Colors.white.withOpacity(0.2),
+            color: selected ? Colors.white : Colors.white.withOpacity(0.2),
             width: selected ? 2 : 1,
           ),
           boxShadow: const [
@@ -528,10 +508,7 @@ class _WalletCard extends StatelessWidget {
                 color: Colors.white.withOpacity(0.18),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(
-                data.icon,
-                color: Colors.white,
-              ),
+              child: Icon(data.icon, color: Colors.white),
             ),
             const SizedBox(height: 20),
             Text(
@@ -571,20 +548,13 @@ class _AddWalletCard extends StatelessWidget {
         height: 150,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(28),
-          border: Border.all(
-            color: Colors.white.withOpacity(0.24),
-            width: 2,
-          ),
+          border: Border.all(color: Colors.white.withOpacity(0.24), width: 2),
           color: Colors.white.withOpacity(0.04),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.add,
-              color: Colors.white.withOpacity(0.8),
-              size: 32,
-            ),
+            Icon(Icons.add, color: Colors.white.withOpacity(0.8), size: 32),
             const SizedBox(height: 12),
             Text(
               'Add wallet',
