@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../common/presentation/moneybase_shell.dart';
@@ -309,10 +308,9 @@ class _AuthCardState extends State<_AuthCard> {
         provider.setCustomParameters({'prompt': 'select_account'});
         credential = await FirebaseAuth.instance.signInWithPopup(provider);
       } else {
-        final account = await googleSignIn.signIn();
-        if (account == null) {
-          throw const _AuthFlowCancelled();
-        }
+        final account = await googleSignInService.authenticate(
+          scopeHint: GoogleSignInService.defaultScopes,
+        );
         final authentication = await account.authentication;
         final idToken = authentication.idToken;
         if (idToken == null) {
@@ -321,8 +319,12 @@ class _AuthCardState extends State<_AuthCard> {
             message: 'Google sign-in did not return a valid ID token.',
           );
         }
+        final authorization =
+            await account.authorizationClient.authorizeScopes(
+          GoogleSignInService.defaultScopes,
+        );
         final authCredential = GoogleAuthProvider.credential(
-          accessToken: authentication.accessToken,
+          accessToken: authorization.accessToken,
           idToken: idToken,
         );
         credential = await FirebaseAuth.instance.signInWithCredential(
@@ -367,14 +369,12 @@ class _AuthCardState extends State<_AuthCard> {
       if (!suppressDefaultCompletion) {
         widget.onLoginSuccess?.call();
       }
-    } on _AuthFlowCancelled {
-      // User dismissed the sign-in flow. Do nothing.
-    } on PlatformException catch (error) {
-      if (error.code == GoogleSignIn.kSignInCanceledError ||
-          error.code == GoogleSignIn.kNetworkError) {
+    } on GoogleSignInException catch (error) {
+      if (error.code == GoogleSignInExceptionCode.canceled ||
+          error.code == GoogleSignInExceptionCode.interrupted) {
         return;
       }
-      _setErrorMessage(error.message ?? 'Google sign-in failed.');
+      _setErrorMessage(error.description ?? 'Google sign-in failed.');
     } on FirebaseAuthException catch (error) {
       _handleFirebaseAuthError(error);
     } catch (error) {
@@ -502,10 +502,6 @@ class _AuthCardState extends State<_AuthCard> {
     }
     return domainPart.contains('.') && !domainPart.endsWith('.');
   }
-}
-
-class _AuthFlowCancelled implements Exception {
-  const _AuthFlowCancelled();
 }
 
 class _AuthMarketingPanel extends StatelessWidget {

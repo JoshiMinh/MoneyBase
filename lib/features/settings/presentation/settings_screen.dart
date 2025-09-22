@@ -228,7 +228,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           onPressed: () async {
                             await FirebaseAuth.instance.signOut();
-                            await googleSignIn.signOut();
+                            await googleSignInService.signOut();
                             widget.onLogout?.call();
                           },
                           icon: const Icon(Icons.logout_rounded),
