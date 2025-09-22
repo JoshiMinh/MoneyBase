@@ -287,15 +287,9 @@ class _DataManagementPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _WalletSection(
-            userId: userId,
-            repository: walletRepository,
-          ),
+          _WalletSection(userId: userId, repository: walletRepository),
           const SizedBox(height: 32),
-          _CategorySection(
-            userId: userId,
-            repository: categoryRepository,
-          ),
+          _CategorySection(userId: userId, repository: categoryRepository),
         ],
       ),
     );
@@ -447,12 +441,15 @@ class _WalletSection extends StatelessWidget {
           stream: repository.watchWallets(userId),
           builder: (context, snapshot) {
             if (snapshot.hasError) {
-              return _ErrorNotice(message: 'Unable to load wallets: ${snapshot.error}');
+              return _ErrorNotice(
+                message: 'Unable to load wallets: ${snapshot.error}',
+              );
             }
 
             final wallets = snapshot.data ?? const <Wallet>[];
             final loading =
-                snapshot.connectionState == ConnectionState.waiting && wallets.isEmpty;
+                snapshot.connectionState == ConnectionState.waiting &&
+                wallets.isEmpty;
 
             if (loading) {
               return const Center(child: CircularProgressIndicator());
@@ -472,7 +469,9 @@ class _WalletSection extends StatelessWidget {
               separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final wallet = wallets[index];
-                final title = wallet.name.isNotEmpty ? wallet.name : 'Untitled wallet';
+                final title = wallet.name.isNotEmpty
+                    ? wallet.name
+                    : 'Untitled wallet';
                 final typeDescription = _walletTypeLabel(wallet.type);
                 final currency = wallet.currencyCode.isEmpty
                     ? 'Currency not set'
@@ -489,7 +488,8 @@ class _WalletSection extends StatelessWidget {
                   ],
                   leading: CircleAvatar(
                     radius: 22,
-                    backgroundColor: accent?.withOpacity(0.2) ??
+                    backgroundColor:
+                        accent?.withOpacity(0.2) ??
                         Colors.white.withOpacity(0.08),
                     child: Icon(iconData, color: accent ?? Colors.white),
                   ),
@@ -541,7 +541,8 @@ class _CategorySection extends StatelessWidget {
 
         final categories = snapshot.data ?? const <Category>[];
         final loading =
-            snapshot.connectionState == ConnectionState.waiting && categories.isEmpty;
+            snapshot.connectionState == ConnectionState.waiting &&
+            categories.isEmpty;
 
         Future<void> openDialog({Category? category}) {
           return _openCategoryDialog(
@@ -588,8 +589,9 @@ class _CategorySection extends StatelessWidget {
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final category = categories[index];
-                  final title =
-                      category.name.isNotEmpty ? category.name : 'Untitled category';
+                  final title = category.name.isNotEmpty
+                      ? category.name
+                      : 'Untitled category';
                   final parent = categories.firstWhere(
                     (item) =>
                         category.parentCategoryId != null &&
@@ -606,7 +608,9 @@ class _CategorySection extends StatelessWidget {
                       'Parent: ${parent.name.isNotEmpty ? parent.name : category.parentCategoryId}',
                   ];
 
-                  final iconData = IconLibrary.iconForCategory(category.iconName);
+                  final iconData = IconLibrary.iconForCategory(
+                    category.iconName,
+                  );
                   final accent = parseHexColor(category.color);
 
                   return _SettingsListTile(
@@ -615,7 +619,8 @@ class _CategorySection extends StatelessWidget {
                     leading: CircleAvatar(
                       radius: 22,
                       backgroundColor:
-                          accent?.withOpacity(0.2) ?? Colors.white.withOpacity(0.08),
+                          accent?.withOpacity(0.2) ??
+                          Colors.white.withOpacity(0.08),
                       child: Icon(iconData, color: accent ?? Colors.white),
                     ),
                   );
@@ -657,10 +662,7 @@ class _SettingsListTile extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (leading != null) ...[
-            leading!,
-            const SizedBox(width: 16),
-          ],
+          if (leading != null) ...[leading!, const SizedBox(width: 16)],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -766,7 +768,6 @@ class _ErrorNotice extends StatelessWidget {
     );
   }
 }
-
 
 class _SettingsToggleTile extends StatelessWidget {
   const _SettingsToggleTile({
