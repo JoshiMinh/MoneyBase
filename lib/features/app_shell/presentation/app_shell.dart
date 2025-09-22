@@ -36,16 +36,11 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
-  void _openAddTransaction() {
-    setState(() => _currentIndex = 1);
-  }
-
   @override
   Widget build(BuildContext context) {
     final destinations = _NavigationDestination.values;
     final pages = <Widget>[
       HomeScreen(
-        onAddTransaction: _openAddTransaction,
         onViewReports: _openReports,
         onViewTransactions: _openTransactions,
       ),
@@ -67,7 +62,6 @@ class _AppShellState extends State<AppShell> {
                   extended: railExtended,
                   selectedIndex: _currentIndex,
                   onDestinationSelected: _handleTabSelected,
-                  onAddTransaction: _openAddTransaction,
                 ),
                 const VerticalDivider(width: 1),
                 Expanded(
@@ -133,14 +127,12 @@ class _AppNavigationRail extends StatelessWidget {
     required this.destinations,
     required this.selectedIndex,
     required this.onDestinationSelected,
-    required this.onAddTransaction,
     required this.extended,
   });
 
   final List<_NavigationDestination> destinations;
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
-  final VoidCallback onAddTransaction;
   final bool extended;
 
   @override
@@ -161,25 +153,19 @@ class _AppNavigationRail extends StatelessWidget {
               ? CrossAxisAlignment.start
               : CrossAxisAlignment.center,
           children: [
-            Icon(Icons.savings, size: extended ? 40 : 28),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.asset(
+                'web/favicon.png',
+                width: extended ? 44 : 32,
+                height: extended ? 44 : 32,
+                fit: BoxFit.cover,
+              ),
+            ),
             const SizedBox(height: 12),
             if (extended) Text('MoneyBase', style: headline),
           ],
         ),
-      ),
-      trailing: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-        child: extended
-            ? FilledButton.icon(
-                onPressed: onAddTransaction,
-                icon: const Icon(Icons.add),
-                label: const Text('New transaction'),
-              )
-            : FloatingActionButton.small(
-                heroTag: 'rail-add',
-                onPressed: onAddTransaction,
-                child: const Icon(Icons.add),
-              ),
       ),
       destinations: [
         for (final destination in destinations)

@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../features/app_shell/presentation/app_shell.dart';
-import '../features/auth/presentation/auth_screen.dart';
+import '../features/auth/presentation/landing_screen.dart';
 import '../core/services/google_sign_in_service.dart';
 import 'theme/theme.dart';
 
@@ -81,7 +81,7 @@ class _MoneyBaseAppState extends State<MoneyBaseApp> {
       return AppShell(onLogout: _onLogout);
     }
 
-    return const AuthScreen();
+    return const LandingScreen();
   }
 }
 

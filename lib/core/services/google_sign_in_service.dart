@@ -1,6 +1,10 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
+
+import 'package:moneybase/firebase_options.dart';
 
 class GoogleSignInService {
   GoogleSignInService._();
@@ -11,7 +15,8 @@ class GoogleSignInService {
   Future<void>? _initialization;
 
   Future<void> ensureInitialized() {
-    return _initialization ??= GoogleSignIn.instance.initialize();
+    return _initialization ??=
+        GoogleSignIn.instance.initialize(serverClientId: _serverClientId);
   }
 
   GoogleSignIn get client => GoogleSignIn.instance;
@@ -26,6 +31,16 @@ class GoogleSignInService {
   Future<void> signOut() async {
     await ensureInitialized();
     await GoogleSignIn.instance.signOut();
+  }
+
+  String? get _serverClientId {
+    if (kIsWeb) {
+      return null;
+    }
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return DefaultFirebaseOptions.androidServerClientId;
+    }
+    return null;
   }
 }
 
