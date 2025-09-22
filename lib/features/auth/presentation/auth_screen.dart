@@ -279,7 +279,7 @@ class _AuthCardState extends State<_AuthCard> {
     await _runAuthFlow(() async {
       final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+        password: _passwordController.text,
       );
       await _syncUserProfile(credential.user);
     });
@@ -294,7 +294,7 @@ class _AuthCardState extends State<_AuthCard> {
       final credential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(
             email: _emailController.text.trim(),
-            password: _passwordController.text.trim(),
+            password: _passwordController.text,
           );
       await _syncUserProfile(credential.user, creating: true);
     });

@@ -1,29 +1,58 @@
 import 'dart:math' as math;
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../common/presentation/moneybase_shell.dart';
+import '../../../core/constants/icon_library.dart';
+import '../../../core/models/category.dart';
+import '../../../core/models/transaction.dart';
+import '../../../core/models/wallet.dart';
+import '../../../core/repositories/category_repository.dart';
+import '../../../core/repositories/transaction_repository.dart';
+import '../../../core/repositories/wallet_repository.dart';
+import '../../../core/utils/color_utils.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({
-    required this.onAddTransaction,
     required this.onViewReports,
     required this.onViewTransactions,
     super.key,
   });
 
-  final VoidCallback onAddTransaction;
   final VoidCallback onViewReports;
   final VoidCallback onViewTransactions;
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  late final TransactionRepository _transactionRepository;
+  late final WalletRepository _walletRepository;
+  late final CategoryRepository _categoryRepository;
+
+  @override
+  void initState() {
+    super.initState();
+    _transactionRepository = TransactionRepository();
+    _walletRepository = WalletRepository();
+    _categoryRepository = CategoryRepository();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+
     return MoneyBaseScaffold(
       builder: (context, layout) {
         return _HomeContent(
-          onAddTransaction: onAddTransaction,
-          onViewReports: onViewReports,
-          onViewTransactions: onViewTransactions,
+          onViewReports: widget.onViewReports,
+          onViewTransactions: widget.onViewTransactions,
+          userId: userId,
+          transactionRepository: _transactionRepository,
+          walletRepository: _walletRepository,
+          categoryRepository: _categoryRepository,
         );
       },
     );
@@ -32,14 +61,20 @@ class HomeScreen extends StatelessWidget {
 
 class _HomeContent extends StatelessWidget {
   const _HomeContent({
-    required this.onAddTransaction,
     required this.onViewReports,
     required this.onViewTransactions,
+    required this.userId,
+    required this.transactionRepository,
+    required this.walletRepository,
+    required this.categoryRepository,
   });
 
-  final VoidCallback onAddTransaction;
   final VoidCallback onViewReports;
   final VoidCallback onViewTransactions;
+  final String? userId;
+  final TransactionRepository transactionRepository;
+  final WalletRepository walletRepository;
+  final CategoryRepository categoryRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -73,12 +108,6 @@ class _HomeContent extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 16),
-            FilledButton.icon(
-              onPressed: onAddTransaction,
-              icon: const Icon(Icons.add),
-              label: const Text('Add transaction'),
-            ),
-            const SizedBox(width: 12),
             MoneyBaseGlassIconButton(
               icon: Icons.analytics_outlined,
               tooltip: 'Reports',
@@ -95,7 +124,13 @@ class _HomeContent extends StatelessWidget {
         const SizedBox(height: 32),
         const _OverviewCard(),
         const SizedBox(height: 24),
-        _RecentTransactionsCard(onViewTransactions: onViewTransactions),
+        _RecentTransactionsCard(
+          onViewTransactions: onViewTransactions,
+          userId: userId,
+          transactionRepository: transactionRepository,
+          walletRepository: walletRepository,
+          categoryRepository: categoryRepository,
+        ),
       ],
     );
   }
@@ -199,38 +234,50 @@ class _OverviewCard extends StatelessWidget {
 }
 
 class _RecentTransactionsCard extends StatelessWidget {
-  const _RecentTransactionsCard({required this.onViewTransactions});
+  const _RecentTransactionsCard({
+    required this.onViewTransactions,
+    required this.userId,
+    required this.transactionRepository,
+    required this.walletRepository,
+    required this.categoryRepository,
+  });
 
   final VoidCallback onViewTransactions;
+  final String? userId;
+  final TransactionRepository transactionRepository;
+  final WalletRepository walletRepository;
+  final CategoryRepository categoryRepository;
 
-  static const _transactions = [
-    _TransactionEntry(
-      title: 'Shopping · Cash',
-      subtitle: 'Aug 08, 2025',
-      amount: r'-USD 50.0',
-      icon: Icons.local_mall_outlined,
-      accent: Color(0xFFFF6D8D),
-    ),
-    _TransactionEntry(
-      title: 'Income · Cash',
-      subtitle: 'Aug 08, 2025',
-      amount: r'+USD 5000.0',
-      icon: Icons.payments_outlined,
-      accent: Color(0xFF4FF3B2),
-    ),
-    _TransactionEntry(
-      title: 'Shopping · Vietcombank',
-      subtitle: 'Aug 08, 2025',
-      amount: r'-USD 1000.0',
-      icon: Icons.directions_car_filled_outlined,
-      accent: Color(0xFFFFC857),
-    ),
+  static const _months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
+  String _formatDate(DateTime date) {
+    final month = _months[date.month - 1];
+    final day = date.day.toString().padLeft(2, '0');
+    final year = date.year.toString();
+    return '$month $day, $year';
+  }
 
+  String _formatAmount(MoneyBaseTransaction transaction) {
+    final prefix = transaction.isIncome ? '+' : '-';
+    final currency =
+        transaction.currencyCode.isEmpty ? 'USD' : transaction.currencyCode;
+    return '$prefix${currency.toUpperCase()} ${transaction.amount.toStringAsFixed(2)}';
+  }
+
+  Widget _buildSurface(TextTheme textTheme, Widget body, String subtitle) {
     return MoneyBaseSurface(
       padding: const EdgeInsets.fromLTRB(28, 28, 28, 16),
       child: Column(
@@ -251,7 +298,7 @@ class _RecentTransactionsCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Updated Aug 08, 2025',
+                      subtitle,
                       style: textTheme.bodySmall?.copyWith(
                         color: Colors.white.withOpacity(0.6),
                       ),
@@ -260,23 +307,149 @@ class _RecentTransactionsCard extends StatelessWidget {
                 ),
               ),
               TextButton.icon(
-                onPressed: onViewTransactions,
+                onPressed: userId == null ? null : onViewTransactions,
                 icon: const Icon(Icons.arrow_forward_rounded),
                 label: const Text('See all'),
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.white,
-                ),
+                style: TextButton.styleFrom(foregroundColor: Colors.white),
               ),
             ],
           ),
           const SizedBox(height: 24),
-          for (final entry in _transactions) ...[
-            _TransactionTile(entry: entry),
-            if (entry != _transactions.last)
-              const SizedBox(height: 12),
-          ],
+          body,
         ],
       ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    if (userId == null) {
+      return _buildSurface(
+        textTheme,
+        Text(
+          'Sign in to see your latest MoneyBase activity at a glance.',
+          style: textTheme.bodyMedium?.copyWith(
+            color: Colors.white.withOpacity(0.72),
+          ),
+        ),
+        'Sign in required',
+      );
+    }
+
+    return StreamBuilder<List<MoneyBaseTransaction>>(
+      stream: transactionRepository.watchTransactions(userId!, limit: 5),
+      builder: (context, transactionSnapshot) {
+        if (transactionSnapshot.hasError) {
+          return _buildSurface(
+            textTheme,
+            Text(
+              'Unable to load recent transactions: ${transactionSnapshot.error}',
+              style: textTheme.bodyMedium?.copyWith(color: Colors.white),
+            ),
+            'Something went wrong',
+          );
+        }
+
+        final transactions =
+            transactionSnapshot.data ?? const <MoneyBaseTransaction>[];
+        final loading =
+            transactionSnapshot.connectionState == ConnectionState.waiting &&
+                transactions.isEmpty;
+
+        return StreamBuilder<List<Wallet>>(
+          stream: walletRepository.watchWallets(userId!),
+          builder: (context, walletSnapshot) {
+            final wallets = walletSnapshot.data ?? const <Wallet>[];
+
+            return StreamBuilder<List<Category>>(
+              stream: categoryRepository.watchCategories(userId!),
+              builder: (context, categorySnapshot) {
+                final categories = categorySnapshot.data ?? const <Category>[];
+
+                if (loading) {
+                  return _buildSurface(
+                    textTheme,
+                    const Center(child: CircularProgressIndicator()),
+                    'Loading the latest activity…',
+                  );
+                }
+
+                if (transactions.isEmpty) {
+                  return _buildSurface(
+                    textTheme,
+                    Text(
+                      'No transactions yet. Create one to start building insights.',
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: Colors.white.withOpacity(0.72),
+                      ),
+                    ),
+                    'Nothing to show',
+                  );
+                }
+
+                final walletById = {
+                  for (final wallet in wallets) wallet.id: wallet,
+                };
+                final categoryById = {
+                  for (final category in categories) category.id: category,
+                };
+
+                final updatedLabel = 'Updated ${_formatDate(transactions.first.date)}';
+
+                return _buildSurface(
+                  textTheme,
+                  Column(
+                    children: List.generate(transactions.length, (index) {
+                      final transaction = transactions[index];
+                      final rawCategoryName =
+                          categoryById[transaction.categoryId]?.name;
+                      final displayCategoryName =
+                          (rawCategoryName?.trim().isNotEmpty ?? false)
+                              ? rawCategoryName!
+                              : 'Uncategorised';
+                      final rawWalletName =
+                          walletById[transaction.walletId]?.name;
+                      final displayWalletName =
+                          (rawWalletName?.trim().isNotEmpty ?? false)
+                              ? rawWalletName!
+                              : 'Unknown wallet';
+                      final amountColor = transaction.isIncome
+                          ? Colors.teal
+                          : Theme.of(context).colorScheme.error;
+                      final accent = parseHexColor(
+                            categoryById[transaction.categoryId]?.color,
+                          ) ??
+                          amountColor;
+
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          bottom: index == transactions.length - 1 ? 0 : 12,
+                        ),
+                        child: _TransactionTile(
+                          entry: _TransactionEntry(
+                            title:
+                                '$displayCategoryName · $displayWalletName',
+                            subtitle: _formatDate(transaction.date),
+                            amount: _formatAmount(transaction),
+                            icon: IconLibrary.iconForCategory(
+                              categoryById[transaction.categoryId]?.iconName,
+                            ),
+                            accent: accent,
+                            amountColor: amountColor,
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                  updatedLabel,
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -335,8 +508,6 @@ class _TransactionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final isPositive = entry.amount.startsWith('+');
-    final amountColor = isPositive ? const Color(0xFF4FF3B2) : const Color(0xFFFF6D8D);
 
     return Container(
       decoration: BoxDecoration(
@@ -382,7 +553,7 @@ class _TransactionTile extends StatelessWidget {
           Text(
             entry.amount,
             style: textTheme.titleMedium?.copyWith(
-              color: amountColor,
+              color: entry.amountColor,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -512,6 +683,7 @@ class _TransactionEntry {
     required this.amount,
     required this.icon,
     required this.accent,
+    required this.amountColor,
   });
 
   final String title;
@@ -519,4 +691,5 @@ class _TransactionEntry {
   final String amount;
   final IconData icon;
   final Color accent;
+  final Color amountColor;
 }

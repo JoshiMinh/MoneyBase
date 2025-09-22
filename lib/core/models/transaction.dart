@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class MoneyBaseTransaction {
   const MoneyBaseTransaction({
     this.id = '',
@@ -10,8 +12,8 @@ class MoneyBaseTransaction {
     this.walletId = '',
     DateTime? date,
     DateTime? createdAt,
-  }) : date = date ?? DateTime.now(),
-       createdAt = createdAt ?? DateTime.now();
+  })  : date = date ?? DateTime.now(),
+        createdAt = createdAt ?? DateTime.now();
 
   final String id;
   final String userId;
@@ -51,6 +53,19 @@ class MoneyBaseTransaction {
   }
 
   factory MoneyBaseTransaction.fromJson(Map<String, dynamic> json) {
+    DateTime parseDate(dynamic value) {
+      if (value is Timestamp) {
+        return value.toDate();
+      }
+      if (value is DateTime) {
+        return value;
+      }
+      if (value is String) {
+        return DateTime.tryParse(value) ?? DateTime.now();
+      }
+      return DateTime.now();
+    }
+
     return MoneyBaseTransaction(
       id: json['id'] as String? ?? '',
       userId: json['userId'] as String? ?? '',
@@ -60,10 +75,8 @@ class MoneyBaseTransaction {
       isIncome: json['isIncome'] as bool? ?? false,
       categoryId: json['categoryId'] as String? ?? '',
       walletId: json['walletId'] as String? ?? '',
-      date: DateTime.tryParse(json['date'] as String? ?? '') ?? DateTime.now(),
-      createdAt:
-          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
-          DateTime.now(),
+      date: parseDate(json['date']),
+      createdAt: parseDate(json['createdAt']),
     );
   }
 
@@ -77,8 +90,8 @@ class MoneyBaseTransaction {
       'isIncome': isIncome,
       'categoryId': categoryId,
       'walletId': walletId,
-      'date': date.toIso8601String(),
-      'createdAt': createdAt.toIso8601String(),
+      'date': Timestamp.fromDate(date),
+      'createdAt': Timestamp.fromDate(createdAt),
     };
   }
 }

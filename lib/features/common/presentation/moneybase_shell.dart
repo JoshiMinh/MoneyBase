@@ -2,15 +2,11 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../../../app/theme/theme.dart';
+
 /// Shared gradient constants for the refreshed MoneyBase shell.
 class MoneyBaseGradients {
   const MoneyBaseGradients._();
-
-  static const shell = LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-    colors: [Color(0xFF1B1232), Color(0xFF0E0A1F)],
-  );
 
   static const frosted = LinearGradient(
     begin: Alignment.topLeft,
@@ -64,7 +60,7 @@ class MoneyBaseScaffold extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Container(
-        decoration: const BoxDecoration(gradient: MoneyBaseGradients.shell),
+        decoration: _buildShellDecoration(context),
         child: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -92,6 +88,24 @@ class MoneyBaseScaffold extends StatelessWidget {
       ),
     );
   }
+}
+
+BoxDecoration _buildShellDecoration(BuildContext context) {
+  final theme = Theme.of(context);
+  final extension = theme.extension<MoneyBaseThemeColors>();
+  final gradientColors = extension?.backgroundGradient;
+
+  if (gradientColors != null && gradientColors.length >= 2) {
+    return BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: gradientColors,
+      ),
+    );
+  }
+
+  return BoxDecoration(color: theme.colorScheme.background);
 }
 
 /// Glassmorphism-inspired card used for analytic content across MoneyBase views.

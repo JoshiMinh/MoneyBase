@@ -66,4 +66,7 @@ class DefaultFirebaseOptions {
     projectId: 'moneybase-bc047',
     storageBucket: 'moneybase-bc047.firebasestorage.app',
   );
+
+  static const String androidServerClientId =
+      '284259483635-geruaub92vfh6k2bvp4n9t700cprj6tt.apps.googleusercontent.com';
 }
