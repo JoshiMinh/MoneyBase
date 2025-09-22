@@ -1,10 +1,11 @@
-import 'dart:ui';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import '../../common/presentation/moneybase_shell.dart';
 import '../../../app/theme/palettes.dart';
 import '../../../app/theme/theme.dart';
+import '../../../core/services/google_sign_in_service.dart';
+import '../../common/presentation/moneybase_shell.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key, this.onLogout});
@@ -29,16 +30,68 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  String _resolveDisplayName(User user, String? displayName) {
+    final trimmed = displayName?.trim();
+    if (trimmed != null && trimmed.isNotEmpty) {
+      return trimmed;
+    }
+    final email = user.email;
+    if (email != null && email.contains('@')) {
+      return email.split('@').first;
+    }
+    return 'MoneyBase user';
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = ThemeControllerProvider.of(context);
     final textTheme = Theme.of(context).textTheme;
     final reminderLabel = _reminderTime.format(context);
+    final user = FirebaseAuth.instance.currentUser;
 
     return MoneyBaseScaffold(
       maxContentWidth: 960,
       widePadding: const EdgeInsets.symmetric(horizontal: 64, vertical: 48),
       builder: (context, layout) {
+        final Widget profileHeader;
+        if (user == null) {
+          profileHeader = _ProfileHeader(
+            textTheme: textTheme,
+            displayName: 'Guest',
+            email: 'Sign in to see your synced profile.',
+          );
+        } else {
+          final userDocStream = FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .snapshots();
+          profileHeader = StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+            stream: userDocStream,
+            builder: (context, snapshot) {
+              final data = snapshot.data?.data();
+              final displayName =
+                  (data?['displayName'] as String?)?.trim() ?? user.displayName;
+              final email =
+                  (data?['email'] as String?) ?? user.email ?? 'Unknown user';
+              final photoUrl =
+                  (data?['profilePictureUrl'] as String?) ??
+                  (data?['photoUrl'] as String?) ??
+                  user.photoURL;
+              final loading =
+                  snapshot.connectionState == ConnectionState.waiting &&
+                  data == null;
+
+              return _ProfileHeader(
+                textTheme: textTheme,
+                displayName: _resolveDisplayName(user, displayName),
+                email: email,
+                photoUrl: photoUrl,
+                loading: loading,
+              );
+            },
+          );
+        }
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -65,7 +118,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _ProfileHeader(textTheme: textTheme),
+                  profileHeader,
                   const SizedBox(height: 32),
                   _SettingsToggleTile(
                     title: 'Expense Reminder',
@@ -96,13 +149,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               vertical: 12,
                             ),
                             foregroundColor: Colors.white,
-                            disabledForegroundColor:
-                                Colors.white.withOpacity(0.4),
+                            disabledForegroundColor: Colors.white.withOpacity(
+                              0.4,
+                            ),
                             backgroundColor: _remindersEnabled
                                 ? Colors.white.withOpacity(0.12)
                                 : Colors.white.withOpacity(0.06),
-                            disabledBackgroundColor:
-                                Colors.white.withOpacity(0.04),
+                            disabledBackgroundColor: Colors.white.withOpacity(
+                              0.04,
+                            ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
                             ),
@@ -114,7 +169,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 20),
                   _SettingsToggleTile(
                     title: 'Dark Mode',
-                    subtitle: 'Match Android\'s amethyst dark finish instantly.',
+                    subtitle:
+                        'Match Android\'s amethyst dark finish instantly.',
                     value: controller.darkMode,
                     onChanged: controller.setDarkMode,
                   ),
@@ -134,8 +190,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       for (var i = 0; i < kMoneyBasePalettes.length; i++)
                         _PaletteOption(
                           color: kMoneyBasePalettes[i].primary,
-                          selected:
-                              controller.palette == kMoneyBasePalettes[i],
+                          selected: controller.palette == kMoneyBasePalettes[i],
                           onTap: () {
                             controller.updateCustomPrimary(null);
                             controller.selectPalette(i);
@@ -171,7 +226,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             backgroundColor: const Color(0xFFE54C4C),
                             foregroundColor: Colors.white,
                           ),
-                          onPressed: widget.onLogout,
+                          onPressed: () async {
+                            await FirebaseAuth.instance.signOut();
+                            await googleSignIn.signOut();
+                            widget.onLogout?.call();
+                          },
                           icon: const Icon(Icons.logout_rounded),
                           label: const Text('Log out'),
                         ),
@@ -188,18 +247,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
 }
 
 class _ProfileHeader extends StatelessWidget {
-  const _ProfileHeader({required this.textTheme});
+  const _ProfileHeader({
+    required this.textTheme,
+    this.displayName,
+    this.email,
+    this.photoUrl,
+    this.loading = false,
+  });
 
   final TextTheme textTheme;
+  final String? displayName;
+  final String? email;
+  final String? photoUrl;
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
+    final resolvedName = (displayName != null && displayName!.trim().isNotEmpty)
+        ? displayName!
+        : 'MoneyBase user';
+    final resolvedEmail = (email != null && email!.trim().isNotEmpty)
+        ? email!
+        : 'No email available';
+
+    Widget avatar;
+    if (loading) {
+      avatar = const Center(
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            strokeWidth: 2.2,
+            color: Colors.white,
+          ),
+        ),
+      );
+    } else if (photoUrl != null && photoUrl!.isNotEmpty) {
+      avatar = Image.network(
+        photoUrl!,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) =>
+            Image.asset('web/favicon.png', fit: BoxFit.cover),
+      );
+    } else {
+      avatar = Image.asset('web/favicon.png', fit: BoxFit.cover);
+    }
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
-          width: 76,
-          height: 76,
+          padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: const LinearGradient(
@@ -209,10 +307,8 @@ class _ProfileHeader extends StatelessWidget {
             ),
             border: Border.all(color: Colors.white.withOpacity(0.18), width: 2),
           ),
-          child: const Icon(
-            Icons.public,
-            color: Colors.white,
-            size: 36,
+          child: ClipOval(
+            child: SizedBox(width: 68, height: 68, child: avatar),
           ),
         ),
         const SizedBox(width: 20),
@@ -221,7 +317,7 @@ class _ProfileHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Joshi Minh',
+                resolvedName,
                 style: textTheme.titleLarge?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.w600,
@@ -229,7 +325,9 @@ class _ProfileHeader extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'binhangia241273@gmail.com',
+                loading && (email == null || email!.isEmpty)
+                    ? 'Syncing profile details…'
+                    : resolvedEmail,
                 style: textTheme.bodyMedium?.copyWith(
                   color: Colors.white.withOpacity(0.72),
                 ),
@@ -303,10 +401,7 @@ class _SettingsToggleTile extends StatelessWidget {
               ),
             ],
           ),
-          if (footer != null) ...[
-            const SizedBox(height: 18),
-            footer!,
-          ],
+          if (footer != null) ...[const SizedBox(height: 18), footer!],
         ],
       ),
     );
@@ -335,10 +430,7 @@ class _PaletteOption extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: LinearGradient(
-            colors: [
-              color,
-              Color.lerp(color, Colors.white, 0.25)!,
-            ],
+            colors: [color, Color.lerp(color, Colors.white, 0.25)!],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -357,11 +449,7 @@ class _PaletteOption extends StatelessWidget {
               : null,
         ),
         child: selected
-            ? const Icon(
-                Icons.check,
-                color: Colors.white,
-                size: 24,
-              )
+            ? const Icon(Icons.check, color: Colors.white, size: 24)
             : null,
       ),
     );
