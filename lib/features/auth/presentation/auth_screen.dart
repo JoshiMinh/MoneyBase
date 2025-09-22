@@ -92,6 +92,10 @@ class _AuthCardState extends State<_AuthCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isLightMode = theme.brightness == Brightness.light;
+    final baseTextColor = isLightMode ? Colors.black : Colors.white;
+    final secondaryTextColor = baseTextColor.withOpacity(0.8);
+    final mutedTextColor = baseTextColor.withOpacity(0.7);
 
     return MoneyBaseFrostedPanel(
       padding: EdgeInsets.symmetric(
@@ -136,7 +140,7 @@ class _AuthCardState extends State<_AuthCard> {
                       Text(
                         'Welcome back',
                         style: theme.textTheme.titleLarge?.copyWith(
-                          color: Colors.white,
+                          color: baseTextColor,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -144,7 +148,7 @@ class _AuthCardState extends State<_AuthCard> {
                       Text(
                         'Sign in to sync your budgets and keep your spending on track across Android and the web.',
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: Colors.white.withOpacity(0.8),
+                          color: secondaryTextColor,
                         ),
                       ),
                     ],
@@ -179,7 +183,7 @@ class _AuthCardState extends State<_AuthCard> {
               LinearProgressIndicator(
                 borderRadius: BorderRadius.circular(12),
                 minHeight: 6,
-                backgroundColor: Colors.white.withOpacity(0.15),
+                backgroundColor: baseTextColor.withOpacity(0.15),
               ),
               const SizedBox(height: 20),
             ],
@@ -221,7 +225,7 @@ class _AuthCardState extends State<_AuthCard> {
                   child: Text(
                     'Keep me signed in',
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withOpacity(0.85),
+                      color: secondaryTextColor,
                     ),
                   ),
                 ),
@@ -253,8 +257,8 @@ class _AuthCardState extends State<_AuthCard> {
               onPressed: _isLoading ? null : _registerWithEmail,
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(52),
-                side: BorderSide(color: Colors.white.withOpacity(0.3)),
-                foregroundColor: Colors.white,
+                side: BorderSide(color: baseTextColor.withOpacity(0.3)),
+                foregroundColor: baseTextColor,
               ),
               child: const Text('Create a MoneyBase account'),
             ),
@@ -262,7 +266,7 @@ class _AuthCardState extends State<_AuthCard> {
             Text(
               'By continuing you agree to the MoneyBase Terms of Service and acknowledge our Privacy Policy.',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: Colors.white.withOpacity(0.7),
+                color: mutedTextColor,
               ),
             ),
           ],
@@ -306,7 +310,15 @@ class _AuthCardState extends State<_AuthCard> {
       if (kIsWeb) {
         final provider = GoogleAuthProvider();
         provider.setCustomParameters({'prompt': 'select_account'});
-        credential = await FirebaseAuth.instance.signInWithPopup(provider);
+        try {
+          credential = await FirebaseAuth.instance.signInWithPopup(provider);
+        } on FirebaseAuthException catch (error) {
+          if (_isCoopWindowClosedError(error)) {
+            await FirebaseAuth.instance.signInWithRedirect(provider);
+            throw const _AuthRedirectException();
+          }
+          rethrow;
+        }
       } else {
         final account = await googleSignInService.authenticate(
           scopeHint: GoogleSignInService.defaultScopes,
@@ -368,6 +380,8 @@ class _AuthCardState extends State<_AuthCard> {
       if (!suppressDefaultCompletion) {
         widget.onLoginSuccess?.call();
       }
+    } on _AuthRedirectException {
+      return;
     } on GoogleSignInException catch (error) {
       if (error.code == GoogleSignInExceptionCode.canceled ||
           error.code == GoogleSignInExceptionCode.interrupted) {
@@ -511,6 +525,9 @@ class _AuthMarketingPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isLightMode = theme.brightness == Brightness.light;
+    final primaryTextColor = isLightMode ? Colors.black : Colors.white;
+    final secondaryTextColor = primaryTextColor.withOpacity(0.85);
     final padding = compact
         ? const EdgeInsets.symmetric(horizontal: 24, vertical: 28)
         : const EdgeInsets.symmetric(horizontal: 48, vertical: 64);
@@ -546,20 +563,22 @@ class _AuthMarketingPanel extends StatelessWidget {
           Text(
             'MoneyBase',
             style: theme.textTheme.displaySmall?.copyWith(
-              color: Colors.white,
+              color: primaryTextColor,
               fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 16),
           Text(
             'All-new everywhere access.',
-            style: theme.textTheme.titleLarge?.copyWith(color: Colors.white),
+            style: theme.textTheme.titleLarge?.copyWith(
+              color: primaryTextColor,
+            ),
           ),
           const SizedBox(height: 24),
           Text(
             'Plan budgets, review reports, and reconcile your accounts seamlessly between web and Android with a refreshed design.',
             style: theme.textTheme.bodyLarge?.copyWith(
-              color: Colors.white.withOpacity(0.85),
+              color: secondaryTextColor,
             ),
           ),
           const SizedBox(height: 32),
@@ -581,18 +600,24 @@ class _MarketingBullet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isLightMode = theme.brightness == Brightness.light;
+    final iconColor = isLightMode ? Colors.black87 : Colors.white;
+    final textColor =
+        (isLightMode ? Colors.black : Colors.white).withOpacity(0.85);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: Colors.white, size: 28),
+          Icon(icon, color: iconColor, size: 28),
           const SizedBox(width: 16),
           Expanded(
             child: Text(
               text,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Colors.white.withOpacity(0.85),
+                color: textColor,
               ),
             ),
           ),
@@ -616,14 +641,16 @@ class _ThirdPartyButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isLightMode = theme.brightness == Brightness.light;
+    final foregroundColor = isLightMode ? Colors.black : Colors.white;
 
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
         minimumSize: const Size.fromHeight(52),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        side: BorderSide(color: Colors.white.withOpacity(0.3)),
-        foregroundColor: Colors.white,
+        side: BorderSide(color: foregroundColor.withOpacity(0.3)),
+        foregroundColor: foregroundColor,
         textStyle: theme.textTheme.titleMedium,
       ),
       child: Row(
@@ -636,6 +663,21 @@ class _ThirdPartyButton extends StatelessWidget {
       ),
     );
   }
+}
+
+class _AuthRedirectException implements Exception {
+  const _AuthRedirectException();
+}
+
+bool _isCoopWindowClosedError(FirebaseAuthException error) {
+  if (error.code != 'internal-error') {
+    return false;
+  }
+  final message = error.message?.toLowerCase() ?? '';
+  if (!message.contains('window.closed')) {
+    return false;
+  }
+  return message.contains('cross-origin-opener-policy');
 }
 
 class _DividerWithText extends StatelessWidget {
