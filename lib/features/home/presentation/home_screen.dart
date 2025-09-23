@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../common/presentation/moneybase_shell.dart';
+import '../../common/presentation/currency_dropdown_field.dart';
+import '../../../core/constants/currencies.dart';
 import '../../../core/constants/icon_library.dart';
 import '../../../core/models/budget.dart';
 import '../../../core/models/category.dart';
@@ -14,6 +16,7 @@ import '../../../core/repositories/category_repository.dart';
 import '../../../core/repositories/transaction_repository.dart';
 import '../../../core/repositories/wallet_repository.dart';
 import '../../../core/utils/color_utils.dart';
+import 'ai_assistant_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -46,17 +49,49 @@ class _HomeScreenState extends State<HomeScreen> {
     _budgetRepository = BudgetRepository();
   }
 
+  void _openAiAssistant(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const AiAssistantSheet(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final userId = FirebaseAuth.instance.currentUser?.uid;
 
     return MoneyBaseScaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: widget.onAddTransaction,
-        icon: const Icon(Icons.add),
-        label: const Text('Add transaction'),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = MediaQuery.of(context).size.width;
+          final horizontalPadding = width > 640 ? 32.0 : 20.0;
+          return SizedBox(
+            width: width,
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+              child: Row(
+                children: [
+                  FloatingActionButton(
+                    heroTag: 'aiChatFab',
+                    onPressed: () => _openAiAssistant(context),
+                    child: const Icon(Icons.chat_bubble_outline),
+                  ),
+                  const Spacer(),
+                  FloatingActionButton.extended(
+                    heroTag: 'addTransactionFab',
+                    onPressed: widget.onAddTransaction,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add transaction'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       builder: (context, layout) {
         return _HomeContent(
           onViewReports: widget.onViewReports,
@@ -598,11 +633,11 @@ class _BudgetDialogState extends State<_BudgetDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _limitController;
-  late final TextEditingController _currencyController;
   late final TextEditingController _notesController;
   String? _selectedCategoryId;
   DateTime? _startDate;
   DateTime? _endDate;
+  late String _currencyCode;
 
   @override
   void initState() {
@@ -614,8 +649,7 @@ class _BudgetDialogState extends State<_BudgetDialog> {
           ? initial.limit.toStringAsFixed(2)
           : '',
     );
-    _currencyController =
-        TextEditingController(text: initial?.currencyCode ?? 'USD');
+    _currencyCode = currencyOptionFor(initial?.currencyCode).code;
     _notesController = TextEditingController(text: initial?.notes ?? '');
     _selectedCategoryId =
         (initial?.categoryId.isNotEmpty ?? false) ? initial!.categoryId : null;
@@ -627,7 +661,6 @@ class _BudgetDialogState extends State<_BudgetDialog> {
   void dispose() {
     _nameController.dispose();
     _limitController.dispose();
-    _currencyController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -675,10 +708,7 @@ class _BudgetDialogState extends State<_BudgetDialog> {
       return;
     }
 
-    var currency = _currencyController.text.trim().toUpperCase();
-    if (currency.isEmpty) {
-      currency = 'USD';
-    }
+    final currency = _currencyCode;
 
     final base = widget.initial ?? Budget();
     final notes = _notesController.text.trim();
@@ -740,11 +770,10 @@ class _BudgetDialogState extends State<_BudgetDialog> {
                     const TextInputType.numberWithOptions(decimal: true),
               ),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: _currencyController,
-                decoration: const InputDecoration(labelText: 'Currency (e.g. USD)'),
-                textCapitalization: TextCapitalization.characters,
-                maxLength: 3,
+              CurrencyDropdownFormField(
+                value: _currencyCode,
+                labelText: 'Currency',
+                onChanged: (code) => setState(() => _currencyCode = code),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String?>(

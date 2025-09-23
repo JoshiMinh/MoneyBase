@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/currencies.dart';
 import '../../../core/constants/icon_library.dart';
 import '../../../core/models/category.dart';
 import '../../../core/models/transaction.dart';
@@ -10,6 +11,8 @@ import '../../../core/repositories/transaction_repository.dart';
 import '../../../core/repositories/wallet_repository.dart';
 import '../../../core/utils/color_utils.dart';
 import '../../common/presentation/moneybase_shell.dart';
+import '../../common/presentation/color_picker.dart';
+import '../../common/presentation/currency_dropdown_field.dart';
 
 enum _TransactionType { expense, income }
 
@@ -1104,9 +1107,10 @@ class _WalletDialogState extends State<_WalletDialog> {
   late final TextEditingController _nameController;
   late final TextEditingController _balanceController;
   late final TextEditingController _colorController;
-  late final TextEditingController _currencyController;
   late WalletType _selectedType;
   late String _selectedIconName;
+  Color? _selectedColor;
+  late String _currencyCode;
   final _formKey = GlobalKey<FormState>();
 
   @override
@@ -1118,8 +1122,9 @@ class _WalletDialogState extends State<_WalletDialog> {
       text: initialBalance == 0 ? '' : initialBalance.toString(),
     );
     _colorController = TextEditingController(text: widget.initial?.color ?? '');
-    _currencyController =
-        TextEditingController(text: widget.initial?.currencyCode ?? 'USD');
+    _selectedColor = parseHexColor(_colorController.text);
+    _colorController.addListener(_handleColorChanged);
+    _currencyCode = currencyOptionFor(widget.initial?.currencyCode).code;
     _selectedType = widget.initial?.type ?? WalletType.physical;
     final initialIcon = widget.initial?.iconName ?? 'account_balance_wallet';
     _selectedIconName = IconLibrary.walletIcons.containsKey(initialIcon)
@@ -1131,9 +1136,18 @@ class _WalletDialogState extends State<_WalletDialog> {
   void dispose() {
     _nameController.dispose();
     _balanceController.dispose();
+    _colorController.removeListener(_handleColorChanged);
     _colorController.dispose();
-    _currencyController.dispose();
     super.dispose();
+  }
+
+  void _handleColorChanged() {
+    final parsed = parseHexColor(_colorController.text);
+    final current = _selectedColor;
+    if ((parsed == null && current != null) ||
+        (parsed != null && (current == null || parsed.value != current.value))) {
+      setState(() => _selectedColor = parsed);
+    }
   }
 
   void _submit() {
@@ -1146,9 +1160,7 @@ class _WalletDialogState extends State<_WalletDialog> {
     final balance = balanceText.isEmpty ? 0.0 : double.parse(balanceText);
     final iconName = _selectedIconName;
     final color = _colorController.text.trim();
-    final currency = _currencyController.text.trim().isEmpty
-        ? 'USD'
-        : _currencyController.text.trim().toUpperCase();
+    final currency = _currencyCode;
 
     final wallet = (widget.initial ?? const Wallet()).copyWith(
       name: name,
@@ -1203,19 +1215,10 @@ class _WalletDialogState extends State<_WalletDialog> {
                 },
               ),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: _currencyController,
-                textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(labelText: 'Currency code'),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Enter a currency code';
-                  }
-                  if (value.trim().length != 3) {
-                    return 'Currency codes are 3 letters (e.g. USD)';
-                  }
-                  return null;
-                },
+              CurrencyDropdownFormField(
+                value: _currencyCode,
+                labelText: 'Currency',
+                onChanged: (code) => setState(() => _currencyCode = code),
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -1244,10 +1247,41 @@ class _WalletDialogState extends State<_WalletDialog> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _colorController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Color hex (optional)',
                   hintText: '#7B5BFF',
+                  suffixIcon: _selectedColor != null
+                      ? Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: _selectedColor,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
+                        )
+                      : null,
                 ),
+              ),
+              const SizedBox(height: 12),
+              MoneyBaseColorPicker(
+                selectedColor: _selectedColor,
+                onColorSelected: (color) {
+                  final hex = formatHexColor(color);
+                  if (_colorController.text.toUpperCase() != hex) {
+                    _colorController.text = hex;
+                  } else {
+                    setState(() => _selectedColor = color);
+                  }
+                },
+                onClear: _colorController.text.isNotEmpty
+                    ? () {
+                        _colorController.clear();
+                      }
+                    : null,
               ),
             ],
           ),
@@ -1282,6 +1316,7 @@ class _CategoryDialogState extends State<_CategoryDialog> {
   late final TextEditingController _colorController;
   late String _selectedIconName;
   String? _parentCategoryId;
+  Color? _selectedColor;
   final _formKey = GlobalKey<FormState>();
 
   @override
@@ -1289,6 +1324,8 @@ class _CategoryDialogState extends State<_CategoryDialog> {
     super.initState();
     _nameController = TextEditingController(text: widget.initial?.name ?? '');
     _colorController = TextEditingController(text: widget.initial?.color ?? '');
+    _selectedColor = parseHexColor(_colorController.text);
+    _colorController.addListener(_onColorChanged);
     _parentCategoryId = widget.initial?.parentCategoryId;
     final initialIcon = widget.initial?.iconName ?? 'shopping_bag';
     _selectedIconName = IconLibrary.categoryIcons.containsKey(initialIcon)
@@ -1299,8 +1336,18 @@ class _CategoryDialogState extends State<_CategoryDialog> {
   @override
   void dispose() {
     _nameController.dispose();
+    _colorController.removeListener(_onColorChanged);
     _colorController.dispose();
     super.dispose();
+  }
+
+  void _onColorChanged() {
+    final parsed = parseHexColor(_colorController.text);
+    final current = _selectedColor;
+    if ((parsed == null && current != null) ||
+        (parsed != null && (current == null || parsed.value != current.value))) {
+      setState(() => _selectedColor = parsed);
+    }
   }
 
   void _submit() {
@@ -1360,10 +1407,41 @@ class _CategoryDialogState extends State<_CategoryDialog> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _colorController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Color hex (optional)',
                   hintText: '#FF6D8D',
+                  suffixIcon: _selectedColor != null
+                      ? Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: _selectedColor,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
+                        )
+                      : null,
                 ),
+              ),
+              const SizedBox(height: 12),
+              MoneyBaseColorPicker(
+                selectedColor: _selectedColor,
+                onColorSelected: (color) {
+                  final hex = formatHexColor(color);
+                  if (_colorController.text.toUpperCase() != hex) {
+                    _colorController.text = hex;
+                  } else {
+                    setState(() => _selectedColor = color);
+                  }
+                },
+                onClear: _colorController.text.isNotEmpty
+                    ? () {
+                        _colorController.clear();
+                      }
+                    : null,
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String?>(

@@ -17,6 +17,9 @@ class ShoppingListRepository {
     String userId,
     String listId,
   ) {
+    if (listId.isEmpty) {
+      throw ArgumentError('listId must be provided to access shopping items.');
+    }
     return _listsRef(userId).doc(listId).collection('shopping_items');
   }
 

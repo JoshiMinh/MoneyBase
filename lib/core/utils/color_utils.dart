@@ -25,3 +25,13 @@ Color? parseHexColor(String? hex) {
   }
   return null;
 }
+
+String formatHexColor(Color? color, {bool leadingHash = true}) {
+  if (color == null) {
+    return '';
+  }
+
+  final value = color.value & 0x00FFFFFF;
+  final hex = value.toRadixString(16).padLeft(6, '0').toUpperCase();
+  return leadingHash ? '#$hex' : hex;
+}

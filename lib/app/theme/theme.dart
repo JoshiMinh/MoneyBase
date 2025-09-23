@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'palettes.dart';
 
@@ -171,16 +173,35 @@ class ThemeController extends ChangeNotifier {
   bool _darkMode = false;
   int _paletteIndex = 0;
   Color? _customPrimary;
+  SharedPreferences? _prefs;
+
+  static const _darkModeKey = 'theme.darkMode';
+  static const _paletteKey = 'theme.palette';
+  static const _customPrimaryKey = 'theme.customPrimary';
 
   bool get darkMode => _darkMode;
   MoneyBasePalette get palette =>
       kMoneyBasePalettes[_paletteIndex.clamp(0, kMoneyBasePalettes.length - 1)];
   Color? get customPrimary => _customPrimary;
 
+  Future<SharedPreferences> _ensurePrefs() async {
+    return _prefs ??= await SharedPreferences.getInstance();
+  }
+
+  Future<void> loadFromStorage() async {
+    final prefs = await _ensurePrefs();
+    _darkMode = prefs.getBool(_darkModeKey) ?? _darkMode;
+    _paletteIndex = prefs.getInt(_paletteKey) ?? _paletteIndex;
+    final customColorValue = prefs.getInt(_customPrimaryKey);
+    _customPrimary = customColorValue != null ? Color(customColorValue) : null;
+    notifyListeners();
+  }
+
   void setDarkMode(bool value) {
     if (value == _darkMode) return;
     _darkMode = value;
     notifyListeners();
+    unawaited(_saveDarkMode());
   }
 
   void selectPalette(int index) {
@@ -188,12 +209,33 @@ class ThemeController extends ChangeNotifier {
     if (index < 0 || index >= kMoneyBasePalettes.length) return;
     _paletteIndex = index;
     notifyListeners();
+    unawaited(_savePalette());
   }
 
   void updateCustomPrimary(Color? color) {
     if (color == _customPrimary) return;
     _customPrimary = color;
     notifyListeners();
+    unawaited(_saveCustomPrimary());
+  }
+
+  Future<void> _saveDarkMode() async {
+    final prefs = await _ensurePrefs();
+    await prefs.setBool(_darkModeKey, _darkMode);
+  }
+
+  Future<void> _savePalette() async {
+    final prefs = await _ensurePrefs();
+    await prefs.setInt(_paletteKey, _paletteIndex);
+  }
+
+  Future<void> _saveCustomPrimary() async {
+    final prefs = await _ensurePrefs();
+    if (_customPrimary == null) {
+      await prefs.remove(_customPrimaryKey);
+    } else {
+      await prefs.setInt(_customPrimaryKey, _customPrimary!.value);
+    }
   }
 }
 

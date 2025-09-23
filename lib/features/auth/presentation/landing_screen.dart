@@ -9,7 +9,11 @@ class LandingScreen extends StatelessWidget {
 
   void _openAuth(BuildContext context) {
     Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const AuthScreen()),
+      MaterialPageRoute<void>(
+        builder: (routeContext) => AuthScreen(
+          onLoginSuccess: () => Navigator.of(routeContext).maybePop(),
+        ),
+      ),
     );
   }
 
