@@ -83,6 +83,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
+    final colorScheme = theme.colorScheme;
+    final onSurface = colorScheme.onSurface;
+    final mutedOnSurface = onSurface.withOpacity(0.72);
 
     return FractionallySizedBox(
       heightFactor: 0.85,
@@ -95,7 +98,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.chat_bubble_outline, color: Colors.white),
+                  Icon(Icons.chat_bubble_outline, color: onSurface),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -104,7 +107,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
                         Text(
                           'Gemini assistant',
                           style: textTheme.titleMedium?.copyWith(
-                            color: Colors.white,
+                            color: onSurface,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -112,7 +115,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
                         Text(
                           'Ask about budgets, wallets, or savings goals. Responses run on Firebase-hosted Gemini.',
                           style: textTheme.bodySmall?.copyWith(
-                            color: Colors.white.withOpacity(0.72),
+                            color: mutedOnSurface,
                           ),
                         ),
                       ],
@@ -121,7 +124,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
                   IconButton(
                     tooltip: 'Close',
                     onPressed: () => Navigator.of(context).maybePop(),
-                    icon: const Icon(Icons.close, color: Colors.white70),
+                    icon: Icon(Icons.close, color: mutedOnSurface),
                   ),
                 ],
               ),
@@ -169,6 +172,7 @@ class _Composer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
 
     return Row(
       children: [
@@ -181,7 +185,7 @@ class _Composer extends StatelessWidget {
             decoration: InputDecoration(
               hintText: 'Describe what you need help with…',
               filled: true,
-              fillColor: Colors.white.withOpacity(0.08),
+              fillColor: onSurface.withOpacity(0.08),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide.none,

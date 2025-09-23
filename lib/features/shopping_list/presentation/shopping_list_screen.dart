@@ -99,8 +99,8 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFE54C4C),
-              foregroundColor: Colors.white,
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
             ),
             child: const Text('Delete'),
           ),
@@ -132,7 +132,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
   }) async {
     final result = await showDialog<ShoppingItem>(
       context: context,
-      builder: (context) => _ShoppingItemDialog(initial: initial),
+      builder: (context) => _ShoppingItemDialog(list: list, initial: initial),
     );
 
     if (result == null) return;
@@ -179,8 +179,8 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFE54C4C),
-              foregroundColor: Colors.white,
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
             ),
             child: const Text('Delete'),
           ),
@@ -238,13 +238,17 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
 
     return MoneyBaseScaffold(
       builder: (context, layout) {
-        final textTheme = Theme.of(context).textTheme;
+        final theme = Theme.of(context);
+        final textTheme = theme.textTheme;
+        final colorScheme = theme.colorScheme;
+        final onSurface = colorScheme.onSurface;
+        final mutedOnSurface = onSurface.withOpacity(0.72);
 
         if (user == null) {
           return Center(
             child: Text(
               'Sign in to create collaborative shopping lists.',
-              style: textTheme.titleMedium?.copyWith(color: Colors.white),
+              style: textTheme.titleMedium?.copyWith(color: onSurface),
               textAlign: TextAlign.center,
             ),
           );
@@ -257,7 +261,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
               return Center(
                 child: Text(
                   'Unable to load shopping lists: ${snapshot.error}',
-                  style: textTheme.bodyLarge?.copyWith(color: Colors.white70),
+                  style: textTheme.bodyLarge?.copyWith(color: mutedOnSurface),
                   textAlign: TextAlign.center,
                 ),
               );
@@ -275,7 +279,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                 Text(
                   'Shopping List',
                   style: textTheme.headlineMedium?.copyWith(
-                    color: Colors.white,
+                    color: onSurface,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -283,7 +287,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                 Text(
                   'Plan your next trip and keep essentials synced across devices.',
                   style: textTheme.bodyLarge?.copyWith(
-                    color: Colors.white.withOpacity(0.72),
+                    color: mutedOnSurface,
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -534,6 +538,84 @@ class _ItemsSection extends StatelessWidget {
   final void Function(ShoppingList, ShoppingItem) onDeleteItem;
   final void Function(ShoppingList, ShoppingItem, bool) onToggleItem;
 
+  List<Widget> _buildGroceryItems(List<ShoppingItem> items, ShoppingList list) {
+    final widgets = <Widget>[];
+
+    for (var index = 0; index < items.length; index++) {
+      final item = items[index];
+      widgets.add(
+        _ItemTile(
+          list: list,
+          item: item,
+          onEdit: () => onEditItem(list, item),
+          onDelete: () => onDeleteItem(list, item),
+          onToggle: (value) => onToggleItem(list, item, value),
+        ),
+      );
+
+      if (index != items.length - 1) {
+        widgets.add(const Divider(height: 28));
+      }
+    }
+
+    return widgets;
+  }
+
+  List<Widget> _buildShoppingItems(List<ShoppingItem> items, ShoppingList list) {
+    if (items.isEmpty) return const [];
+
+    final itemsById = {for (final item in items) item.id: item};
+    final childrenMap = <String, List<ShoppingItem>>{};
+    final roots = <ShoppingItem>[];
+
+    for (final item in items) {
+      final parentId = item.parentItemRef?.id;
+      if (parentId != null && itemsById.containsKey(parentId)) {
+        childrenMap.putIfAbsent(parentId, () => <ShoppingItem>[]).add(item);
+      } else {
+        roots.add(item);
+      }
+    }
+
+    Widget buildNode(ShoppingItem item, int depth) {
+      final children = childrenMap[item.id] ?? const <ShoppingItem>[];
+      final nested = <Widget>[];
+
+      for (var index = 0; index < children.length; index++) {
+        nested.add(buildNode(children[index], depth + 1));
+        if (index != children.length - 1) {
+          nested.add(const SizedBox(height: 12));
+        }
+      }
+
+      return _ItemTile(
+        list: list,
+        item: item,
+        indent: depth * 28.0,
+        onEdit: () => onEditItem(list, item),
+        onDelete: () => onDeleteItem(list, item),
+        onToggle: (value) => onToggleItem(list, item, value),
+        children: nested,
+      );
+    }
+
+    if (roots.isEmpty) {
+      // Avoid an empty root set when all items reference missing parents.
+      roots.addAll(items);
+    }
+
+    final widgets = <Widget>[];
+
+    for (var index = 0; index < roots.length; index++) {
+      widgets.add(buildNode(roots[index], 0));
+      if (index != roots.length - 1) {
+        widgets.add(const Divider(height: 28));
+      }
+    }
+
+    return widgets;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -582,6 +664,8 @@ class _ItemsSection extends StatelessWidget {
         }
 
         final items = snapshot.data ?? const <ShoppingItem>[];
+        final currentList = list!;
+        final listType = currentList.type;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -589,7 +673,7 @@ class _ItemsSection extends StatelessWidget {
             _ItemsHeader(
               onSurface: onSurface,
               textTheme: textTheme,
-              onAddItem: () => onAddItem(list!),
+              onAddItem: () => onAddItem(currentList),
             ),
             const SizedBox(height: 16),
             if (items.isEmpty)
@@ -601,18 +685,9 @@ class _ItemsSection extends StatelessWidget {
               )
             else
               Column(
-                children: [
-                  for (final item in items) ...[
-                    _ItemTile(
-                      list: list!,
-                      item: item,
-                      onEdit: () => onEditItem(list!, item),
-                      onDelete: () => onDeleteItem(list!, item),
-                      onToggle: (value) => onToggleItem(list!, item, value),
-                    ),
-                    if (item != items.last) const Divider(height: 28),
-                  ],
-                ],
+                children: listType == ShoppingListType.shopping
+                    ? _buildShoppingItems(items, currentList)
+                    : _buildGroceryItems(items, currentList),
               ),
           ],
         );
@@ -662,6 +737,8 @@ class _ItemTile extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     required this.onToggle,
+    this.children = const <Widget>[],
+    this.indent = 0,
   });
 
   final ShoppingList list;
@@ -669,6 +746,8 @@ class _ItemTile extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final ValueChanged<bool> onToggle;
+  final List<Widget> children;
+  final double indent;
 
   Color _priorityColor(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -682,6 +761,58 @@ class _ItemTile extends StatelessWidget {
     }
   }
 
+  void _showImagePreview(BuildContext context, String url) {
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          insetPadding: const EdgeInsets.all(24),
+          clipBehavior: Clip.antiAlias,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420, maxHeight: 420),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: InteractiveViewer(
+                    child: Image.network(
+                      url,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) => Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.broken_image_outlined, size: 48),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Unable to load image.',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -690,8 +821,67 @@ class _ItemTile extends StatelessWidget {
 
     final emoji = item.iconEmoji;
     final hasEmoji = emoji != null && emoji.trim().isNotEmpty;
+    final iconUrl = item.iconUrl;
+    final hasIconUrl =
+        list.type == ShoppingListType.shopping && iconUrl != null && iconUrl.trim().isNotEmpty;
+    final createdLabel = _formatDate(item.createdAt);
+    final updatedLabel = _formatDate(item.updatedAt);
+    final metadataSummary = list.type == ShoppingListType.shopping
+        ? 'Created $createdLabel · Updated $updatedLabel'
+        : 'Updated $updatedLabel';
 
-    return Row(
+    Widget buildIcon() {
+      if (hasIconUrl) {
+        final radius = BorderRadius.circular(14);
+        final sanitizedUrl = iconUrl!.trim();
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: radius,
+            onTap: () => _showImagePreview(context, sanitizedUrl),
+            child: Ink(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceVariant.withOpacity(0.28),
+                borderRadius: radius,
+              ),
+              child: ClipRRect(
+                borderRadius: radius,
+                child: Image.network(
+                  sanitizedUrl,
+                  width: 44,
+                  height: 44,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Icon(
+                    Icons.image_not_supported_outlined,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      return Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primary.withOpacity(0.18),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        alignment: Alignment.center,
+        child: hasEmoji
+            ? Text(
+                emoji!,
+                style: const TextStyle(fontSize: 24),
+              )
+            : Icon(Icons.shopping_bag_outlined, color: theme.colorScheme.primary),
+      );
+    }
+
+    final content = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Transform.scale(
@@ -702,21 +892,7 @@ class _ItemTile extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primary.withOpacity(0.18),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          alignment: Alignment.center,
-          child: hasEmoji
-              ? Text(
-                  emoji!,
-                  style: const TextStyle(fontSize: 24),
-                )
-              : Icon(Icons.shopping_bag_outlined, color: theme.colorScheme.primary),
-        ),
+        buildIcon(),
         const SizedBox(width: 16),
         Expanded(
           child: Column(
@@ -783,7 +959,7 @@ class _ItemTile extends StatelessWidget {
                       label: 'Needed ${_formatDate(item.purchaseDate!)}',
                       color: theme.colorScheme.secondary,
                     ),
-                  if (item.expiryDate != null)
+                  if (item.expiryDate != null && list.type == ShoppingListType.shopping)
                     _MetadataChip(
                       icon: Icons.hourglass_bottom,
                       label: 'Expires ${_formatDate(item.expiryDate!)}',
@@ -799,13 +975,27 @@ class _ItemTile extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'Updated ${_formatDate(item.updatedAt)}',
+                metadataSummary,
                 style: theme.textTheme.bodySmall?.copyWith(color: subtitleColor),
               ),
             ],
           ),
         ),
       ],
+    );
+
+    return Padding(
+      padding: EdgeInsets.only(left: indent),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          content,
+          if (children.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            ...children,
+          ],
+        ],
+      ),
     );
   }
 }
@@ -864,6 +1054,7 @@ class _ShoppingListDialogState extends State<_ShoppingListDialog> {
   late final TextEditingController _nameController;
   late final TextEditingController _notesController;
   late ShoppingListType _type;
+  late String _currencyCode;
 
   @override
   void initState() {
@@ -871,6 +1062,7 @@ class _ShoppingListDialogState extends State<_ShoppingListDialog> {
     _nameController = TextEditingController(text: widget.initial?.name ?? '');
     _notesController = TextEditingController(text: widget.initial?.notes ?? '');
     _type = widget.initial?.type ?? ShoppingListType.grocery;
+    _currencyCode = currencyOptionFor(widget.initial?.currency).code;
   }
 
   @override
@@ -892,6 +1084,7 @@ class _ShoppingListDialogState extends State<_ShoppingListDialog> {
         name: name,
         notes: notes.isEmpty ? null : notes,
         type: _type,
+        currency: _currencyCode,
       ),
     );
   }
@@ -931,9 +1124,19 @@ class _ShoppingListDialogState extends State<_ShoppingListDialog> {
                     )
                     .toList(),
                 onChanged: (value) {
-                  if (value != null) setState(() => _type = value);
+                  if (value != null) {
+                    setState(() => _type = value);
+                  }
                 },
               ),
+              if (_type == ShoppingListType.grocery) ...[
+                const SizedBox(height: 12),
+                CurrencyDropdownFormField(
+                  value: _currencyCode,
+                  labelText: 'Currency',
+                  onChanged: (code) => setState(() => _currencyCode = code),
+                ),
+              ],
               const SizedBox(height: 12),
               TextFormField(
                 controller: _notesController,
@@ -962,8 +1165,9 @@ class _ShoppingListDialogState extends State<_ShoppingListDialog> {
 }
 
 class _ShoppingItemDialog extends StatefulWidget {
-  const _ShoppingItemDialog({this.initial});
+  const _ShoppingItemDialog({required this.list, this.initial});
 
+  final ShoppingList list;
   final ShoppingItem? initial;
 
   @override
@@ -975,11 +1179,14 @@ class _ShoppingItemDialogState extends State<_ShoppingItemDialog> {
   late final TextEditingController _titleController;
   late final TextEditingController _priceController;
   late final TextEditingController _emojiController;
+  late final TextEditingController _iconUrlController;
   bool _bought = false;
   ShoppingItemPriority _priority = ShoppingItemPriority.medium;
   DateTime? _purchaseDate;
   DateTime? _expiryDate;
   late String _currencyCode;
+
+  bool get _isShoppingList => widget.list.type == ShoppingListType.shopping;
 
   @override
   void initState() {
@@ -989,12 +1196,17 @@ class _ShoppingItemDialogState extends State<_ShoppingItemDialog> {
     _priceController = TextEditingController(
       text: initial != null && initial.price > 0 ? initial.price.toStringAsFixed(2) : '',
     );
-    _currencyCode = currencyOptionFor(initial?.currency).code;
+    final defaultCurrency = widget.list.currency;
+    _currencyCode = currencyOptionFor(initial?.currency ?? defaultCurrency).code;
+    if (!_isShoppingList) {
+      _currencyCode = currencyOptionFor(defaultCurrency).code;
+    }
     _emojiController = TextEditingController(text: initial?.iconEmoji ?? '');
+    _iconUrlController = TextEditingController(text: initial?.iconUrl ?? '');
     _priority = initial?.priority ?? ShoppingItemPriority.medium;
     _bought = initial?.bought ?? false;
     _purchaseDate = initial?.purchaseDate;
-    _expiryDate = initial?.expiryDate;
+    _expiryDate = _isShoppingList ? initial?.expiryDate : null;
   }
 
   @override
@@ -1002,6 +1214,7 @@ class _ShoppingItemDialogState extends State<_ShoppingItemDialog> {
     _titleController.dispose();
     _priceController.dispose();
     _emojiController.dispose();
+    _iconUrlController.dispose();
     super.dispose();
   }
 
@@ -1044,9 +1257,10 @@ class _ShoppingItemDialogState extends State<_ShoppingItemDialog> {
     final parsedPrice = double.tryParse(priceText);
     final price = parsedPrice != null && parsedPrice > 0 ? parsedPrice : 0.0;
 
-    final currency = _currencyCode;
+    final currency = _isShoppingList ? _currencyCode : widget.list.currency;
 
     final emoji = _emojiController.text.trim();
+    final iconUrl = _isShoppingList ? _iconUrlController.text.trim() : '';
 
     final base = widget.initial ?? ShoppingItem();
 
@@ -1058,8 +1272,9 @@ class _ShoppingItemDialogState extends State<_ShoppingItemDialog> {
         priority: _priority,
         bought: _bought,
         iconEmoji: emoji.isEmpty ? null : emoji,
+        iconUrl: iconUrl.isEmpty ? null : iconUrl,
         purchaseDate: _purchaseDate,
-        expiryDate: _expiryDate,
+        expiryDate: _isShoppingList ? _expiryDate : null,
       ),
     );
   }
@@ -1110,8 +1325,12 @@ class _ShoppingItemDialogState extends State<_ShoppingItemDialog> {
               ),
               const SizedBox(height: 12),
               CurrencyDropdownFormField(
-                value: _currencyCode,
+                value: _isShoppingList ? _currencyCode : widget.list.currency,
                 labelText: 'Currency',
+                helperText: _isShoppingList
+                    ? null
+                    : 'Currency is managed at the grocery list level.',
+                enabled: _isShoppingList,
                 onChanged: (code) => setState(() => _currencyCode = code),
               ),
               const SizedBox(height: 8),
@@ -1120,12 +1339,24 @@ class _ShoppingItemDialogState extends State<_ShoppingItemDialog> {
                 decoration: const InputDecoration(labelText: 'Emoji icon'),
                 maxLength: 2,
               ),
+              if (_isShoppingList) ...[
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _iconUrlController,
+                  decoration: const InputDecoration(
+                    labelText: 'Image URL',
+                    helperText: 'Paste an image link to use as the icon.',
+                  ),
+                  keyboardType: TextInputType.url,
+                ),
+              ],
               const SizedBox(height: 8),
-              SwitchListTile(
+              CheckboxListTile(
                 value: _bought,
-                onChanged: (value) => setState(() => _bought = value),
+                onChanged: (value) => setState(() => _bought = value ?? false),
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Mark as purchased'),
+                controlAffinity: ListTileControlAffinity.leading,
               ),
               const SizedBox(height: 8),
               Wrap(
@@ -1141,15 +1372,16 @@ class _ShoppingItemDialogState extends State<_ShoppingItemDialog> {
                         ? () => _clearDate(true)
                         : null,
                   ),
-                  _DatePickerChip(
-                    label: _expiryDate != null
-                        ? 'Expires ${_formatDate(_expiryDate!)}'
-                        : 'Set expiry date',
-                    onPressed: () => _pickDate(isPurchase: false),
-                    onClear: _expiryDate != null
-                        ? () => _clearDate(false)
-                        : null,
-                  ),
+                  if (_isShoppingList)
+                    _DatePickerChip(
+                      label: _expiryDate != null
+                          ? 'Expires ${_formatDate(_expiryDate!)}'
+                          : 'Set expiry date',
+                      onPressed: () => _pickDate(isPurchase: false),
+                      onClear: _expiryDate != null
+                          ? () => _clearDate(false)
+                          : null,
+                    ),
                 ],
               ),
             ],

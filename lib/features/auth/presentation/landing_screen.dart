@@ -21,6 +21,9 @@ class LandingScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
+    final colorScheme = theme.colorScheme;
+    final onSurface = colorScheme.onSurface;
+    final mutedOnSurface = onSurface.withOpacity(0.78);
 
     return MoneyBaseScaffold(
       builder: (context, layout) {
@@ -49,7 +52,7 @@ class LandingScreen extends StatelessWidget {
                           Text(
                             'MoneyBase',
                             style: textTheme.headlineMedium?.copyWith(
-                              color: Colors.white,
+                              color: onSurface,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -59,7 +62,7 @@ class LandingScreen extends StatelessWidget {
                       Text(
                         'Take control of your cashflow with live insights across every device.',
                         style: textTheme.displaySmall?.copyWith(
-                          color: Colors.white,
+                          color: onSurface,
                           fontWeight: FontWeight.w600,
                           height: 1.2,
                         ),
@@ -68,7 +71,7 @@ class LandingScreen extends StatelessWidget {
                       Text(
                         'Track spending in real-time, analyse budgets with rich visuals, and manage wallets and categories without ever leaving the dashboard.',
                         style: textTheme.bodyLarge?.copyWith(
-                          color: Colors.white.withOpacity(0.78),
+                          color: mutedOnSurface,
                           height: 1.5,
                         ),
                       ),
@@ -155,6 +158,7 @@ class _LandingHighlight extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
+    final onSurface = theme.colorScheme.onSurface;
 
     return MoneyBaseFrostedPanel(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
@@ -162,7 +166,7 @@ class _LandingHighlight extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: Colors.white, size: 28),
+          Icon(icon, color: onSurface, size: 28),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -171,7 +175,7 @@ class _LandingHighlight extends StatelessWidget {
                 Text(
                   title,
                   style: textTheme.titleMedium?.copyWith(
-                    color: Colors.white,
+                    color: onSurface,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -179,7 +183,7 @@ class _LandingHighlight extends StatelessWidget {
                 Text(
                   subtitle,
                   style: textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withOpacity(0.78),
+                    color: onSurface.withOpacity(0.78),
                   ),
                 ),
               ],
@@ -199,6 +203,8 @@ class _PreviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = theme.textTheme;
+    final colorScheme = theme.colorScheme;
+    final onSurface = colorScheme.onSurface;
 
     return MoneyBaseFrostedPanel(
       borderRadius: 36,
@@ -210,7 +216,7 @@ class _PreviewCard extends StatelessWidget {
           Text(
             'See your budgets come alive',
             style: textTheme.titleLarge?.copyWith(
-              color: Colors.white,
+              color: onSurface,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -218,7 +224,7 @@ class _PreviewCard extends StatelessWidget {
           Text(
             'Switch between red, blue, green, yellow, purple, pink, or gray themes — each one repaints the experience to match your vibe.',
             style: textTheme.bodyMedium?.copyWith(
-              color: Colors.white.withOpacity(0.78),
+              color: onSurface.withOpacity(0.78),
             ),
           ),
           const SizedBox(height: 24),
@@ -242,7 +248,7 @@ class _PreviewCard extends StatelessWidget {
                   Text(
                     'Live sync',
                     style: textTheme.titleMedium?.copyWith(
-                      color: Colors.white,
+                      color: onSurface,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -250,7 +256,7 @@ class _PreviewCard extends StatelessWidget {
                   Text(
                     'MoneyBase keeps every transaction connected to your Firestore data so you never lose track of a penny.',
                     style: textTheme.bodySmall?.copyWith(
-                      color: Colors.white.withOpacity(0.78),
+                      color: onSurface.withOpacity(0.78),
                     ),
                   ),
                 ],
