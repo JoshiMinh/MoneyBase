@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Budget {
-  const Budget({
+  Budget({
     this.id = '',
     this.userId = '',
     this.name = '',

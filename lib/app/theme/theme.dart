@@ -127,14 +127,14 @@ class MoneyBaseTheme {
       navigationRailTheme: NavigationRailThemeData(
         backgroundColor: darkMode ? const Color(0xFF0F0F0F) : const Color(0xFFF9F9F9),
         indicatorColor: colorScheme.secondaryContainer,
-        labelTextStyle: MaterialStateProperty.resolveWith((states) {
-          final active = states.contains(MaterialState.selected);
-          final baseColor = darkMode ? Colors.white : Colors.black;
-          return TextStyle(
-            fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-            color: active ? colorScheme.primary : baseColor.withOpacity(0.68),
-          );
-        }),
+        selectedLabelTextStyle: TextStyle(
+          fontWeight: FontWeight.w600,
+          color: colorScheme.primary,
+        ),
+        unselectedLabelTextStyle: TextStyle(
+          fontWeight: FontWeight.w500,
+          color: (darkMode ? Colors.white : Colors.black).withOpacity(0.68),
+        ),
         unselectedIconTheme: IconThemeData(
           color: (darkMode ? Colors.white : Colors.black).withOpacity(0.68),
         ),

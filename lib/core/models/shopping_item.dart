@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 enum ShoppingItemPriority { low, medium, high }
 
 class ShoppingItem {
-  const ShoppingItem({
+  ShoppingItem({
     this.id = '',
     this.userId = '',
     this.listId = '',
