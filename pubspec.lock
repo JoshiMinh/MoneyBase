@@ -93,7 +93,7 @@ packages:
     dependency: transitive
     description:
       name: ffi
-      sha256: 289279317b4b16eb2bb7e271abccd4bf84ec9bdcbe999e278a94b804f5630418
+      sha256: "289279317b4b16eb2bb7e271abccd4bf84ec9bdcbe999e278a94b804f5630418"
       url: "https://pub.dev"
     source: hosted
     version: "2.1.4"
@@ -316,7 +316,7 @@ packages:
     dependency: transitive
     description:
       name: path_provider_platform_interface
-      sha256: 88f5779f72ba699763fa3a3b06aa4bf6de76c8e5de842cf6f29e2e06476c2334
+      sha256: "88f5779f72ba699763fa3a3b06aa4bf6de76c8e5de842cf6f29e2e06476c2334"
       url: "https://pub.dev"
     source: hosted
     version: "2.1.2"
@@ -328,6 +328,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.3.0"
+  platform:
+    dependency: transitive
+    description:
+      name: platform
+      sha256: "5d6b1b0036a5f331ebc77c850ebc8506cbc1e9416c27e59b439f917a902a4984"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.6"
   plugin_platform_interface:
     dependency: transitive
     description:
@@ -356,7 +364,7 @@ packages:
     dependency: transitive
     description:
       name: shared_preferences_foundation
-      sha256: 6a52cfcdaeac77cad8c97b539ff688ccfc458c007b4db12be584fbe5c0e49e03
+      sha256: "6a52cfcdaeac77cad8c97b539ff688ccfc458c007b4db12be584fbe5c0e49e03"
       url: "https://pub.dev"
     source: hosted
     version: "2.5.4"
@@ -364,7 +372,7 @@ packages:
     dependency: transitive
     description:
       name: shared_preferences_linux
-      sha256: 580abfd40f415611503cae30adf626e6656dfb2f0cee8f465ece7b6defb40f2f
+      sha256: "580abfd40f415611503cae30adf626e6656dfb2f0cee8f465ece7b6defb40f2f"
       url: "https://pub.dev"
     source: hosted
     version: "2.4.1"
@@ -372,7 +380,7 @@ packages:
     dependency: transitive
     description:
       name: shared_preferences_platform_interface
-      sha256: 57cbf196c486bc2cf1f02b85784932c6094376284b3ad5779d1b1c6c6a816b80
+      sha256: "57cbf196c486bc2cf1f02b85784932c6094376284b3ad5779d1b1c6c6a816b80"
       url: "https://pub.dev"
     source: hosted
     version: "2.4.1"
@@ -388,7 +396,7 @@ packages:
     dependency: transitive
     description:
       name: shared_preferences_windows
-      sha256: 94ef0f72b2d71bc3e700e025db3710911bd51a71cefb65cc609dd0d9a982e3c1
+      sha256: "94ef0f72b2d71bc3e700e025db3710911bd51a71cefb65cc609dd0d9a982e3c1"
       url: "https://pub.dev"
     source: hosted
     version: "2.4.1"
@@ -477,6 +485,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.1"
+  xdg_directories:
+    dependency: transitive
+    description:
+      name: xdg_directories
+      sha256: "7a3f37b05d989967cdddcbb571f1ea834867ae2faa29725fd085180e0883aa15"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.0"
 sdks:
   dart: ">=3.9.2 <4.0.0"
   flutter: ">=3.29.0"

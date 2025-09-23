@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 @immutable
@@ -21,8 +20,13 @@ class CurrencyOption {
   }
 }
 
+/// Default currency
+const CurrencyOption kDefaultCurrency =
+    CurrencyOption(code: 'USD', name: 'US Dollar', symbol: '\$');
+
+/// List of supported currencies
 const List<CurrencyOption> kCurrencyOptions = [
-  CurrencyOption(code: 'USD', name: 'US Dollar', symbol: '\$'),
+  kDefaultCurrency,
   CurrencyOption(code: 'EUR', name: 'Euro', symbol: '€'),
   CurrencyOption(code: 'GBP', name: 'British Pound', symbol: '£'),
   CurrencyOption(code: 'AUD', name: 'Australian Dollar', symbol: '\$'),
@@ -63,12 +67,12 @@ const List<CurrencyOption> kCurrencyOptions = [
   CurrencyOption(code: 'ILS', name: 'Israeli Shekel', symbol: '₪'),
 ];
 
-const CurrencyOption kDefaultCurrency = kCurrencyOptions.first;
-
+/// Fast lookup by currency code
 final Map<String, CurrencyOption> _currencyByCode = {
   for (final option in kCurrencyOptions) option.code: option,
 };
 
+/// Get currency by code, fallback to default
 CurrencyOption currencyOptionFor(String? code) {
   final normalized = code?.trim().toUpperCase();
   if (normalized == null || normalized.isEmpty) {
@@ -77,6 +81,7 @@ CurrencyOption currencyOptionFor(String? code) {
   return _currencyByCode[normalized] ?? kDefaultCurrency;
 }
 
+/// Build dropdown items for UI
 List<DropdownMenuItem<String>> buildCurrencyDropdownItems() {
   return kCurrencyOptions
       .map(
