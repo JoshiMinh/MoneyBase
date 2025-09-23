@@ -4,20 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../../../app/theme/theme.dart';
 
-/// Shared gradient constants for the refreshed MoneyBase shell.
-class MoneyBaseGradients {
-  const MoneyBaseGradients._();
-
-  static const frosted = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [
-      Color(0x66382A66),
-      Color(0x3329214A),
-    ],
-  );
-}
-
 /// Layout metadata describing how wide layouts should render within the shell.
 class MoneyBaseLayout {
   const MoneyBaseLayout({
@@ -45,6 +31,8 @@ class MoneyBaseScaffold extends StatelessWidget {
     this.narrowPadding = const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
     this.widePadding = const EdgeInsets.symmetric(horizontal: 64, vertical: 40),
     this.scrollController,
+    this.floatingActionButton,
+    this.floatingActionButtonLocation,
     super.key,
   });
 
@@ -54,11 +42,15 @@ class MoneyBaseScaffold extends StatelessWidget {
   final EdgeInsets narrowPadding;
   final EdgeInsets widePadding;
   final ScrollController? scrollController;
+  final Widget? floatingActionButton;
+  final FloatingActionButtonLocation? floatingActionButtonLocation;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
+      floatingActionButton: floatingActionButton,
+      floatingActionButtonLocation: floatingActionButtonLocation,
       body: Container(
         decoration: _buildShellDecoration(context),
         child: SafeArea(
@@ -123,16 +115,27 @@ class MoneyBaseSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final extension = theme.extension<MoneyBaseThemeColors>();
+    final surfaceColor = extension?.surfaceBackground ?? colorScheme.surface;
+    final borderOpacity = theme.brightness == Brightness.dark ? 0.4 : 0.6;
+    final shadowColor = theme.brightness == Brightness.dark
+        ? Colors.black.withOpacity(0.6)
+        : Colors.black.withOpacity(0.08);
+
+    return DecoratedBox(
       decoration: BoxDecoration(
+        color: surfaceColor,
         borderRadius: BorderRadius.circular(borderRadius),
-        gradient: MoneyBaseGradients.frosted,
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-        boxShadow: const [
+        border: Border.all(
+          color: colorScheme.outlineVariant.withOpacity(borderOpacity),
+        ),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x33000000),
+            color: shadowColor,
             blurRadius: 24,
-            offset: Offset(0, 16),
+            offset: const Offset(0, 16),
           ),
         ],
       ),
@@ -167,6 +170,10 @@ class MoneyBaseFrostedPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final overlayBase =
+        theme.brightness == Brightness.dark ? Colors.white : Colors.black;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
       child: BackdropFilter(
@@ -175,8 +182,8 @@ class MoneyBaseFrostedPanel extends StatelessWidget {
           padding: padding,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(borderRadius),
-            color: Colors.white.withOpacity(backgroundOpacity),
-            border: Border.all(color: Colors.white.withOpacity(borderOpacity)),
+            color: overlayBase.withOpacity(backgroundOpacity),
+            border: Border.all(color: overlayBase.withOpacity(borderOpacity)),
             boxShadow: boxShadow,
           ),
           child: child,
@@ -205,17 +212,26 @@ class MoneyBaseGlassIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final background = theme.brightness == Brightness.dark
+        ? Colors.white.withOpacity(0.08)
+        : Colors.black.withOpacity(0.05);
+    final iconColor = theme.brightness == Brightness.dark
+        ? Colors.white
+        : colorScheme.onSurface;
+
     return Tooltip(
       message: tooltip,
       child: Material(
-        color: Colors.white.withOpacity(0.08),
+        color: background,
         borderRadius: BorderRadius.circular(borderRadius),
         child: InkWell(
           borderRadius: BorderRadius.circular(borderRadius),
           onTap: onPressed,
           child: Padding(
             padding: padding,
-            child: Icon(icon, color: Colors.white),
+            child: Icon(icon, color: iconColor),
           ),
         ),
       ),

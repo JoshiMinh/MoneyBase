@@ -4,6 +4,7 @@ import '../../add_transaction/presentation/add_transaction_screen.dart';
 import '../../home/presentation/home_screen.dart';
 import '../../reports/presentation/reports_screen.dart';
 import '../../settings/presentation/settings_screen.dart';
+import '../../shopping_list/presentation/shopping_list_screen.dart';
 import '../../transactions/presentation/transactions_screen.dart';
 
 class AppShell extends StatefulWidget {
@@ -20,6 +21,13 @@ class _AppShellState extends State<AppShell> {
 
   void _handleTabSelected(int index) {
     setState(() => _currentIndex = index);
+  }
+
+  void _openAddTransaction() {
+    final navigator = Navigator.of(context);
+    navigator.push(
+      MaterialPageRoute<void>(builder: (_) => const AddTransactionScreen()),
+    );
   }
 
   void _openReports() {
@@ -41,10 +49,11 @@ class _AppShellState extends State<AppShell> {
     final destinations = _NavigationDestination.values;
     final pages = <Widget>[
       HomeScreen(
+        onAddTransaction: _openAddTransaction,
         onViewReports: _openReports,
         onViewTransactions: _openTransactions,
       ),
-      const AddTransactionScreen(),
+      const ShoppingListScreen(),
       SettingsScreen(onLogout: widget.onLogout),
     ];
 
@@ -53,17 +62,31 @@ class _AppShellState extends State<AppShell> {
         final useRail = constraints.maxWidth >= 900;
         final railExtended = constraints.maxWidth >= 1200;
 
+        final theme = Theme.of(context);
+
         if (useRail) {
+          final railTheme = NavigationRailTheme.of(context);
+          final railBackground = railTheme.backgroundColor ??
+              (theme.brightness == Brightness.dark
+                  ? const Color(0xFF0F0F0F)
+                  : const Color(0xFFF9F9F9));
+          final dividerColor =
+              theme.colorScheme.outlineVariant.withOpacity(0.4);
+
           return Scaffold(
+            backgroundColor: theme.colorScheme.background,
             body: Row(
               children: [
-                _AppNavigationRail(
-                  destinations: destinations,
-                  extended: railExtended,
-                  selectedIndex: _currentIndex,
-                  onDestinationSelected: _handleTabSelected,
+                Container(
+                  color: railBackground,
+                  child: _AppNavigationRail(
+                    destinations: destinations,
+                    extended: railExtended,
+                    selectedIndex: _currentIndex,
+                    onDestinationSelected: _handleTabSelected,
+                  ),
                 ),
-                const VerticalDivider(width: 1),
+                VerticalDivider(width: 1, color: dividerColor),
                 Expanded(
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 250),
@@ -78,9 +101,18 @@ class _AppShellState extends State<AppShell> {
           );
         }
 
+        final navTheme = NavigationBarTheme.of(context);
+        final navBackground = navTheme.backgroundColor ??
+            (theme.brightness == Brightness.dark
+                ? const Color(0xFF0F0F0F)
+                : const Color(0xFFF9F9F9));
+
         return Scaffold(
+          backgroundColor: theme.colorScheme.background,
           body: IndexedStack(index: _currentIndex, children: pages),
           bottomNavigationBar: NavigationBar(
+            backgroundColor: navBackground,
+            surfaceTintColor: Colors.transparent,
             selectedIndex: _currentIndex,
             destinations: [
               for (final destination in destinations)
@@ -100,10 +132,10 @@ class _AppShellState extends State<AppShell> {
 
 enum _NavigationDestination {
   home(label: 'Home', icon: Icons.home_outlined, selectedIcon: Icons.home),
-  add(
-    label: 'Add',
-    icon: Icons.add_circle_outline,
-    selectedIcon: Icons.add_circle,
+  shoppingList(
+    label: 'Shopping List',
+    icon: Icons.shopping_cart_outlined,
+    selectedIcon: Icons.shopping_cart,
   ),
   settings(
     label: 'Settings',
@@ -140,6 +172,7 @@ class _AppNavigationRail extends StatelessWidget {
     final headline = Theme.of(context).textTheme.titleMedium;
 
     return NavigationRail(
+      backgroundColor: Colors.transparent,
       selectedIndex: selectedIndex,
       extended: extended,
       labelType: extended ? null : NavigationRailLabelType.all,

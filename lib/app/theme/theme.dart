@@ -68,12 +68,11 @@ class MoneyBaseTheme {
     Color? customPrimary,
   }) {
     final seedColor = customPrimary ?? palette.primary;
-    final backgroundColor =
-        darkMode ? palette.darkBackground : palette.lightBackground;
-    final surfaceBlendBase = darkMode ? palette.darkBackground : palette.lightBackground;
-    final surfaceOverlay =
-        darkMode ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.04);
-    final surfaceColor = Color.alphaBlend(surfaceOverlay, surfaceBlendBase);
+    final backgroundColor = darkMode ? Colors.black : Colors.white;
+    final surfaceBase = darkMode ? const Color(0xFF101010) : const Color(0xFFF5F5F5);
+    final highSurface = darkMode ? const Color(0xFF161616) : const Color(0xFFFFFFFF);
+    final outlineColor =
+        darkMode ? const Color(0xFF2E2E2E) : const Color(0xFFE0E0E0);
 
     final colorScheme = ColorScheme.fromSeed(
       brightness: darkMode ? Brightness.dark : Brightness.light,
@@ -82,16 +81,14 @@ class MoneyBaseTheme {
       secondary: palette.secondary,
       background: backgroundColor,
     ).copyWith(
-      surface: surfaceColor,
+      surface: surfaceBase,
       surfaceTint: Colors.transparent,
-      surfaceContainerHighest: Color.alphaBlend(
-        darkMode ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.06),
-        surfaceColor,
-      ),
-      surfaceContainerHigh: Color.alphaBlend(
-        darkMode ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.04),
-        surfaceColor,
-      ),
+      onBackground: darkMode ? Colors.white : Colors.black,
+      onSurface: darkMode ? Colors.white : Colors.black,
+      surfaceContainerHigh: highSurface,
+      surfaceContainerHighest: highSurface,
+      outline: outlineColor,
+      outlineVariant: outlineColor,
     );
 
     return ThemeData(
@@ -99,25 +96,68 @@ class MoneyBaseTheme {
       useMaterial3: true,
       scaffoldBackgroundColor: backgroundColor,
       canvasColor: backgroundColor,
-      cardColor: surfaceColor,
+      cardColor: highSurface,
       appBarTheme: AppBarTheme(
-        backgroundColor: colorScheme.primary,
-        foregroundColor: colorScheme.onPrimary,
+        backgroundColor: darkMode ? Colors.black : Colors.white,
+        foregroundColor: darkMode ? Colors.white : Colors.black,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor:
-            darkMode ? colorScheme.surfaceContainerHigh : colorScheme.surface,
+        backgroundColor: darkMode ? const Color(0xFF0F0F0F) : const Color(0xFFF9F9F9),
         indicatorColor: colorScheme.secondaryContainer,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: MaterialStateProperty.resolveWith((states) {
+          final active = states.contains(MaterialState.selected);
+          final baseColor = darkMode ? Colors.white : Colors.black;
+          return IconThemeData(
+            color: active ? colorScheme.primary : baseColor.withOpacity(0.68),
+          );
+        }),
+        labelTextStyle: MaterialStateProperty.resolveWith((states) {
+          final active = states.contains(MaterialState.selected);
+          final baseColor = darkMode ? Colors.white : Colors.black;
+          return TextStyle(
+            fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+            color: active ? colorScheme.primary : baseColor.withOpacity(0.68),
+          );
+        }),
+      ),
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: darkMode ? const Color(0xFF0F0F0F) : const Color(0xFFF9F9F9),
+        indicatorColor: colorScheme.secondaryContainer,
+        labelTextStyle: MaterialStateProperty.resolveWith((states) {
+          final active = states.contains(MaterialState.selected);
+          final baseColor = darkMode ? Colors.white : Colors.black;
+          return TextStyle(
+            fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+            color: active ? colorScheme.primary : baseColor.withOpacity(0.68),
+          );
+        }),
+        unselectedIconTheme: IconThemeData(
+          color: (darkMode ? Colors.white : Colors.black).withOpacity(0.68),
+        ),
+        selectedIconTheme: IconThemeData(color: colorScheme.primary),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: colorScheme.secondary,
         foregroundColor: colorScheme.onSecondary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       extensions: [
         MoneyBaseThemeColors(
-          backgroundGradient:
-              darkMode ? palette.darkGradient : palette.lightGradient,
-          surfaceBackground: surfaceColor,
+          backgroundGradient: [
+            if (darkMode)
+              Colors.black
+            else
+              Colors.white,
+            if (darkMode)
+              Colors.black
+            else
+              Colors.white,
+          ],
+          surfaceBackground: highSurface,
         ),
       ],
     );

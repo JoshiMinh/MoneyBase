@@ -9,6 +9,7 @@ import '../../../core/repositories/category_repository.dart';
 import '../../../core/repositories/transaction_repository.dart';
 import '../../../core/repositories/wallet_repository.dart';
 import '../../../core/utils/color_utils.dart';
+import '../../add_transaction/presentation/add_transaction_screen.dart';
 
 class TransactionsScreen extends StatefulWidget {
   const TransactionsScreen({super.key});
@@ -140,6 +141,12 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     }
   }
 
+  void _openAddTransaction() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const AddTransactionScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -155,6 +162,11 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Transactions')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openAddTransaction,
+        icon: const Icon(Icons.add),
+        label: const Text('Add transaction'),
+      ),
       body: StreamBuilder<List<Wallet>>(
         stream: _walletRepository.watchWallets(user.uid),
         builder: (context, walletSnapshot) {
