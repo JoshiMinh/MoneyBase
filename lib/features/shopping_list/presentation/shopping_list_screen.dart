@@ -1,10 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/currencies.dart';
 import '../../../core/models/shopping_item.dart';
 import '../../../core/models/shopping_list.dart';
 import '../../../core/repositories/shopping_list_repository.dart';
 import '../../common/presentation/moneybase_shell.dart';
+import '../../common/presentation/currency_dropdown_field.dart';
 
 class ShoppingListScreen extends StatefulWidget {
   const ShoppingListScreen({super.key});
@@ -972,12 +974,12 @@ class _ShoppingItemDialogState extends State<_ShoppingItemDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _titleController;
   late final TextEditingController _priceController;
-  late final TextEditingController _currencyController;
   late final TextEditingController _emojiController;
   bool _bought = false;
   ShoppingItemPriority _priority = ShoppingItemPriority.medium;
   DateTime? _purchaseDate;
   DateTime? _expiryDate;
+  late String _currencyCode;
 
   @override
   void initState() {
@@ -987,7 +989,7 @@ class _ShoppingItemDialogState extends State<_ShoppingItemDialog> {
     _priceController = TextEditingController(
       text: initial != null && initial.price > 0 ? initial.price.toStringAsFixed(2) : '',
     );
-    _currencyController = TextEditingController(text: initial?.currency ?? 'USD');
+    _currencyCode = currencyOptionFor(initial?.currency).code;
     _emojiController = TextEditingController(text: initial?.iconEmoji ?? '');
     _priority = initial?.priority ?? ShoppingItemPriority.medium;
     _bought = initial?.bought ?? false;
@@ -999,7 +1001,6 @@ class _ShoppingItemDialogState extends State<_ShoppingItemDialog> {
   void dispose() {
     _titleController.dispose();
     _priceController.dispose();
-    _currencyController.dispose();
     _emojiController.dispose();
     super.dispose();
   }
@@ -1043,10 +1044,7 @@ class _ShoppingItemDialogState extends State<_ShoppingItemDialog> {
     final parsedPrice = double.tryParse(priceText);
     final price = parsedPrice != null && parsedPrice > 0 ? parsedPrice : 0.0;
 
-    var currency = _currencyController.text.trim().toUpperCase();
-    if (currency.isEmpty) {
-      currency = 'USD';
-    }
+    final currency = _currencyCode;
 
     final emoji = _emojiController.text.trim();
 
@@ -1111,11 +1109,10 @@ class _ShoppingItemDialogState extends State<_ShoppingItemDialog> {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
               ),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: _currencyController,
-                decoration: const InputDecoration(labelText: 'Currency (e.g. USD)'),
-                textCapitalization: TextCapitalization.characters,
-                maxLength: 3,
+              CurrencyDropdownFormField(
+                value: _currencyCode,
+                labelText: 'Currency',
+                onChanged: (code) => setState(() => _currencyCode = code),
               ),
               const SizedBox(height: 8),
               TextFormField(

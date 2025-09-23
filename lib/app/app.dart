@@ -22,6 +22,7 @@ class _MoneyBaseAppState extends State<MoneyBaseApp> {
   void initState() {
     super.initState();
     _themeController = ThemeController();
+    unawaited(_themeController.loadFromStorage());
     unawaited(googleSignInService.ensureInitialized());
   }
 
