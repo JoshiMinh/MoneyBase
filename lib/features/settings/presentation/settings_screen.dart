@@ -544,14 +544,6 @@ class _CategorySection extends StatelessWidget {
             snapshot.connectionState == ConnectionState.waiting &&
             categories.isEmpty;
 
-        Future<void> openDialog({Category? category}) {
-          return _openCategoryDialog(
-            context,
-            categories: categories,
-            category: category,
-          );
-        }
-
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
