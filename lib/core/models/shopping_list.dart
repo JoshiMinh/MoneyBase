@@ -9,6 +9,7 @@ class ShoppingList {
     this.name = '',
     this.type = ShoppingListType.grocery,
     this.notes,
+    this.currency = 'USD',
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -17,6 +18,7 @@ class ShoppingList {
   final String name;
   final ShoppingListType type;
   final String? notes;
+  final String currency;
   final DateTime createdAt;
 
   ShoppingList copyWith({
@@ -25,6 +27,7 @@ class ShoppingList {
     String? name,
     ShoppingListType? type,
     String? notes,
+    String? currency,
     DateTime? createdAt,
   }) {
     return ShoppingList(
@@ -33,6 +36,7 @@ class ShoppingList {
       name: name ?? this.name,
       type: type ?? this.type,
       notes: notes ?? this.notes,
+      currency: currency ?? this.currency,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -61,6 +65,7 @@ class ShoppingList {
       name: json['name'] as String? ?? '',
       type: parseType(json['type'] as String?),
       notes: json['notes'] as String?,
+      currency: (json['currency'] as String? ?? 'USD').toUpperCase(),
       createdAt: parseDate(json['createdAt']),
     );
   }
@@ -72,6 +77,7 @@ class ShoppingList {
       'name': name,
       'type': type.name.toUpperCase(),
       'notes': notes,
+      'currency': currency.toUpperCase(),
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }
