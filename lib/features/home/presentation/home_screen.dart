@@ -680,7 +680,7 @@ class _BudgetDialogState extends State<_BudgetDialog> {
       currency = 'USD';
     }
 
-    final base = widget.initial ?? const Budget();
+    final base = widget.initial ?? Budget();
     final notes = _notesController.text.trim();
 
     Navigator.of(context).pop(
@@ -1206,7 +1206,7 @@ class _ReportsTab extends StatelessWidget {
           _ReportInsightTile(
             icon: Icons.trending_up,
             title: 'Net income is up 12%',
-            subtitle: 'You spent \\$250 less compared to last month.',
+            subtitle: 'You spent \$250 less compared to last month.',
             iconTint: colorScheme.primary,
             textColor: onSurface,
             subtitleColor: mutedOnSurface,
@@ -1960,22 +1960,4 @@ class _BudgetSegment {
   final String amount;
   final double ratio;
   final Color color;
-}
-
-class _TransactionEntry {
-  const _TransactionEntry({
-    required this.title,
-    required this.subtitle,
-    required this.amount,
-    required this.icon,
-    required this.accent,
-    required this.amountColor,
-  });
-
-  final String title;
-  final String subtitle;
-  final String amount;
-  final IconData icon;
-  final Color accent;
-  final Color amountColor;
 }

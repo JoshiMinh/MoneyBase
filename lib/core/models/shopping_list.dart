@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 enum ShoppingListType { grocery, shopping }
 
 class ShoppingList {
-  const ShoppingList({
+  ShoppingList({
     this.id = '',
     this.userId = '',
     this.name = '',

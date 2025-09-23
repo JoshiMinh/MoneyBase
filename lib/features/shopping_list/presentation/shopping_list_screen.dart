@@ -265,7 +265,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
             _syncSelection(lists);
 
             final selectedList =
-                lists.firstWhere((list) => list.id == _selectedListId, orElse: () => const ShoppingList());
+                lists.firstWhere((list) => list.id == _selectedListId, orElse: () => ShoppingList());
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -883,7 +883,7 @@ class _ShoppingListDialogState extends State<_ShoppingListDialog> {
 
     final name = _nameController.text.trim();
     final notes = _notesController.text.trim();
-    final base = widget.initial ?? const ShoppingList();
+    final base = widget.initial ?? ShoppingList();
 
     Navigator.of(context).pop(
       base.copyWith(
@@ -1050,7 +1050,7 @@ class _ShoppingItemDialogState extends State<_ShoppingItemDialog> {
 
     final emoji = _emojiController.text.trim();
 
-    final base = widget.initial ?? const ShoppingItem();
+    final base = widget.initial ?? ShoppingItem();
 
     Navigator.of(context).pop(
       base.copyWith(
