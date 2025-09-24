@@ -10,6 +10,7 @@ class Wallet {
     this.color = '',
     this.type = WalletType.physical,
     this.currencyCode = 'USD',
+    this.position = 0,
   });
 
   final String id;
@@ -20,6 +21,7 @@ class Wallet {
   final String color;
   final WalletType type;
   final String currencyCode;
+  final int position;
 
   Wallet copyWith({
     String? id,
@@ -30,6 +32,7 @@ class Wallet {
     String? color,
     WalletType? type,
     String? currencyCode,
+    int? position,
   }) {
     return Wallet(
       id: id ?? this.id,
@@ -40,6 +43,7 @@ class Wallet {
       color: color ?? this.color,
       type: type ?? this.type,
       currencyCode: currencyCode ?? this.currencyCode,
+      position: position ?? this.position,
     );
   }
 
@@ -56,6 +60,7 @@ class Wallet {
         orElse: () => WalletType.physical,
       ),
       currencyCode: json['currencyCode'] as String? ?? 'USD',
+      position: (json['position'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -69,6 +74,7 @@ class Wallet {
       'color': color,
       'type': type.name,
       'currencyCode': currencyCode,
+      'position': position,
     };
   }
 }

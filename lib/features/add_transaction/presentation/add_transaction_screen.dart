@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/currencies.dart';
@@ -31,6 +32,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   String? _selectedCategoryId;
   String? _selectedWalletId;
   bool _submitting = false;
+  List<Wallet>? _reorderedWallets;
   late final WalletRepository _walletRepository;
   late final CategoryRepository _categoryRepository;
   late final TransactionRepository _transactionRepository;
@@ -108,6 +110,40 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         });
       });
     }
+  }
+
+  void _handleReorderWallets(
+    int oldIndex,
+    int newIndex,
+    List<Wallet> wallets,
+    String userId,
+  ) {
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+
+    final reordered = List<Wallet>.from(wallets);
+    final movedWallet = reordered.removeAt(oldIndex);
+    reordered.insert(newIndex, movedWallet);
+
+    final positioned = [
+      for (var index = 0; index < reordered.length; index++)
+        reordered[index].copyWith(position: index + 1),
+    ];
+
+    setState(() => _reorderedWallets = positioned);
+
+    _walletRepository.reorderWallets(userId, positioned).catchError(
+      (error, _) {
+        if (!mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to reorder wallets: $error')),
+        );
+        setState(() => _reorderedWallets = null);
+      },
+    );
   }
 
   Future<void> _openWalletDialog(
@@ -449,11 +485,44 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         return StreamBuilder<List<Wallet>>(
           stream: _walletRepository.watchWallets(user.uid),
           builder: (context, walletSnapshot) {
-            final wallets = walletSnapshot.data ?? const <Wallet>[];
+            final loadedWallets = walletSnapshot.data ?? const <Wallet>[];
             final walletLoading =
                 walletSnapshot.connectionState == ConnectionState.waiting &&
-                    wallets.isEmpty;
+                    loadedWallets.isEmpty;
             final walletError = walletSnapshot.error;
+
+            var wallets = loadedWallets;
+            final override = _reorderedWallets;
+            if (override != null && override.isNotEmpty) {
+              if (override.length == loadedWallets.length) {
+                final overrideIds = override.map((wallet) => wallet.id).toList();
+                final snapshotIds =
+                    loadedWallets.map((wallet) => wallet.id).toList();
+                if (listEquals(overrideIds, snapshotIds)) {
+                  wallets = override;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted) {
+                      return;
+                    }
+                    if (_reorderedWallets != null) {
+                      setState(() => _reorderedWallets = null);
+                    }
+                  });
+                } else {
+                  wallets = override;
+                }
+              } else {
+                wallets = loadedWallets;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) {
+                    return;
+                  }
+                  if (_reorderedWallets != null) {
+                    setState(() => _reorderedWallets = null);
+                  }
+                });
+              }
+            }
 
             return StreamBuilder<List<Category>>(
               stream: _categoryRepository.watchCategories(user.uid),
@@ -718,7 +787,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       if (!missingWallets) ...[
                         const SizedBox(height: 8),
                         Text(
-                          'Long press a wallet to edit or remove it.',
+                          'Drag wallets to reposition them, or long press to edit or remove.',
                           style: textTheme.bodySmall?.copyWith(
                             color: Colors.white.withOpacity(0.6),
                           ),
@@ -745,12 +814,38 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           ],
                         )
                       else
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: [
-                              for (final wallet in wallets) ...[
-                                _WalletCard(
+                        SizedBox(
+                          height: 220,
+                          child: ReorderableListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            padding: EdgeInsets.zero,
+                            itemCount: wallets.length,
+                            onReorder: (oldIndex, newIndex) =>
+                                _handleReorderWallets(
+                              oldIndex,
+                              newIndex,
+                              wallets,
+                              user.uid,
+                            ),
+                            proxyDecorator:
+                                (child, index, animation) => Material(
+                              color: Colors.transparent,
+                              child: FadeTransition(
+                                opacity: CurvedAnimation(
+                                  parent: animation,
+                                  curve: Curves.easeInOut,
+                                ),
+                                child: child,
+                              ),
+                            ),
+                            itemBuilder: (context, index) {
+                              final wallet = wallets[index];
+                              return Padding(
+                                key: ValueKey(wallet.id),
+                                padding: EdgeInsets.only(
+                                  right: index == wallets.length - 1 ? 0 : 16,
+                                ),
+                                child: _WalletCard(
                                   wallet: wallet,
                                   selected: wallet.id == _selectedWalletId,
                                   onTap: () =>
@@ -758,9 +853,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                   onLongPress: () =>
                                       _showWalletActions(context, user.uid, wallet),
                                 ),
-                                const SizedBox(width: 16),
-                              ],
-                            ],
+                              );
+                            },
                           ),
                         ),
                       const SizedBox(height: 36),

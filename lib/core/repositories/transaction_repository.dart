@@ -66,4 +66,45 @@ class TransactionRepository {
   Future<void> deleteTransaction(String userId, String transactionId) {
     return _transactionsRef(userId).doc(transactionId).delete();
   }
+
+  Future<List<MoneyBaseTransaction>> fetchAllTransactions(String userId) async {
+    final snapshot = await _transactionsRef(userId)
+        .orderBy('date', descending: true)
+        .get();
+    return snapshot.docs
+        .map(
+          (doc) => MoneyBaseTransaction.fromJson({
+            ...doc.data(),
+            'id': doc.id,
+            'userId': userId,
+          }),
+        )
+        .toList();
+  }
+
+  Future<void> importTransactions(
+    String userId,
+    List<MoneyBaseTransaction> transactions,
+  ) async {
+    if (transactions.isEmpty) {
+      return;
+    }
+
+    final batch = _firestore.batch();
+    for (final transaction in transactions) {
+      final reference = transaction.id.isNotEmpty
+          ? _transactionsRef(userId).doc(transaction.id)
+          : _transactionsRef(userId).doc();
+      batch.set(
+        reference,
+        transaction.copyWith(
+          id: reference.id,
+          userId: userId,
+          createdAt: transaction.createdAt,
+        ).toJson(),
+      );
+    }
+
+    await batch.commit();
+  }
 }

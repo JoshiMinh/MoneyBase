@@ -1,16 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../app/theme/palettes.dart';
 import '../../../app/theme/theme.dart';
-import '../../../core/constants/icon_library.dart';
-import '../../../core/models/category.dart';
-import '../../../core/models/wallet.dart';
-import '../../../core/repositories/category_repository.dart';
-import '../../../core/repositories/wallet_repository.dart';
 import '../../../core/services/google_sign_in_service.dart';
-import '../../../core/utils/color_utils.dart';
+import '../../../core/repositories/transaction_repository.dart';
+import '../../../core/utils/csv_utils.dart';
 import '../../common/presentation/moneybase_shell.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -25,14 +22,14 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _remindersEnabled = true;
   TimeOfDay _reminderTime = const TimeOfDay(hour: 17, minute: 25);
-  late final WalletRepository _walletRepository;
-  late final CategoryRepository _categoryRepository;
+  late final TransactionRepository _transactionRepository;
+  bool _isExportingCsv = false;
+  bool _isImportingCsv = false;
 
   @override
   void initState() {
     super.initState();
-    _walletRepository = WalletRepository();
-    _categoryRepository = CategoryRepository();
+    _transactionRepository = TransactionRepository();
   }
 
   Future<void> _pickReminderTime(BuildContext context) async {
@@ -55,6 +52,118 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return email.split('@').first;
     }
     return 'MoneyBase user';
+  }
+
+  Future<void> _exportTransactionsCsv(
+    BuildContext context,
+    String userId,
+  ) async {
+    if (_isExportingCsv) {
+      return;
+    }
+
+    setState(() => _isExportingCsv = true);
+    try {
+      final transactions =
+          await _transactionRepository.fetchAllTransactions(userId);
+      if (transactions.isEmpty) {
+        if (!mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No transactions to export yet.')),
+        );
+        return;
+      }
+
+      final csv = encodeTransactionsCsv(transactions);
+      await Clipboard.setData(ClipboardData(text: csv));
+
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Copied ${transactions.length} transactions to your clipboard as CSV.',
+          ),
+        ),
+      );
+
+      await showDialog<void>(
+        context: context,
+        builder: (context) => _CsvPreviewDialog(csv: csv),
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to export CSV: $error')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isExportingCsv = false);
+      }
+    }
+  }
+
+  Future<void> _importTransactionsCsv(
+    BuildContext context,
+    String userId,
+  ) async {
+    if (_isImportingCsv) {
+      return;
+    }
+
+    final csvInput = await showDialog<String>(
+      context: context,
+      builder: (context) => const _CsvPasteDialog(),
+    );
+
+    final trimmed = csvInput?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return;
+    }
+
+    setState(() => _isImportingCsv = true);
+    try {
+      final transactions = decodeTransactionsCsv(trimmed);
+      if (transactions.isEmpty) {
+        if (!mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content:
+                Text('No valid transactions were found in the provided CSV.'),
+          ),
+        );
+        return;
+      }
+
+      await _transactionRepository.importTransactions(userId, transactions);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Imported ${transactions.length} transactions from CSV.',
+            ),
+          ),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to import CSV: $error')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isImportingCsv = false);
+      }
+    }
   }
 
   @override
@@ -218,19 +327,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     spacing: 16,
                     runSpacing: 16,
                     children: [
-                      FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 16,
-                          ),
-                          backgroundColor: Colors.white.withOpacity(0.12),
-                          foregroundColor: Colors.white,
-                        ),
-                        onPressed: () {},
-                        icon: const Icon(Icons.upload_file_rounded),
-                        label: const Text('Export Transactions to CSV'),
-                      ),
                       if (widget.onLogout != null)
                         FilledButton.icon(
                           style: FilledButton.styleFrom(
@@ -256,42 +352,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             if (user != null) ...[
               const SizedBox(height: 24),
-              _DataManagementPanel(
-                userId: user.uid,
-                walletRepository: _walletRepository,
-                categoryRepository: _categoryRepository,
+              MoneyBaseFrostedPanel(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Data tools',
+                      style: textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Export a backup or paste in CSV rows to migrate data between MoneyBase installs.',
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: Colors.white.withOpacity(0.68),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    _DataActionTile(
+                      icon: Icons.download_outlined,
+                      title: 'Export transactions to CSV',
+                      subtitle:
+                          'Copies your latest transactions to the clipboard as a CSV snapshot.',
+                      buttonLabel: 'Copy CSV',
+                      onPressed: _isExportingCsv
+                          ? null
+                          : () => _exportTransactionsCsv(context, user.uid),
+                      loading: _isExportingCsv,
+                    ),
+                    const SizedBox(height: 16),
+                    _DataActionTile(
+                      icon: Icons.upload_file_outlined,
+                      title: 'Import transactions from CSV',
+                      subtitle:
+                          'Paste CSV rows exported from MoneyBase or another budgeting tool to bulk add entries.',
+                      buttonLabel: 'Import CSV',
+                      onPressed: _isImportingCsv
+                          ? null
+                          : () => _importTransactionsCsv(context, user.uid),
+                      loading: _isImportingCsv,
+                    ),
+                  ],
+                ),
               ),
             ],
           ],
         );
       },
-    );
-  }
-}
-
-class _DataManagementPanel extends StatelessWidget {
-  const _DataManagementPanel({
-    required this.userId,
-    required this.walletRepository,
-    required this.categoryRepository,
-  });
-
-  final String userId;
-  final WalletRepository walletRepository;
-  final CategoryRepository categoryRepository;
-
-  @override
-  Widget build(BuildContext context) {
-    return MoneyBaseFrostedPanel(
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _WalletSection(userId: userId, repository: walletRepository),
-          const SizedBox(height: 32),
-          _CategorySection(userId: userId, repository: categoryRepository),
-        ],
-      ),
     );
   }
 }
@@ -390,271 +501,40 @@ class _ProfileHeader extends StatelessWidget {
   }
 }
 
-String _walletTypeLabel(WalletType type) {
-  switch (type) {
-    case WalletType.physical:
-      return 'Physical';
-    case WalletType.bankAccount:
-      return 'Bank account';
-    case WalletType.crypto:
-      return 'Crypto';
-    case WalletType.investment:
-      return 'Investment';
-    case WalletType.other:
-      return 'Other';
-  }
-}
-
-class _WalletSection extends StatelessWidget {
-  const _WalletSection({required this.userId, required this.repository});
-
-  final String userId;
-  final WalletRepository repository;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              'Wallets',
-              style: textTheme.titleMedium?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Create or edit wallets from the Add tab while recording transactions.',
-          style: textTheme.bodySmall?.copyWith(
-            color: Colors.white.withOpacity(0.72),
-          ),
-        ),
-        const SizedBox(height: 16),
-        StreamBuilder<List<Wallet>>(
-          stream: repository.watchWallets(userId),
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return _ErrorNotice(
-                message: 'Unable to load wallets: ${snapshot.error}',
-              );
-            }
-
-            final wallets = snapshot.data ?? const <Wallet>[];
-            final loading =
-                snapshot.connectionState == ConnectionState.waiting &&
-                wallets.isEmpty;
-
-            if (loading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            if (wallets.isEmpty) {
-              return const _EmptyNotice(
-                message:
-                    'No wallets yet. Use the Add tab to create one and track balances.',
-              );
-            }
-
-            return ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: wallets.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final wallet = wallets[index];
-                final title = wallet.name.isNotEmpty
-                    ? wallet.name
-                    : 'Untitled wallet';
-                final typeDescription = _walletTypeLabel(wallet.type);
-                final currency = wallet.currencyCode.isEmpty
-                    ? 'Currency not set'
-                    : wallet.currencyCode.toUpperCase();
-                final iconData = IconLibrary.iconForWallet(wallet.iconName);
-                final accent = parseHexColor(wallet.color);
-
-                return _SettingsListTile(
-                  title: title,
-                  metadata: [
-                    '$typeDescription • $currency',
-                    if (wallet.balance != 0)
-                      'Balance: ${wallet.balance.toStringAsFixed(2)}',
-                  ],
-                  leading: CircleAvatar(
-                    radius: 22,
-                    backgroundColor:
-                        accent?.withOpacity(0.2) ??
-                        Colors.white.withOpacity(0.08),
-                    child: Icon(iconData, color: accent ?? Colors.white),
-                  ),
-                );
-              },
-            );
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class _CategorySection extends StatelessWidget {
-  const _CategorySection({required this.userId, required this.repository});
-
-  final String userId;
-  final CategoryRepository repository;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
-    return StreamBuilder<List<Category>>(
-      stream: repository.watchCategories(userId),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    'Categories',
-                    style: textTheme.titleMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _ErrorNotice(
-                message: 'Unable to load categories: ${snapshot.error}',
-              ),
-            ],
-          );
-        }
-
-        final categories = snapshot.data ?? const <Category>[];
-        final loading =
-            snapshot.connectionState == ConnectionState.waiting &&
-            categories.isEmpty;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  'Categories',
-                  style: textTheme.titleMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Manage your category library from the Add tab to keep selections in sync.',
-              style: textTheme.bodySmall?.copyWith(
-                color: Colors.white.withOpacity(0.72),
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (loading)
-              const Center(child: CircularProgressIndicator())
-            else if (categories.isEmpty)
-              const _EmptyNotice(
-                message:
-                    'No categories yet. Use the Add tab to create one to organise transactions.',
-              )
-            else
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: categories.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final category = categories[index];
-                  final title = category.name.isNotEmpty
-                      ? category.name
-                      : 'Untitled category';
-                  final parent = categories.firstWhere(
-                    (item) =>
-                        category.parentCategoryId != null &&
-                        category.parentCategoryId!.isNotEmpty &&
-                        item.id == category.parentCategoryId,
-                    orElse: () => const Category(),
-                  );
-
-                  final metadata = <String>[
-                    if (category.color.isNotEmpty)
-                      'Color: ${category.color.toUpperCase()}',
-                    if (category.parentCategoryId != null &&
-                        category.parentCategoryId!.isNotEmpty)
-                      'Parent: ${parent.name.isNotEmpty ? parent.name : category.parentCategoryId}',
-                  ];
-
-                  final iconData = IconLibrary.iconForCategory(
-                    category.iconName,
-                  );
-                  final accent = parseHexColor(category.color);
-
-                  return _SettingsListTile(
-                    title: title,
-                    metadata: metadata,
-                    leading: CircleAvatar(
-                      radius: 22,
-                      backgroundColor:
-                          accent?.withOpacity(0.2) ??
-                          Colors.white.withOpacity(0.08),
-                      child: Icon(iconData, color: accent ?? Colors.white),
-                    ),
-                  );
-                },
-              ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _SettingsListTile extends StatelessWidget {
-  const _SettingsListTile({
+class _DataActionTile extends StatelessWidget {
+  const _DataActionTile({
+    required this.icon,
     required this.title,
-    required this.metadata,
-    this.onEdit,
-    this.onDelete,
-    this.leading,
+    required this.subtitle,
+    required this.buttonLabel,
+    required this.onPressed,
+    required this.loading,
   });
 
+  final IconData icon;
   final String title;
-  final List<String> metadata;
-  final VoidCallback? onEdit;
-  final VoidCallback? onDelete;
-  final Widget? leading;
+  final String subtitle;
+  final String buttonLabel;
+  final VoidCallback? onPressed;
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final isDisabled = onPressed == null;
 
     return Container(
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.white.withOpacity(0.12)),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (leading != null) ...[leading!, const SizedBox(width: 16)],
+          Icon(icon, color: Colors.white, size: 28),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -666,97 +546,174 @@ class _SettingsListTile extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                for (final entry in metadata)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Text(
-                      entry,
-                      style: textTheme.bodySmall?.copyWith(
-                        color: Colors.white.withOpacity(0.72),
-                      ),
-                    ),
+                const SizedBox(height: 6),
+                Text(
+                  subtitle,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: Colors.white.withOpacity(0.7),
                   ),
+                ),
               ],
             ),
           ),
-          if (onEdit != null || onDelete != null) ...[
-            const SizedBox(width: 12),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (onEdit != null)
-                  IconButton(
-                    tooltip: 'Edit',
-                    onPressed: onEdit,
-                    icon: const Icon(Icons.edit_outlined),
-                    color: Colors.white,
-                  ),
-                if (onEdit != null && onDelete != null)
-                  const SizedBox(width: 4),
-                if (onDelete != null)
-                  IconButton(
-                    tooltip: 'Delete',
-                    onPressed: onDelete,
-                    icon: const Icon(Icons.delete_outline),
-                    color: Colors.white,
-                  ),
-              ],
+          const SizedBox(width: 16),
+          FilledButton(
+            onPressed: onPressed,
+            style: FilledButton.styleFrom(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+              backgroundColor: (loading || !isDisabled)
+                  ? const Color(0xFF7B5BFF)
+                  : Colors.white.withOpacity(0.12),
+              foregroundColor:
+                  (loading || !isDisabled) ? Colors.white : Colors.white70,
             ),
-          ],
+            child: loading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.4,
+                      color: Colors.white,
+                    ),
+                  )
+                : Text(buttonLabel),
+          ),
         ],
       ),
     );
   }
 }
 
-class _EmptyNotice extends StatelessWidget {
-  const _EmptyNotice({required this.message});
+class _CsvPreviewDialog extends StatelessWidget {
+  const _CsvPreviewDialog({required this.csv});
 
-  final String message;
+  final String csv;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-      ),
-      child: Text(
-        message,
-        style: textTheme.bodyMedium?.copyWith(
-          color: Colors.white.withOpacity(0.72),
+    return AlertDialog(
+      title: const Text('CSV ready to share'),
+      content: SizedBox(
+        width: 520,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'The export has been copied to your clipboard. Paste it into your spreadsheet or save it to a file.',
+              style: textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white.withOpacity(0.1)),
+              ),
+              constraints: const BoxConstraints(maxHeight: 240),
+              padding: const EdgeInsets.all(12),
+              child: SingleChildScrollView(
+                child: SelectableText(
+                  csv,
+                  style: textTheme.bodySmall?.copyWith(
+                    fontFamily: 'monospace',
+                    color: Colors.white.withOpacity(0.85),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Clipboard.setData(ClipboardData(text: csv)),
+          child: const Text('Copy again'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Close'),
+        ),
+      ],
     );
   }
 }
 
-class _ErrorNotice extends StatelessWidget {
-  const _ErrorNotice({required this.message});
+class _CsvPasteDialog extends StatefulWidget {
+  const _CsvPasteDialog();
 
-  final String message;
+  @override
+  State<_CsvPasteDialog> createState() => _CsvPasteDialogState();
+}
+
+class _CsvPasteDialogState extends State<_CsvPasteDialog> {
+  late final TextEditingController _controller;
+  String? _errorText;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final text = _controller.text.trim();
+    if (text.isEmpty) {
+      setState(() => _errorText = 'Paste at least one CSV row.');
+      return;
+    }
+    Navigator.of(context).pop(text);
+  }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      decoration: BoxDecoration(
-        color: const Color(0x44E54C4C),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0x66E54C4C)),
+    return AlertDialog(
+      title: const Text('Import CSV transactions'),
+      content: SizedBox(
+        width: 520,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Paste CSV rows exported from MoneyBase or a compatible template. The importer keeps the CSV text on this device only.',
+              style: textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _controller,
+              maxLines: 12,
+              decoration: InputDecoration(
+                border: const OutlineInputBorder(),
+                hintText:
+                    'id,date,description,amount,currencyCode,isIncome,categoryId,walletId,createdAt',
+                errorText: _errorText,
+              ),
+            ),
+          ],
+        ),
       ),
-      child: Text(
-        message,
-        style: textTheme.bodyMedium?.copyWith(color: Colors.white),
-      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: const Text('Import'),
+        ),
+      ],
     );
   }
 }

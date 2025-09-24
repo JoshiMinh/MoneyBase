@@ -39,6 +39,9 @@ dependencies:
   cloud_firestore: ^6.0.1
   google_sign_in: ^7.2.0
   shared_preferences: ^2.5.3
+  flutter_dotenv: ^6.0.0
+  google_generative_ai: ^0.4.7
+  csv: ^6.0.0
 
 dev_dependencies:
   flutter_test:
@@ -64,6 +67,7 @@ flutter:
 
   assets:
     - web/favicon.png
+    - .env
 
   # To add assets to your application, add an assets section, like this:
   # assets:

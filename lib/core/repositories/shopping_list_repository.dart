@@ -40,6 +40,29 @@ class ShoppingListRepository {
         );
   }
 
+  Stream<ShoppingList?> watchShoppingList(String userId, String listId) {
+    if (listId.isEmpty) {
+      return const Stream<ShoppingList?>.empty();
+    }
+
+    return _listsRef(userId).doc(listId).snapshots().map((snapshot) {
+      if (!snapshot.exists) {
+        return null;
+      }
+
+      final data = snapshot.data();
+      if (data == null) {
+        return null;
+      }
+
+      return ShoppingList.fromJson({
+        ...data,
+        'id': snapshot.id,
+        'userId': userId,
+      });
+    });
+  }
+
   Future<ShoppingList> addShoppingList(String userId, ShoppingList list) async {
     final ref = _listsRef(userId).doc();
     final now = DateTime.now();

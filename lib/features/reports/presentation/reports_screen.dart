@@ -4,9 +4,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/models/category.dart';
+import '../../../core/models/wallet.dart';
 import '../../../core/models/transaction.dart';
 import '../../../core/repositories/category_repository.dart';
 import '../../../core/repositories/transaction_repository.dart';
+import '../../../core/repositories/wallet_repository.dart';
 import '../../../core/utils/color_utils.dart';
 import '../../common/presentation/moneybase_shell.dart';
 
@@ -19,6 +21,15 @@ class ReportsScreen extends StatefulWidget {
 
 class _ReportsScreenState extends State<ReportsScreen> {
   static const _uncategorizedKey = '__uncategorized__';
+  static const _unassignedWalletKey = '__unassigned_wallet__';
+  static const List<Color> _fallbackSegmentColors = [
+    Color(0xFFFF6D8D),
+    Color(0xFF7B61FF),
+    Color(0xFFFFC857),
+    Color(0xFF4DD4FF),
+    Color(0xFF5CE1E6),
+    Color(0xFFF991CC),
+  ];
   static const _monthNames = [
     'January',
     'February',
@@ -36,13 +47,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   late final TransactionRepository _transactionRepository;
   late final CategoryRepository _categoryRepository;
+  late final WalletRepository _walletRepository;
   _ReportPeriod _selectedPeriod = _ReportPeriod.month;
+  _ReportDimension _selectedDimension = _ReportDimension.categories;
 
   @override
   void initState() {
     super.initState();
     _transactionRepository = TransactionRepository();
     _categoryRepository = CategoryRepository();
+    _walletRepository = WalletRepository();
   }
 
   DateTimeRange? _periodRange(_ReportPeriod period) {
@@ -111,7 +125,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return '$currency ${amount.toStringAsFixed(2)} ($percentText%)';
   }
 
-  _ReportBreakdown _buildBreakdown(
+  _ReportBreakdown _buildCategoryBreakdown(
     List<MoneyBaseTransaction> transactions,
     Map<String, Category> categories,
     _ReportPeriod period,
@@ -171,14 +185,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
       );
     }
 
-    final fallbackColors = const [
-      Color(0xFFFF6D8D),
-      Color(0xFF7B61FF),
-      Color(0xFFFFC857),
-      Color(0xFF4DD4FF),
-      Color(0xFF5CE1E6),
-      Color(0xFFF991CC),
-    ];
     var fallbackIndex = 0;
     final expenseEntries = expenseTotals.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
@@ -189,7 +195,89 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ? category.name
           : 'Other';
       final color = parseHexColor(category?.color) ??
-          fallbackColors[fallbackIndex % fallbackColors.length];
+          _fallbackSegmentColors[fallbackIndex % _fallbackSegmentColors.length];
+      fallbackIndex++;
+      final ratio = entry.value / total;
+      segments.add(
+        _ReportSegment(
+          label: label,
+          amount: _formatSegmentAmount(entry.value, ratio, currency),
+          ratio: ratio,
+          color: color,
+        ),
+      );
+    }
+
+    return _ReportBreakdown(
+      segments: segments,
+      total: total,
+      currency: currency,
+      range: range,
+    );
+  }
+
+  _ReportBreakdown _buildWalletBreakdown(
+    List<MoneyBaseTransaction> transactions,
+    Map<String, Wallet> wallets,
+    _ReportPeriod period,
+  ) {
+    final range = _periodRange(period);
+    final scoped = _filterTransactions(transactions, range);
+    if (scoped.isEmpty) {
+      return _ReportBreakdown(
+        segments: const [],
+        total: 0,
+        currency: _resolveCurrency(transactions),
+        range: range,
+      );
+    }
+
+    final currency = _resolveCurrency(scoped);
+    final totalsByWallet = <String, double>{};
+
+    for (final transaction in scoped) {
+      final amount = transaction.amount.abs();
+      if (amount == 0) {
+        continue;
+      }
+
+      final key =
+          transaction.walletId.isNotEmpty ? transaction.walletId : _unassignedWalletKey;
+      totalsByWallet[key] = (totalsByWallet[key] ?? 0) + amount;
+    }
+
+    if (totalsByWallet.isEmpty) {
+      return _ReportBreakdown(
+        segments: const [],
+        total: 0,
+        currency: currency,
+        range: range,
+      );
+    }
+
+    final total =
+        totalsByWallet.values.fold<double>(0, (sum, value) => sum + value);
+    if (total == 0) {
+      return _ReportBreakdown(
+        segments: const [],
+        total: 0,
+        currency: currency,
+        range: range,
+      );
+    }
+
+    final entries = totalsByWallet.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final segments = <_ReportSegment>[];
+    var fallbackIndex = 0;
+
+    for (final entry in entries) {
+      final wallet = wallets[entry.key];
+      final label = wallet != null && wallet.name.isNotEmpty
+          ? wallet.name
+          : 'Unassigned wallet';
+      final color = parseHexColor(wallet?.color) ??
+          _fallbackSegmentColors[fallbackIndex % _fallbackSegmentColors.length];
       fallbackIndex++;
       final ratio = entry.value / total;
       segments.add(
@@ -334,23 +422,71 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 final categoryLoading =
                     categorySnapshot.connectionState == ConnectionState.waiting &&
                         categories.isEmpty;
+                return StreamBuilder<List<Wallet>>(
+                  stream: _walletRepository.watchWallets(user.uid),
+                  builder: (context, walletSnapshot) {
+                    if (walletSnapshot.hasError) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(
+                            'Unable to load wallets: ${walletSnapshot.error}',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyLarge
+                                ?.copyWith(color: Colors.white),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      );
+                    }
 
-                final breakdown =
-                    _buildBreakdown(transactions, categories, _selectedPeriod);
-                final loading = transactionLoading || categoryLoading;
+                    final wallets =
+                        walletSnapshot.data ?? const <Wallet>[];
+                    final walletLoading =
+                        walletSnapshot.connectionState == ConnectionState.waiting &&
+                            wallets.isEmpty;
 
-                return _ReportsContent(
-                  segments: breakdown.segments,
-                  selectedPeriod: _selectedPeriod,
-                  onPeriodChanged: (period) {
-                    setState(() => _selectedPeriod = period);
+                    final walletMap = {
+                      for (final wallet in wallets) wallet.id: wallet,
+                      _unassignedWalletKey: const Wallet(name: 'Unassigned wallet'),
+                    };
+
+                    final breakdown = _selectedDimension ==
+                            _ReportDimension.categories
+                        ? _buildCategoryBreakdown(
+                            transactions,
+                            categories,
+                            _selectedPeriod,
+                          )
+                        : _buildWalletBreakdown(
+                            transactions,
+                            walletMap,
+                            _selectedPeriod,
+                          );
+
+                    final loading =
+                        transactionLoading || categoryLoading || walletLoading;
+
+                    return _ReportsContent(
+                      segments: breakdown.segments,
+                      selectedPeriod: _selectedPeriod,
+                      onPeriodChanged: (period) {
+                        setState(() => _selectedPeriod = period);
+                      },
+                      selectedDimension: _selectedDimension,
+                      onDimensionChanged: (dimension) {
+                        setState(() => _selectedDimension = dimension);
+                      },
+                      totalAmount: breakdown.total,
+                      currencyCode: breakdown.currency,
+                      loading: loading,
+                      periodLabel:
+                          _periodTitle(breakdown.range, _selectedPeriod),
+                      periodSubtitle: _comparisonSubtitle(_selectedPeriod),
+                      hasTransactions: transactions.isNotEmpty,
+                    );
                   },
-                  totalAmount: breakdown.total,
-                  currencyCode: breakdown.currency,
-                  loading: loading,
-                  periodLabel: _periodTitle(breakdown.range, _selectedPeriod),
-                  periodSubtitle: _comparisonSubtitle(_selectedPeriod),
-                  hasTransactions: transactions.isNotEmpty,
                 );
               },
             );
@@ -380,6 +516,8 @@ class _ReportsContent extends StatelessWidget {
     required this.segments,
     required this.selectedPeriod,
     required this.onPeriodChanged,
+    required this.selectedDimension,
+    required this.onDimensionChanged,
     required this.totalAmount,
     required this.currencyCode,
     required this.loading,
@@ -391,6 +529,8 @@ class _ReportsContent extends StatelessWidget {
   final List<_ReportSegment> segments;
   final _ReportPeriod selectedPeriod;
   final ValueChanged<_ReportPeriod> onPeriodChanged;
+  final _ReportDimension selectedDimension;
+  final ValueChanged<_ReportDimension> onDimensionChanged;
   final double totalAmount;
   final String currencyCode;
   final bool loading;
@@ -509,6 +649,27 @@ class _ReportsContent extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              SegmentedButton<_ReportDimension>(
+                segments: const [
+                  ButtonSegment(
+                    value: _ReportDimension.categories,
+                    icon: Icon(Icons.auto_graph_outlined),
+                    label: Text('By categories'),
+                  ),
+                  ButtonSegment(
+                    value: _ReportDimension.wallets,
+                    icon: Icon(Icons.account_balance_wallet_outlined),
+                    label: Text('By wallets'),
+                  ),
+                ],
+                selected: {selectedDimension},
+                onSelectionChanged: (selection) {
+                  if (selection.isNotEmpty) {
+                    onDimensionChanged(selection.first);
+                  }
+                },
+              ),
+              const SizedBox(height: 24),
               Row(
                 children: [
                   MoneyBaseGlassIconButton(
@@ -758,6 +919,15 @@ enum _ReportPeriod {
   all('All');
 
   const _ReportPeriod(this.label);
+
+  final String label;
+}
+
+enum _ReportDimension {
+  categories('Categories'),
+  wallets('Wallets');
+
+  const _ReportDimension(this.label);
 
   final String label;
 }
