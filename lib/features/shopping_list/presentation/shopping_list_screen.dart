@@ -7,6 +7,7 @@ import '../../../core/models/shopping_list.dart';
 import '../../../core/repositories/shopping_list_repository.dart';
 import '../../common/presentation/moneybase_shell.dart';
 import '../../common/presentation/currency_dropdown_field.dart';
+import '../../../app/theme/theme.dart';
 
 class ShoppingListScreen extends StatefulWidget {
   const ShoppingListScreen({super.key});
@@ -99,8 +100,8 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-              foregroundColor: Theme.of(context).colorScheme.onError,
+              backgroundColor: context.moneyBaseColors.negative,
+              foregroundColor: Colors.white,
             ),
             child: const Text('Delete'),
           ),
@@ -122,6 +123,38 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
         SnackBar(content: Text('Failed to delete shopping list: $error')),
       );
     }
+  }
+
+  Future<void> _openListDetail(
+    BuildContext context,
+    String userId,
+    ShoppingList list,
+  ) async {
+    if (list.id.isEmpty) {
+      return;
+    }
+
+    setState(() => _selectedListId = list.id);
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => ShoppingListDetailScreen(
+          userId: userId,
+          repository: _repository,
+          initialList: list,
+          onAddItem: (current) => _openItemDialog(context, userId, current),
+          onEditItem: (current, item) =>
+              _openItemDialog(context, userId, current, initial: item),
+          onDeleteItem: (current, item) =>
+              _deleteItem(context, userId, current, item),
+          onToggleItem: (current, item, bought) =>
+              _toggleItem(context, userId, current, item, bought),
+          onEditList: (current) =>
+              _openListDialog(context, userId, initial: current),
+          onDeleteList: (current) => _deleteList(context, userId, current),
+        ),
+      ),
+    );
   }
 
   Future<void> _openItemDialog(
@@ -179,8 +212,8 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-              foregroundColor: Theme.of(context).colorScheme.onError,
+              backgroundColor: context.moneyBaseColors.negative,
+              foregroundColor: Colors.white,
             ),
             child: const Text('Delete'),
           ),
@@ -240,9 +273,9 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
       builder: (context, layout) {
         final theme = Theme.of(context);
         final textTheme = theme.textTheme;
-        final colorScheme = theme.colorScheme;
-        final onSurface = colorScheme.onSurface;
-        final mutedOnSurface = onSurface.withOpacity(0.72);
+        final colors = context.moneyBaseColors;
+        final onSurface = colors.primaryText;
+        final mutedOnSurface = colors.mutedText;
 
         if (user == null) {
           return Center(
@@ -270,9 +303,6 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
             final lists = snapshot.data ?? const <ShoppingList>[];
             _syncSelection(lists);
 
-            final selectedList =
-                lists.firstWhere((list) => list.id == _selectedListId, orElse: () => ShoppingList());
-
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -293,29 +323,23 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                 const SizedBox(height: 32),
                 MoneyBaseSurface(
                   padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+                  backgroundColor: colors.surfaceBackground,
+                  borderColor: colors.surfaceBorder,
                   child: _ListsSection(
                     lists: lists,
                     selectedListId: _selectedListId,
-                    onSelectList: (id) => setState(() => _selectedListId = id),
+                    onOpenList: (list) =>
+                        _openListDetail(context, user.uid, list),
                     onCreateList: () => _openListDialog(context, user.uid),
                     onEditList: (list) => _openListDialog(context, user.uid, initial: list),
                     onDeleteList: (list) => _deleteList(context, user.uid, list),
                   ),
                 ),
-                const SizedBox(height: 24),
-                MoneyBaseSurface(
-                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
-                  child: _ItemsSection(
-                    userId: user.uid,
-                    list: selectedList.id.isEmpty ? null : selectedList,
-                    repository: _repository,
-                    onAddItem: (list) => _openItemDialog(context, user.uid, list),
-                    onEditItem: (list, item) =>
-                        _openItemDialog(context, user.uid, list, initial: item),
-                    onDeleteItem: (list, item) =>
-                        _deleteItem(context, user.uid, list, item),
-                    onToggleItem: (list, item, bought) =>
-                        _toggleItem(context, user.uid, list, item, bought),
+                const SizedBox(height: 16),
+                Text(
+                  'Select a list to manage its items in a focused workspace.',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: mutedOnSurface,
                   ),
                 ),
               ],
@@ -331,7 +355,7 @@ class _ListsSection extends StatelessWidget {
   const _ListsSection({
     required this.lists,
     required this.selectedListId,
-    required this.onSelectList,
+    required this.onOpenList,
     required this.onCreateList,
     required this.onEditList,
     required this.onDeleteList,
@@ -339,16 +363,17 @@ class _ListsSection extends StatelessWidget {
 
   final List<ShoppingList> lists;
   final String? selectedListId;
-  final ValueChanged<String> onSelectList;
+  final ValueChanged<ShoppingList> onOpenList;
   final VoidCallback onCreateList;
   final ValueChanged<ShoppingList> onEditList;
   final ValueChanged<ShoppingList> onDeleteList;
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
-    final onSurface = colorScheme.onSurface;
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+    final colors = context.moneyBaseColors;
+    final onSurface = colors.primaryText;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -375,20 +400,20 @@ class _ListsSection extends StatelessWidget {
         if (lists.isEmpty)
           Text(
             'Start by creating a list for groceries or a weekend project.',
-            style: textTheme.bodyMedium?.copyWith(color: onSurface.withOpacity(0.7)),
+            style: textTheme.bodyMedium?.copyWith(color: colors.mutedText),
           )
         else
           Column(
             children: [
-              for (final list in lists) ...[
-                _ListTile(
-                  list: list,
-                  selected: list.id == selectedListId,
-                  onTap: () => onSelectList(list.id),
-                  onEdit: () => onEditList(list),
-                  onDelete: () => onDeleteList(list),
-                ),
-                if (list != lists.last) const SizedBox(height: 16),
+                for (final list in lists) ...[
+                  _ListTile(
+                    list: list,
+                    selected: list.id == selectedListId,
+                    onTap: () => onOpenList(list),
+                    onEdit: () => onEditList(list),
+                    onDelete: () => onDeleteList(list),
+                  ),
+                  if (list != lists.last) const SizedBox(height: 16),
               ],
             ],
           ),
@@ -415,17 +440,16 @@ class _ListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final onSurface = colorScheme.onSurface;
-    final baseColor = theme.brightness == Brightness.dark
-        ? colorScheme.surfaceContainerHigh
-        : colorScheme.surface;
+    final colors = context.moneyBaseColors;
+    final onSurface = colors.primaryText;
+    final baseColor = colors.surfaceElevated;
 
-    final background =
-        selected ? baseColor.withOpacity(0.5) : baseColor.withOpacity(0.2);
+    final background = selected
+        ? colors.primaryAccent.withOpacity(theme.brightness == Brightness.dark ? 0.25 : 0.14)
+        : baseColor;
     final borderColor = selected
-        ? colorScheme.primary.withOpacity(0.6)
-        : colorScheme.outlineVariant.withOpacity(theme.brightness == Brightness.dark ? 0.5 : 0.6);
+        ? colors.primaryAccent.withOpacity(0.5)
+        : colors.surfaceBorder;
 
     return InkWell(
       onTap: onTap,
@@ -461,13 +485,13 @@ class _ListTile extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: colorScheme.primary.withOpacity(0.14),
+                          color: colors.primaryAccent.withOpacity(0.16),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           list.type.label,
                           style: theme.textTheme.labelMedium?.copyWith(
-                            color: colorScheme.primary,
+                            color: colors.primaryAccent,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -480,7 +504,7 @@ class _ListTile extends StatelessWidget {
                         ? list.notes!
                         : 'Created ${_formatDate(list.createdAt)}',
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: onSurface.withOpacity(0.68),
+                      color: colors.mutedText,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -517,10 +541,265 @@ class _ListTile extends StatelessWidget {
   }
 }
 
+class ShoppingListDetailScreen extends StatelessWidget {
+  const ShoppingListDetailScreen({
+    required this.userId,
+    required this.repository,
+    required this.initialList,
+    required this.onAddItem,
+    required this.onEditItem,
+    required this.onDeleteItem,
+    required this.onToggleItem,
+    required this.onEditList,
+    required this.onDeleteList,
+    super.key,
+  });
+
+  final String userId;
+  final ShoppingListRepository repository;
+  final ShoppingList initialList;
+  final ValueChanged<ShoppingList> onAddItem;
+  final void Function(ShoppingList, ShoppingItem) onEditItem;
+  final void Function(ShoppingList, ShoppingItem) onDeleteItem;
+  final void Function(ShoppingList, ShoppingItem, bool) onToggleItem;
+  final ValueChanged<ShoppingList> onEditList;
+  final ValueChanged<ShoppingList> onDeleteList;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<ShoppingList?>(
+      stream: repository.watchShoppingList(userId, initialList.id),
+      initialData: initialList,
+      builder: (context, snapshot) {
+        final theme = Theme.of(context);
+        final colors = context.moneyBaseColors;
+        final gradient = colors.backgroundGradient;
+        final decoration = gradient.length >= 2
+            ? BoxDecoration(
+                gradient: LinearGradient(
+                  colors: gradient,
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              )
+            : BoxDecoration(color: theme.scaffoldBackgroundColor);
+
+        final list = snapshot.data;
+        final error = snapshot.error;
+
+        Widget buildContent(ShoppingList resolved) {
+          final textTheme = theme.textTheme;
+          final notes = resolved.notes?.trim() ?? '';
+
+          return SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isWide = constraints.maxWidth >= 900;
+                final padding = EdgeInsets.symmetric(
+                  horizontal: isWide ? 64 : 24,
+                  vertical: isWide ? 40 : 24,
+                );
+
+                return SingleChildScrollView(
+                  padding: padding.copyWith(bottom: padding.bottom + 96),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 900),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          MoneyBaseSurface(
+                            padding: const EdgeInsets.all(28),
+                            backgroundColor: colors.surfaceBackground,
+                            borderColor: colors.surfaceBorder,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  resolved.name.isEmpty
+                                      ? 'Shopping list'
+                                      : resolved.name,
+                                  style: textTheme.headlineSmall?.copyWith(
+                                    color: colors.primaryText,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Wrap(
+                                  spacing: 12,
+                                  runSpacing: 12,
+                                  children: [
+                                    _ListMetadataChip(
+                                      icon: Icons.category_outlined,
+                                      label: resolved.type.label,
+                                      color: colors.primaryAccent,
+                                    ),
+                                    if (resolved.currency.isNotEmpty)
+                                      _ListMetadataChip(
+                                        icon: Icons.attach_money,
+                                        label: resolved.currency.toUpperCase(),
+                                        color: colors.secondaryAccent,
+                                      ),
+                                    _ListMetadataChip(
+                                      icon: Icons.calendar_today_outlined,
+                                      label: 'Created ${_formatDate(resolved.createdAt)}',
+                                      color: colors.info,
+                                    ),
+                                  ],
+                                ),
+                                if (notes.isNotEmpty) ...[
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    notes,
+                                    style: textTheme.bodyMedium?.copyWith(
+                                      color: colors.mutedText,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          MoneyBaseSurface(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 28,
+                              vertical: 24,
+                            ),
+                            child: _ShoppingListItemsView(
+                              userId: userId,
+                              list: resolved,
+                              repository: repository,
+                              onAddItem: onAddItem,
+                              onEditItem: onEditItem,
+                              onDeleteItem: onDeleteItem,
+                              onToggleItem: onToggleItem,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        }
+
+        Widget body;
+        if (error != null) {
+          body = Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                'Unable to load this list: $error',
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: colors.mutedText,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          );
+        } else if (list == null) {
+          body = Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                'This shopping list is no longer available.',
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: colors.mutedText,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          );
+        } else {
+          body = buildContent(list);
+        }
+
+        final titleList = list ?? initialList;
+
+        return Container(
+          decoration: decoration,
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              title: Text(
+                titleList.name.isEmpty ? 'Shopping list' : titleList.name,
+              ),
+              actions: list == null
+                  ? null
+                  : [
+                      IconButton(
+                        tooltip: 'Edit list',
+                        onPressed: () => onEditList(list),
+                        icon: const Icon(Icons.edit_outlined),
+                      ),
+                      IconButton(
+                        tooltip: 'Delete list',
+                        onPressed: () => onDeleteList(list),
+                        icon: const Icon(Icons.delete_outline),
+                      ),
+                    ],
+            ),
+            floatingActionButton: list == null
+                ? null
+                : FloatingActionButton.extended(
+                    onPressed: () => onAddItem(list),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add item'),
+                  ),
+            floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+            body: body,
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ListMetadataChip extends StatelessWidget {
+  const _ListMetadataChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 enum _ListAction { edit, delete }
 
-class _ItemsSection extends StatelessWidget {
-  const _ItemsSection({
+class _ShoppingListItemsView extends StatelessWidget {
+  const _ShoppingListItemsView({
     required this.userId,
     required this.list,
     required this.repository,
@@ -531,7 +810,7 @@ class _ItemsSection extends StatelessWidget {
   });
 
   final String userId;
-  final ShoppingList? list;
+  final ShoppingList list;
   final ShoppingListRepository repository;
   final ValueChanged<ShoppingList> onAddItem;
   final void Function(ShoppingList, ShoppingItem) onEditItem;
@@ -620,43 +899,22 @@ class _ItemsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
-    final onSurface = theme.colorScheme.onSurface;
-
-    if (list == null) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Items',
-            style: textTheme.titleMedium?.copyWith(
-              color: onSurface,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Choose a list to start adding items.',
-            style: textTheme.bodyMedium?.copyWith(
-              color: onSurface.withOpacity(0.7),
-            ),
-          ),
-        ],
-      );
-    }
+    final colors = context.moneyBaseColors;
+    final onSurface = colors.primaryText;
 
     return StreamBuilder<List<ShoppingItem>>(
-      stream: repository.watchItems(userId, list!.id),
+      stream: repository.watchItems(userId, list.id),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _ItemsHeader(onSurface: onSurface, textTheme: textTheme, onAddItem: () => onAddItem(list!)),
+              _ItemsHeader(onSurface: onSurface, textTheme: textTheme, onAddItem: () => onAddItem(list)),
               const SizedBox(height: 16),
               Text(
                 'Unable to load items: ${snapshot.error}',
                 style: textTheme.bodyMedium?.copyWith(
-                  color: onSurface.withOpacity(0.7),
+                  color: colors.mutedText,
                 ),
               ),
             ],
@@ -664,7 +922,7 @@ class _ItemsSection extends StatelessWidget {
         }
 
         final items = snapshot.data ?? const <ShoppingItem>[];
-        final currentList = list!;
+        final currentList = list;
         final listType = currentList.type;
 
         return Column(
@@ -680,7 +938,7 @@ class _ItemsSection extends StatelessWidget {
               Text(
                 'Add essentials, plan meals, and track quantities in one place.',
                 style: textTheme.bodyMedium?.copyWith(
-                  color: onSurface.withOpacity(0.7),
+                  color: colors.mutedText,
                 ),
               )
             else
@@ -750,14 +1008,14 @@ class _ItemTile extends StatelessWidget {
   final double indent;
 
   Color _priorityColor(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final colors = context.moneyBaseColors;
     switch (item.priority) {
       case ShoppingItemPriority.low:
-        return scheme.tertiary;
+        return colors.info;
       case ShoppingItemPriority.medium:
-        return scheme.secondary;
+        return colors.secondaryAccent;
       case ShoppingItemPriority.high:
-        return scheme.error;
+        return colors.negative;
     }
   }
 
@@ -816,8 +1074,9 @@ class _ItemTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final onSurface = theme.colorScheme.onSurface;
-    final subtitleColor = onSurface.withOpacity(0.68);
+    final colors = context.moneyBaseColors;
+    final onSurface = colors.primaryText;
+    final subtitleColor = colors.mutedText;
 
     final emoji = item.iconEmoji;
     final hasEmoji = emoji != null && emoji.trim().isNotEmpty;
@@ -843,7 +1102,7 @@ class _ItemTile extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceVariant.withOpacity(0.28),
+                color: colors.surfaceBackground,
                 borderRadius: radius,
               ),
               child: ClipRRect(
@@ -855,7 +1114,7 @@ class _ItemTile extends StatelessWidget {
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => Icon(
                     Icons.image_not_supported_outlined,
-                    color: theme.colorScheme.primary,
+                    color: colors.primaryAccent,
                   ),
                 ),
               ),
@@ -868,7 +1127,7 @@ class _ItemTile extends StatelessWidget {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: theme.colorScheme.primary.withOpacity(0.18),
+          color: colors.primaryAccent.withOpacity(0.18),
           borderRadius: BorderRadius.circular(14),
         ),
         alignment: Alignment.center,
@@ -877,7 +1136,7 @@ class _ItemTile extends StatelessWidget {
                 emoji!,
                 style: const TextStyle(fontSize: 24),
               )
-            : Icon(Icons.shopping_bag_outlined, color: theme.colorScheme.primary),
+            : Icon(Icons.shopping_bag_outlined, color: colors.primaryAccent),
       );
     }
 
@@ -951,25 +1210,25 @@ class _ItemTile extends StatelessWidget {
                       icon: Icons.attach_money,
                       label:
                           '${item.currency.toUpperCase()} ${item.price.toStringAsFixed(2)}',
-                      color: theme.colorScheme.primary,
+                      color: colors.primaryAccent,
                     ),
                   if (item.purchaseDate != null)
                     _MetadataChip(
                       icon: Icons.schedule_outlined,
                       label: 'Needed ${_formatDate(item.purchaseDate!)}',
-                      color: theme.colorScheme.secondary,
+                      color: colors.secondaryAccent,
                     ),
                   if (item.expiryDate != null && list.type == ShoppingListType.shopping)
                     _MetadataChip(
                       icon: Icons.hourglass_bottom,
                       label: 'Expires ${_formatDate(item.expiryDate!)}',
-                      color: theme.colorScheme.tertiary,
+                      color: colors.info,
                     ),
                   if (item.bought)
                     _MetadataChip(
                       icon: Icons.check_circle_outline,
                       label: 'Purchased',
-                      color: theme.colorScheme.primary,
+                      color: colors.positive,
                     ),
                 ],
               ),
@@ -1421,7 +1680,7 @@ class _DatePickerChip extends StatelessWidget {
       icon: const Icon(Icons.event_outlined),
       label: Text(label),
       style: OutlinedButton.styleFrom(
-        foregroundColor: theme.colorScheme.primary,
+        foregroundColor: context.moneyBaseColors.primaryAccent,
       ),
     );
 

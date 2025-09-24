@@ -14,6 +14,7 @@ class WalletRepository {
 
   Stream<List<Wallet>> watchWallets(String userId) {
     return _walletsRef(userId)
+        .orderBy('position')
         .orderBy('name')
         .snapshots()
         .map((snapshot) => snapshot.docs
@@ -30,7 +31,11 @@ class WalletRepository {
   Future<Wallet> addWallet(String userId, Wallet wallet) async {
     final collection = _walletsRef(userId);
     final doc = collection.doc();
-    final walletToSave = wallet.copyWith(id: doc.id, userId: userId);
+    final sortPosition = wallet.position != 0
+        ? wallet.position
+        : DateTime.now().microsecondsSinceEpoch;
+    final walletToSave =
+        wallet.copyWith(id: doc.id, userId: userId, position: sortPosition);
     await doc.set(walletToSave.toJson());
     return walletToSave;
   }
@@ -41,10 +46,32 @@ class WalletRepository {
     }
     await _walletsRef(userId)
         .doc(wallet.id)
-        .set(wallet.copyWith(userId: userId).toJson());
+        .set(
+          wallet
+              .copyWith(
+                userId: userId,
+                position: wallet.position != 0
+                    ? wallet.position
+                    : DateTime.now().microsecondsSinceEpoch,
+              )
+              .toJson(),
+        );
   }
 
   Future<void> deleteWallet(String userId, String walletId) {
     return _walletsRef(userId).doc(walletId).delete();
+  }
+
+  Future<void> reorderWallets(String userId, List<Wallet> wallets) async {
+    final batch = _firestore.batch();
+    for (var index = 0; index < wallets.length; index++) {
+      final wallet = wallets[index];
+      final position = index + 1;
+      batch.set(
+        _walletsRef(userId).doc(wallet.id),
+        wallet.copyWith(position: position, userId: userId).toJson(),
+      );
+    }
+    await batch.commit();
   }
 }

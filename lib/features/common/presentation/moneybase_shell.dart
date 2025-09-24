@@ -106,38 +106,37 @@ class MoneyBaseSurface extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(28),
     this.borderRadius = 32,
+    this.backgroundColor,
+    this.borderColor,
+    this.shadow,
     super.key,
   });
 
   final Widget child;
   final EdgeInsets padding;
   final double borderRadius;
+  final Color? backgroundColor;
+  final Color? borderColor;
+  final BoxShadow? shadow;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final extension = theme.extension<MoneyBaseThemeColors>();
-    final surfaceColor = extension?.surfaceBackground ?? colorScheme.surface;
-    final borderOpacity = theme.brightness == Brightness.dark ? 0.4 : 0.6;
-    final shadowColor = theme.brightness == Brightness.dark
-        ? Colors.black.withOpacity(0.6)
-        : Colors.black.withOpacity(0.08);
+    final colors = context.moneyBaseColors;
+    final surfaceColor = backgroundColor ?? colors.surfaceBackground;
+    final border = borderColor ?? colors.surfaceBorder;
+    final resolvedShadow = shadow ??
+        BoxShadow(
+          color: colors.surfaceShadow,
+          blurRadius: 24,
+          offset: const Offset(0, 16),
+        );
 
     return DecoratedBox(
       decoration: BoxDecoration(
         color: surfaceColor,
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withOpacity(borderOpacity),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: shadowColor,
-            blurRadius: 24,
-            offset: const Offset(0, 16),
-          ),
-        ],
+        border: Border.all(color: border),
+        boxShadow: [resolvedShadow],
       ),
       child: Padding(
         padding: padding,

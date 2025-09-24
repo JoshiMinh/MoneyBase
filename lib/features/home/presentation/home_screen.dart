@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../../app/theme/theme.dart';
 import '../../common/presentation/moneybase_shell.dart';
 import '../../common/presentation/currency_dropdown_field.dart';
 import '../../../core/constants/currencies.dart';
@@ -77,7 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   FloatingActionButton(
                     heroTag: 'aiChatFab',
                     onPressed: () => _openAiAssistant(context),
-                    child: const Icon(Icons.chat_bubble_outline),
+                    child: const Icon(Icons.smart_toy_outlined),
                   ),
                   const Spacer(),
                   FloatingActionButton.extended(
@@ -157,13 +158,15 @@ class _BudgetAnalyticsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
-    final colorScheme = theme.colorScheme;
-    final onSurface = colorScheme.onSurface;
-    final mutedOnSurface = onSurface.withOpacity(0.7);
+    final colors = context.moneyBaseColors;
+    final onSurface = colors.primaryText;
+    final mutedOnSurface = colors.mutedText;
 
     if (views.isEmpty) {
       return MoneyBaseSurface(
         padding: const EdgeInsets.all(28),
+        backgroundColor: colors.surfaceElevated,
+        borderColor: colors.surfaceBorder,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -228,6 +231,8 @@ class _BudgetAnalyticsCard extends StatelessWidget {
 
     return MoneyBaseSurface(
       padding: const EdgeInsets.all(28),
+      backgroundColor: colors.surfaceElevated,
+      borderColor: colors.surfaceBorder,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final isStacked = constraints.maxWidth < 540;
@@ -271,9 +276,7 @@ class _BudgetAnalyticsCard extends StatelessWidget {
                   totalLabel: totalLabel,
                   subtitle: subtitle,
                   segments: segments,
-                  overlayColor: theme.brightness == Brightness.dark
-                      ? Colors.white.withOpacity(0.08)
-                      : Colors.black.withOpacity(0.06),
+                  overlayColor: colors.mutedText.withOpacity(0.08),
                 ),
               ),
             ],
@@ -301,10 +304,13 @@ class _BudgetsListCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
-    final onSurface = theme.colorScheme.onSurface;
+    final colors = context.moneyBaseColors;
+    final onSurface = colors.primaryText;
 
     return MoneyBaseSurface(
       padding: const EdgeInsets.all(28),
+      backgroundColor: colors.surfaceBackground,
+      borderColor: colors.surfaceBorder,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -331,7 +337,7 @@ class _BudgetsListCard extends StatelessWidget {
             Text(
               'Budgets automatically pull in transactions to show real-time progress.',
               style: textTheme.bodyMedium?.copyWith(
-                color: onSurface.withOpacity(0.7),
+                color: colors.mutedText,
               ),
             )
           else
@@ -367,9 +373,10 @@ class _BudgetListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final onSurface = theme.colorScheme.onSurface;
+    final colors = context.moneyBaseColors;
+    final onSurface = colors.primaryText;
     final accent =
-        parseHexColor(view.category?.color) ?? theme.colorScheme.primary;
+        parseHexColor(view.category?.color) ?? colors.primaryAccent;
     final limit = view.budget.limit;
     final spent = view.spent;
     final remaining = limit - spent;
@@ -386,16 +393,14 @@ class _BudgetListTile extends StatelessWidget {
         ? '${_formatCurrency(remaining, currency)} remaining'
         : 'Over by ${_formatCurrency(remaining.abs(), currency)}';
 
-    final surfaceColor = theme.brightness == Brightness.dark
-        ? theme.colorScheme.surfaceContainerHigh
-        : theme.colorScheme.surface;
+    final surfaceColor = colors.surfaceElevated;
 
     return DecoratedBox(
       decoration: BoxDecoration(
         color: surfaceColor,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: accent.withOpacity(theme.brightness == Brightness.dark ? 0.45 : 0.28),
+          color: accent.withOpacity(theme.brightness == Brightness.dark ? 0.55 : 0.35),
         ),
       ),
       child: Padding(
@@ -423,7 +428,7 @@ class _BudgetListTile extends StatelessWidget {
                             ? view.category!.name
                             : 'All categories',
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: onSurface.withOpacity(0.7),
+                          color: colors.mutedText,
                         ),
                       ),
                     ],
@@ -469,21 +474,19 @@ class _BudgetListTile extends StatelessWidget {
                 _BudgetChip(
                   icon: Icons.timeline_outlined,
                   label: remainingLabel,
-                  color: remaining >= 0
-                      ? theme.colorScheme.secondary
-                      : theme.colorScheme.error,
+                  color: remaining >= 0 ? colors.positive : colors.negative,
                 ),
                 if (rangeLabel.isNotEmpty)
                   _BudgetChip(
                     icon: Icons.calendar_today_outlined,
                     label: rangeLabel,
-                    color: theme.colorScheme.tertiary,
+                    color: colors.info,
                   ),
                 if (notes?.isNotEmpty == true)
                   _BudgetChip(
                     icon: Icons.note_outlined,
                     label: notes!,
-                    color: theme.colorScheme.primary,
+                    color: colors.primaryAccent,
                   ),
               ],
             ),
@@ -854,41 +857,13 @@ class _HomeContent extends StatefulWidget {
 }
 
 class _HomeContentState extends State<_HomeContent> {
-  _HomeTab _selectedTab = _HomeTab.graphs;
-
-  void _handleTabSelected(_HomeTab tab) {
-    setState(() => _selectedTab = tab);
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
-    final colorScheme = theme.colorScheme;
-    final onBackground = colorScheme.onBackground;
-    final mutedOnBackground = onBackground.withOpacity(0.68);
-
-    Widget buildTabContent() {
-      switch (_selectedTab) {
-        case _HomeTab.graphs:
-          return _GraphsTab(
-            userId: widget.userId,
-            budgetRepository: widget.budgetRepository,
-            transactionRepository: widget.transactionRepository,
-            categoryRepository: widget.categoryRepository,
-          );
-        case _HomeTab.reports:
-          return _ReportsTab(onViewReports: widget.onViewReports);
-        case _HomeTab.recentTransactions:
-          return _RecentTransactionsTab(
-            onViewTransactions: widget.onViewTransactions,
-            userId: widget.userId,
-            transactionRepository: widget.transactionRepository,
-            walletRepository: widget.walletRepository,
-            categoryRepository: widget.categoryRepository,
-          );
-      }
-    }
+    final colors = context.moneyBaseColors;
+    final onBackground = colors.primaryText;
+    final mutedOnBackground = colors.mutedText;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -932,80 +907,60 @@ class _HomeContentState extends State<_HomeContent> {
           ],
         ),
         const SizedBox(height: 32),
-        _HomeTabSelector(
-          selectedTab: _selectedTab,
-          onTabSelected: _handleTabSelected,
-        ),
-        const SizedBox(height: 24),
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 250),
-          child: KeyedSubtree(
-            key: ValueKey(_selectedTab),
-            child: buildTabContent(),
-          ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            const sectionSpacing = 24.0;
+
+            final graphsSection = _GraphsTab(
+              userId: widget.userId,
+              budgetRepository: widget.budgetRepository,
+              transactionRepository: widget.transactionRepository,
+              categoryRepository: widget.categoryRepository,
+            );
+
+            final trailingColumn = Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _ReportsTab(onViewReports: widget.onViewReports),
+                const SizedBox(height: sectionSpacing),
+                _RecentTransactionsCard(
+                  onViewTransactions: widget.onViewTransactions,
+                  userId: widget.userId,
+                  transactionRepository: widget.transactionRepository,
+                  walletRepository: widget.walletRepository,
+                  categoryRepository: widget.categoryRepository,
+                ),
+              ],
+            );
+
+            if (constraints.maxWidth >= 1024) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: graphsSection,
+                  ),
+                  const SizedBox(width: sectionSpacing),
+                  Expanded(
+                    flex: 2,
+                    child: trailingColumn,
+                  ),
+                ],
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                graphsSection,
+                const SizedBox(height: sectionSpacing),
+                trailingColumn,
+              ],
+            );
+          },
         ),
       ],
-    );
-  }
-}
-
-enum _HomeTab { graphs, reports, recentTransactions }
-
-extension on _HomeTab {
-  String get label {
-    switch (this) {
-      case _HomeTab.graphs:
-        return 'Graphs';
-      case _HomeTab.reports:
-        return 'Reports';
-      case _HomeTab.recentTransactions:
-        return 'Recent Transactions';
-    }
-  }
-
-  IconData get icon {
-    switch (this) {
-      case _HomeTab.graphs:
-        return Icons.show_chart;
-      case _HomeTab.reports:
-        return Icons.insert_chart_outlined_rounded;
-      case _HomeTab.recentTransactions:
-        return Icons.history;
-    }
-  }
-}
-
-class _HomeTabSelector extends StatelessWidget {
-  const _HomeTabSelector({
-    required this.selectedTab,
-    required this.onTabSelected,
-  });
-
-  final _HomeTab selectedTab;
-  final ValueChanged<_HomeTab> onTabSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return SegmentedButton<_HomeTab>(
-      segments: [
-        for (final tab in _HomeTab.values)
-          ButtonSegment<_HomeTab>(
-            value: tab,
-            icon: Icon(tab.icon),
-            label: Text(tab.label),
-          ),
-      ],
-      selected: {selectedTab},
-      onSelectionChanged: (selection) {
-        if (selection.isNotEmpty) {
-          onTabSelected(selection.first);
-        }
-      },
-      style: ButtonStyle(
-        padding: MaterialStateProperty.all(
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        ),
-      ),
     );
   }
 }
@@ -1148,7 +1103,7 @@ class _GraphsTabState extends State<_GraphsTab> {
                   style: Theme.of(context)
                       .textTheme
                       .bodyMedium
-                      ?.copyWith(color: Theme.of(context).colorScheme.onSurface),
+                      ?.copyWith(color: context.moneyBaseColors.primaryText),
                 ),
               ),
             ],
@@ -1215,12 +1170,14 @@ class _ReportsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
-    final colorScheme = theme.colorScheme;
-    final onSurface = colorScheme.onSurface;
-    final mutedOnSurface = onSurface.withOpacity(0.7);
+    final colors = context.moneyBaseColors;
+    final onSurface = colors.primaryText;
+    final mutedOnSurface = colors.mutedText;
 
     return MoneyBaseSurface(
       padding: const EdgeInsets.all(28),
+      backgroundColor: colors.surfaceBackground,
+      borderColor: colors.surfaceBorder,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1236,7 +1193,7 @@ class _ReportsTab extends StatelessWidget {
             icon: Icons.trending_up,
             title: 'Net income is up 12%',
             subtitle: 'You spent \$250 less compared to last month.',
-            iconTint: colorScheme.primary,
+            iconTint: colors.primaryAccent,
             textColor: onSurface,
             subtitleColor: mutedOnSurface,
           ),
@@ -1245,7 +1202,7 @@ class _ReportsTab extends StatelessWidget {
             icon: Icons.shopping_bag_outlined,
             title: 'Top category: Shopping',
             subtitle: 'Shopping accounts for 34% of this month’s expenses.',
-            iconTint: colorScheme.secondary,
+            iconTint: colors.secondaryAccent,
             textColor: onSurface,
             subtitleColor: mutedOnSurface,
           ),
@@ -1254,7 +1211,7 @@ class _ReportsTab extends StatelessWidget {
             icon: Icons.savings_outlined,
             title: 'Savings streak ongoing',
             subtitle: 'You have contributed to savings for 5 weeks straight.',
-            iconTint: colorScheme.tertiary,
+            iconTint: colors.tertiaryAccent,
             textColor: onSurface,
             subtitleColor: mutedOnSurface,
           ),
@@ -1332,33 +1289,6 @@ class _ReportInsightTile extends StatelessWidget {
   }
 }
 
-class _RecentTransactionsTab extends StatelessWidget {
-  const _RecentTransactionsTab({
-    required this.onViewTransactions,
-    required this.userId,
-    required this.transactionRepository,
-    required this.walletRepository,
-    required this.categoryRepository,
-  });
-
-  final VoidCallback onViewTransactions;
-  final String? userId;
-  final TransactionRepository transactionRepository;
-  final WalletRepository walletRepository;
-  final CategoryRepository categoryRepository;
-
-  @override
-  Widget build(BuildContext context) {
-    return _RecentTransactionsCard(
-      onViewTransactions: onViewTransactions,
-      userId: userId,
-      transactionRepository: transactionRepository,
-      walletRepository: walletRepository,
-      categoryRepository: categoryRepository,
-    );
-  }
-}
-
 class _RecentTransactionsCard extends StatelessWidget {
   const _RecentTransactionsCard({
     required this.onViewTransactions,
@@ -1410,12 +1340,14 @@ class _RecentTransactionsCard extends StatelessWidget {
     String subtitle,
   ) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final onSurface = colorScheme.onSurface;
-    final mutedOnSurface = onSurface.withOpacity(0.68);
+    final colors = context.moneyBaseColors;
+    final onSurface = colors.primaryText;
+    final mutedOnSurface = colors.mutedText;
 
     return MoneyBaseSurface(
       padding: const EdgeInsets.fromLTRB(28, 28, 28, 16),
+      backgroundColor: colors.surfaceBackground,
+      borderColor: colors.surfaceBorder,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1447,7 +1379,7 @@ class _RecentTransactionsCard extends StatelessWidget {
                 icon: const Icon(Icons.arrow_forward_rounded),
                 label: const Text('See all'),
                 style: TextButton.styleFrom(
-                  foregroundColor: colorScheme.primary,
+                  foregroundColor: colors.primaryAccent,
                   textStyle: textTheme.labelLarge?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
@@ -1466,7 +1398,7 @@ class _RecentTransactionsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
-    final onSurfaceMuted = theme.colorScheme.onSurface.withOpacity(0.7);
+    final onSurfaceMuted = context.moneyBaseColors.mutedText;
 
     if (userId == null) {
       return _buildSurface(
@@ -1492,7 +1424,7 @@ class _RecentTransactionsCard extends StatelessWidget {
             Text(
               'Unable to load recent transactions: ${transactionSnapshot.error}',
               style: textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface,
+                color: context.moneyBaseColors.primaryText,
               ),
             ),
             'Something went wrong',
@@ -1531,8 +1463,7 @@ class _RecentTransactionsCard extends StatelessWidget {
                     Text(
                       'No transactions yet. Create one to start building insights.',
                       style: textTheme.bodyMedium?.copyWith(
-                        color:
-                            theme.colorScheme.onSurface.withOpacity(0.7),
+                        color: context.moneyBaseColors.mutedText,
                       ),
                     ),
                     'Nothing to show',
@@ -1575,11 +1506,11 @@ class _RecentTransactionsCard extends StatelessWidget {
                                     categoryById[transaction.categoryId]?.color,
                                   ) ??
                                   (transaction.isIncome
-                                      ? theme.colorScheme.tertiary
-                                      : theme.colorScheme.error),
+                                      ? context.moneyBaseColors.tertiaryAccent
+                                      : context.moneyBaseColors.negative),
                           amountColor: transaction.isIncome
-                              ? theme.colorScheme.tertiary
-                              : theme.colorScheme.error,
+                              ? context.moneyBaseColors.tertiaryAccent
+                              : context.moneyBaseColors.negative,
                           isIncome: transaction.isIncome,
                         ),
                     ],
@@ -1604,8 +1535,9 @@ class _LegendRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
-    final onSurface = theme.colorScheme.onSurface;
-    final mutedOnSurface = onSurface.withOpacity(0.68);
+    final colors = context.moneyBaseColors;
+    final onSurface = colors.primaryText;
+    final mutedOnSurface = colors.mutedText;
 
     return Row(
       children: [
@@ -1674,22 +1606,18 @@ class _TransactionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
-    final onSurface = colorScheme.onSurface;
-    final mutedOnSurface = onSurface.withOpacity(0.7);
-    final tileColor = theme.brightness == Brightness.dark
-        ? colorScheme.surfaceContainerHigh
-        : colorScheme.surface;
+    final colors = context.moneyBaseColors;
+    final onSurface = colors.primaryText;
+    final mutedOnSurface = colors.mutedText;
+    final tileColor = colors.surfaceElevated;
 
     return DecoratedBox(
       decoration: BoxDecoration(
         color: tileColor,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: colorScheme.outlineVariant.withOpacity(
-            theme.brightness == Brightness.dark ? 0.5 : 0.6,
-          ),
+          color: colors.surfaceBorder,
         ),
       ),
       child: Padding(
@@ -1804,22 +1732,18 @@ class _TransactionMetadataChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
+    final colors = context.moneyBaseColors;
     final hasAccent = accent != null;
     final chipBackground = hasAccent
-        ? accent!.withOpacity(theme.brightness == Brightness.dark ? 0.18 : 0.12)
-        : (theme.brightness == Brightness.dark
-            ? colorScheme.surface.withOpacity(0.6)
-            : colorScheme.surface.withOpacity(0.9));
+        ? accent!.withOpacity(theme.brightness == Brightness.dark ? 0.24 : 0.14)
+        : colors.surfaceBackground;
     final chipBorder = hasAccent
-        ? accent!.withOpacity(0.4)
-        : colorScheme.outlineVariant.withOpacity(
-            theme.brightness == Brightness.dark ? 0.4 : 0.5,
-          );
+        ? accent!.withOpacity(0.38)
+        : colors.surfaceBorder;
     final chipForeground = hasAccent
         ? accent!
-        : colorScheme.onSurface.withOpacity(0.7);
+        : colors.mutedText;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1887,8 +1811,9 @@ class _DonutChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
-    final onSurface = theme.colorScheme.onSurface;
-    final mutedOnSurface = onSurface.withOpacity(0.6);
+    final colors = context.moneyBaseColors;
+    final onSurface = colors.primaryText;
+    final mutedOnSurface = colors.mutedText;
 
     return Stack(
       alignment: Alignment.center,
