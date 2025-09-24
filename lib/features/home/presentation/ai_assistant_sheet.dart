@@ -37,13 +37,11 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       HarmBlockThreshold.medium,
     ),
   ];
-  static final Content _systemInstruction = Content.system(<Part>[
-    TextPart(
-      "You are MoneyBase's AI budgeting assistant. Provide concise, safe "
-      'financial guidance that helps people understand their spending, '
-      'budgets, and savings progress using the information they share.',
-    ),
-  ]);
+  static final Content _systemInstruction = Content.system(
+    "You are MoneyBase's AI budgeting assistant. Provide concise, safe "
+    'financial guidance that helps people understand their spending, '
+    'budgets, and savings progress using the information they share.',
+  );
   late final _AiMessage _welcomeMessage;
   late final FirebaseFirestore _firestore;
   late final FirebaseAuth _auth;
@@ -389,7 +387,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     }
 
     final buffer = StringBuffer();
-    for (final candidate in response.candidates ?? const <GenerateContentCandidate>[]) {
+    for (final candidate in response.candidates) {
       final content = candidate.content;
       for (final part in content.parts) {
         if (part is TextPart) {
@@ -403,7 +401,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       return fallback;
     }
 
-    return 'I'm still thinking about that. Could you try asking in a different way?';
+    return "I'm still thinking about that. Could you try asking in a different way?";
   }
 
   void _scrollToBottom() {
@@ -663,8 +661,8 @@ class _AiMessage {
 
   Content toContent() {
     return Content(
-      role: isUser ? 'user' : 'model',
-      parts: [TextPart(text)],
+      isUser ? 'user' : 'model',
+      [TextPart(text)],
     );
   }
 }
