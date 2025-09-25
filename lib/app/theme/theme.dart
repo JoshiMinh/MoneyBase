@@ -120,34 +120,46 @@ class MoneyBaseThemeColors extends ThemeExtension<MoneyBaseThemeColors> {
       return this;
     }
 
-    final gradientLength = math.max(backgroundGradient.length, other.backgroundGradient.length);
+    final gradientLength = math.max(
+      backgroundGradient.length,
+      other.backgroundGradient.length,
+    );
     final colors = <Color>[];
     for (var i = 0; i < gradientLength; i++) {
       final a = i < backgroundGradient.length
           ? backgroundGradient[i]
           : backgroundGradient.isEmpty
-              ? Colors.transparent
-              : backgroundGradient.last;
+          ? Colors.transparent
+          : backgroundGradient.last;
       final b = i < other.backgroundGradient.length
           ? other.backgroundGradient[i]
           : other.backgroundGradient.isEmpty
-              ? Colors.transparent
-              : other.backgroundGradient.last;
+          ? Colors.transparent
+          : other.backgroundGradient.last;
       colors.add(Color.lerp(a, b, t) ?? a);
     }
 
     return MoneyBaseThemeColors(
       backgroundGradient: colors,
-      surfaceBackground: Color.lerp(surfaceBackground, other.surfaceBackground, t) ??
+      surfaceBackground:
+          Color.lerp(surfaceBackground, other.surfaceBackground, t) ??
           surfaceBackground,
-      surfaceElevated: Color.lerp(surfaceElevated, other.surfaceElevated, t) ?? surfaceElevated,
-      surfaceBorder: Color.lerp(surfaceBorder, other.surfaceBorder, t) ?? surfaceBorder,
-      surfaceShadow: Color.lerp(surfaceShadow, other.surfaceShadow, t) ?? surfaceShadow,
+      surfaceElevated:
+          Color.lerp(surfaceElevated, other.surfaceElevated, t) ??
+          surfaceElevated,
+      surfaceBorder:
+          Color.lerp(surfaceBorder, other.surfaceBorder, t) ?? surfaceBorder,
+      surfaceShadow:
+          Color.lerp(surfaceShadow, other.surfaceShadow, t) ?? surfaceShadow,
       primaryText: Color.lerp(primaryText, other.primaryText, t) ?? primaryText,
       mutedText: Color.lerp(mutedText, other.mutedText, t) ?? mutedText,
-      primaryAccent: Color.lerp(primaryAccent, other.primaryAccent, t) ?? primaryAccent,
-      secondaryAccent: Color.lerp(secondaryAccent, other.secondaryAccent, t) ?? secondaryAccent,
-      tertiaryAccent: Color.lerp(tertiaryAccent, other.tertiaryAccent, t) ?? tertiaryAccent,
+      primaryAccent:
+          Color.lerp(primaryAccent, other.primaryAccent, t) ?? primaryAccent,
+      secondaryAccent:
+          Color.lerp(secondaryAccent, other.secondaryAccent, t) ??
+          secondaryAccent,
+      tertiaryAccent:
+          Color.lerp(tertiaryAccent, other.tertiaryAccent, t) ?? tertiaryAccent,
       positive: Color.lerp(positive, other.positive, t) ?? positive,
       negative: Color.lerp(negative, other.negative, t) ?? negative,
       warning: Color.lerp(warning, other.warning, t) ?? warning,
@@ -160,51 +172,63 @@ class MoneyBaseThemeColors extends ThemeExtension<MoneyBaseThemeColors> {
 class MoneyBaseTheme {
   const MoneyBaseTheme._();
 
-  static ThemeData buildTheme({
-    required bool darkMode,
-  }) {
-    final backgroundColor =
-        darkMode ? const Color(0xFF080B16) : const Color(0xFFF7F8FF);
+  static ThemeData buildTheme({required bool darkMode}) {
+    final backgroundColor = darkMode
+        ? const Color(0xFF080B16)
+        : const Color(0xFFF7F8FF);
     final baseColors = MoneyBaseThemeColors.fallback(darkMode: darkMode);
     final themeColors = baseColors.copyWith(
       surfaceBackground: darkMode ? const Color(0xFF131A2A) : Colors.white,
-      surfaceElevated: darkMode ? const Color(0xFF1E2740) : const Color(0xFFE8ECFF),
-      surfaceBorder: darkMode ? const Color(0x33FFFFFF) : const Color(0x1A1F2937),
-      surfaceShadow: darkMode ? const Color(0x99000000) : const Color(0x14000000),
+      surfaceElevated: darkMode
+          ? const Color(0xFF1E2740)
+          : const Color(0xFFE8ECFF),
+      surfaceBorder: darkMode
+          ? const Color(0x33FFFFFF)
+          : const Color(0x1A1F2937),
+      surfaceShadow: darkMode
+          ? const Color(0x99000000)
+          : const Color(0x14000000),
     );
 
     final colorScheme =
-        (darkMode ? const ColorScheme.dark() : const ColorScheme.light()).copyWith(
-      primary: themeColors.primaryAccent,
-      onPrimary: Colors.white,
-      primaryContainer:
-          darkMode ? const Color(0xFF2C3268) : const Color(0xFFE0E7FF),
-      onPrimaryContainer: darkMode ? Colors.white : themeColors.primaryText,
-      secondary: themeColors.secondaryAccent,
-      onSecondary: darkMode ? Colors.black : Colors.white,
-      secondaryContainer:
-          themeColors.secondaryAccent.withOpacity(darkMode ? 0.32 : 0.18),
-      onSecondaryContainer:
-          darkMode ? Colors.black : themeColors.primaryText,
-      tertiary: themeColors.tertiaryAccent,
-      onTertiary: Colors.white,
-      background: backgroundColor,
-      onBackground: themeColors.primaryText,
-      surface: themeColors.surfaceBackground,
-      surfaceTint: Colors.transparent,
-      onSurface: themeColors.primaryText,
-      onSurfaceVariant: themeColors.mutedText,
-      error: themeColors.negative,
-      onError: Colors.white,
-      outline: themeColors.surfaceBorder,
-      outlineVariant: themeColors.surfaceBorder,
-      surfaceContainerHigh: themeColors.surfaceElevated,
-      surfaceContainerHighest: themeColors.surfaceElevated,
-      shadow: themeColors.surfaceShadow,
-      scrim: Colors.black.withOpacity(darkMode ? 0.6 : 0.3),
-      inversePrimary:
-          darkMode ? const Color(0xFF4F46E5) : const Color(0xFFA5B4FF),
-    );
+        (darkMode ? const ColorScheme.dark() : const ColorScheme.light())
+            .copyWith(
+              primary: themeColors.primaryAccent,
+              onPrimary: Colors.white,
+              primaryContainer: darkMode
+                  ? const Color(0xFF2C3268)
+                  : const Color(0xFFE0E7FF),
+              onPrimaryContainer: darkMode
+                  ? Colors.white
+                  : themeColors.primaryText,
+              secondary: themeColors.secondaryAccent,
+              onSecondary: darkMode ? Colors.black : Colors.white,
+              secondaryContainer: themeColors.secondaryAccent.withOpacity(
+                darkMode ? 0.32 : 0.18,
+              ),
+              onSecondaryContainer: darkMode
+                  ? Colors.black
+                  : themeColors.primaryText,
+              tertiary: themeColors.tertiaryAccent,
+              onTertiary: Colors.white,
+              background: backgroundColor,
+              onBackground: themeColors.primaryText,
+              surface: themeColors.surfaceBackground,
+              surfaceTint: Colors.transparent,
+              onSurface: themeColors.primaryText,
+              onSurfaceVariant: themeColors.mutedText,
+              error: themeColors.negative,
+              onError: Colors.white,
+              outline: themeColors.surfaceBorder,
+              outlineVariant: themeColors.surfaceBorder,
+              surfaceContainerHigh: themeColors.surfaceElevated,
+              surfaceContainerHighest: themeColors.surfaceElevated,
+              shadow: themeColors.surfaceShadow,
+              scrim: Colors.black.withOpacity(darkMode ? 0.6 : 0.3),
+              inversePrimary: darkMode
+                  ? const Color(0xFF4F46E5)
+                  : const Color(0xFFA5B4FF),
+            );
 
     return ThemeData(
       colorScheme: colorScheme,
@@ -225,12 +249,19 @@ class MoneyBaseTheme {
           color: themeColors.primaryText,
         ),
       ),
-      bottomAppBarColor: themeColors.surfaceBackground,
+      bottomAppBarTheme: BottomAppBarThemeData(
+        color: themeColors.surfaceBackground,
+        surfaceTintColor:
+            Colors.transparent, // optional, to match your M3 usage
+        elevation: 0, // optional, mirrors your flat surfaces
+      ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor:
-            darkMode ? const Color(0xFF10172A) : const Color(0xFFEAF0FF),
-        indicatorColor:
-            themeColors.primaryAccent.withOpacity(darkMode ? 0.24 : 0.18),
+        backgroundColor: darkMode
+            ? const Color(0xFF10172A)
+            : const Color(0xFFEAF0FF),
+        indicatorColor: themeColors.primaryAccent.withOpacity(
+          darkMode ? 0.24 : 0.18,
+        ),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         iconTheme: MaterialStateProperty.resolveWith((states) {
@@ -250,10 +281,12 @@ class MoneyBaseTheme {
         }),
       ),
       navigationRailTheme: NavigationRailThemeData(
-        backgroundColor:
-            darkMode ? const Color(0xFF10172A) : const Color(0xFFEAF0FF),
-        indicatorColor:
-            themeColors.primaryAccent.withOpacity(darkMode ? 0.24 : 0.18),
+        backgroundColor: darkMode
+            ? const Color(0xFF10172A)
+            : const Color(0xFFEAF0FF),
+        indicatorColor: themeColors.primaryAccent.withOpacity(
+          darkMode ? 0.24 : 0.18,
+        ),
         selectedLabelTextStyle: TextStyle(
           fontWeight: FontWeight.w600,
           color: themeColors.primaryAccent,
@@ -262,9 +295,7 @@ class MoneyBaseTheme {
           fontWeight: FontWeight.w500,
           color: themeColors.mutedText,
         ),
-        unselectedIconTheme: IconThemeData(
-          color: themeColors.mutedText,
-        ),
+        unselectedIconTheme: IconThemeData(color: themeColors.mutedText),
         selectedIconTheme: IconThemeData(color: themeColors.primaryAccent),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
@@ -291,9 +322,7 @@ class MoneyBaseTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: themeColors.primaryAccent,
-          side: BorderSide(
-            color: themeColors.primaryAccent.withOpacity(0.5),
-          ),
+          side: BorderSide(color: themeColors.primaryAccent.withOpacity(0.5)),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
           ),
@@ -303,8 +332,10 @@ class MoneyBaseTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: darkMode ? const Color(0xFF0F1526) : Colors.white,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 18,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
           borderSide: BorderSide(color: themeColors.surfaceBorder),
@@ -321,20 +352,20 @@ class MoneyBaseTheme {
         labelStyle: TextStyle(color: themeColors.mutedText),
       ),
       chipTheme: ChipThemeData(
-        backgroundColor:
-            themeColors.secondaryAccent.withOpacity(darkMode ? 0.16 : 0.12),
-        selectedColor:
-            themeColors.secondaryAccent.withOpacity(darkMode ? 0.26 : 0.2),
+        backgroundColor: themeColors.secondaryAccent.withOpacity(
+          darkMode ? 0.16 : 0.12,
+        ),
+        selectedColor: themeColors.secondaryAccent.withOpacity(
+          darkMode ? 0.26 : 0.2,
+        ),
         disabledColor: themeColors.surfaceBorder.withOpacity(0.4),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         labelStyle: TextStyle(color: themeColors.primaryText),
         secondaryLabelStyle: TextStyle(color: themeColors.primaryText),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         brightness: darkMode ? Brightness.dark : Brightness.light,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: themeColors.surfaceBackground,
         shadowColor: themeColors.surfaceShadow,
         elevation: 0,
@@ -344,12 +375,10 @@ class MoneyBaseTheme {
           side: BorderSide(color: themeColors.surfaceBorder),
         ),
       ),
-      dialogTheme: DialogTheme(
+      dialogTheme: DialogThemeData(
         backgroundColor: themeColors.surfaceBackground,
         surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(28),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       ),
       dividerTheme: DividerThemeData(
         color: themeColors.surfaceBorder,
@@ -373,18 +402,14 @@ class MoneyBaseTheme {
         backgroundColor: themeColors.primaryAccent,
         contentTextStyle: const TextStyle(color: Colors.white),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: themeColors.primaryAccent,
         linearTrackColor: themeColors.surfaceBorder,
         circularTrackColor: themeColors.surfaceBorder,
       ),
-      extensions: [
-        themeColors,
-      ],
+      extensions: [themeColors],
     );
   }
 }
@@ -393,7 +418,9 @@ extension MoneyBaseThemeColorsContext on BuildContext {
   MoneyBaseThemeColors get moneyBaseColors {
     final theme = Theme.of(this);
     return theme.extension<MoneyBaseThemeColors>() ??
-        MoneyBaseThemeColors.fallback(darkMode: theme.brightness == Brightness.dark);
+        MoneyBaseThemeColors.fallback(
+          darkMode: theme.brightness == Brightness.dark,
+        );
   }
 }
 
