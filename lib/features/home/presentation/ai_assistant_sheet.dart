@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:speech_to_text/speech_recognition_error.dart';
@@ -295,9 +296,11 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     _transactionRepository = TransactionRepository(firestore: _firestore);
     _walletRepository = WalletRepository(firestore: _firestore);
     _categoryRepository = CategoryRepository(firestore: _firestore);
+    const welcomeText =
+        'Hi there! I\'m MoneyBase Assistant, your budgeting copilot. Ask me about tracking spending, wallets, or goals.';
     _welcomeMessage = _AiMessage(
-      text:
-          'Hi there! I\'m MoneyBase Assistant, your budgeting copilot. Ask me about tracking spending, wallets, or goals.',
+      rawText: welcomeText,
+      displayText: welcomeText,
       isUser: false,
       timestamp: DateTime.now(),
     );
@@ -429,10 +432,22 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         resolvedTimestamp = DateTime.now();
       }
 
+      if (isUser) {
+        return _AiMessage(
+          rawText: text,
+          displayText: text,
+          isUser: true,
+          timestamp: resolvedTimestamp,
+        );
+      }
+
+      final parsed = _parseAssistantMessage(text);
       return _AiMessage(
-        text: text,
-        isUser: isUser,
+        rawText: text,
+        displayText: parsed.displayText.isNotEmpty ? parsed.displayText : text,
+        isUser: false,
         timestamp: resolvedTimestamp,
+        preview: parsed.preview,
       );
     }).whereType<_AiMessage>().toList();
   }
@@ -632,7 +647,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     }
 
     final userMessage = _AiMessage(
-      text: raw,
+      rawText: raw,
+      displayText: raw,
       isUser: true,
       timestamp: DateTime.now(),
     );
@@ -659,7 +675,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       );
 
       await chatRef.collection('messages').add({
-        'text': userMessage.text,
+        'text': userMessage.rawText,
         'isUser': true,
         'timestamp': FieldValue.serverTimestamp(),
       });
@@ -678,10 +694,14 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       response = await _resolveFunctionCalls(response);
       final replyText = _extractReplyText(response);
 
+      final parsed = _parseAssistantMessage(replyText);
       final aiMessage = _AiMessage(
-        text: replyText,
+        rawText: replyText,
+        displayText:
+            parsed.displayText.isNotEmpty ? parsed.displayText : replyText,
         isUser: false,
         timestamp: DateTime.now(),
+        preview: parsed.preview,
       );
 
       if (!mounted) {
@@ -694,15 +714,17 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       _scrollToBottom();
 
       await chatRef.collection('messages').add({
-        'text': aiMessage.text,
+        'text': aiMessage.rawText,
         'isUser': false,
         'timestamp': FieldValue.serverTimestamp(),
       });
     } on GenerativeAIException catch (error, stackTrace) {
       debugPrint('MoneyBase Assistant rejected the message: $error\n$stackTrace');
+      const fallbackText =
+          'MoneyBase Assistant could not process that request. Please double-check your question and try again.';
       final fallback = _AiMessage(
-        text:
-            'MoneyBase Assistant could not process that request. Please double-check your question and try again.',
+        rawText: fallbackText,
+        displayText: fallbackText,
         isUser: false,
         timestamp: DateTime.now(),
       );
@@ -721,7 +743,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
 
       try {
         await chatRef.collection('messages').add({
-          'text': fallback.text,
+          'text': fallback.rawText,
           'isUser': false,
           'timestamp': FieldValue.serverTimestamp(),
         });
@@ -734,7 +756,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       const fallbackText =
           'I had trouble reaching MoneyBase Assistant just now. Please try again in a moment.';
       final fallback = _AiMessage(
-        text: fallbackText,
+        rawText: fallbackText,
+        displayText: fallbackText,
         isUser: false,
         timestamp: DateTime.now(),
       );
@@ -754,7 +777,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
 
       try {
         await chatRef.collection('messages').add({
-          'text': fallback.text,
+          'text': fallback.rawText,
           'isUser': false,
           'timestamp': FieldValue.serverTimestamp(),
         });
@@ -1052,6 +1075,86 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     return "I'm still thinking about that. Could you try asking in a different way?";
   }
 
+  _ParsedAssistantMessage _parseAssistantMessage(String rawText) {
+    final match = RegExp(r'((?:^\|.*\|\s*\n?){2,})', multiLine: true).firstMatch(rawText);
+    if (match == null) {
+      return _ParsedAssistantMessage(displayText: rawText.trim());
+    }
+
+    final tableBlock = rawText.substring(match.start, match.end);
+    final preview = _tryParsePreview(tableBlock);
+    if (preview == null) {
+      return _ParsedAssistantMessage(displayText: rawText.trim());
+    }
+
+    final before = rawText.substring(0, match.start);
+    final after = rawText.substring(match.end);
+    final combined = ('$before$after').replaceAll(RegExp(r'\n{3,}'), '\n\n').trim();
+    final fallback = before.trim().isNotEmpty ? before.trim() : preview.title;
+    final display = combined.isNotEmpty ? combined : fallback;
+
+    return _ParsedAssistantMessage(
+      displayText: display,
+      preview: preview,
+    );
+  }
+
+  _TransactionPreview? _tryParsePreview(String tableText) {
+    final lines = tableText
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.startsWith('|'))
+        .toList();
+    if (lines.length < 2) {
+      return null;
+    }
+
+    final headers = _parseTableRow(lines.first);
+    if (headers.isEmpty) {
+      return null;
+    }
+
+    final rows = <List<String>>[];
+    for (var index = 1; index < lines.length; index += 1) {
+      final cells = _parseTableRow(lines[index]);
+      final separator = cells.every(
+        (cell) => cell.replaceAll(RegExp(r'[-\s]'), '').isEmpty,
+      );
+      if (separator) {
+        continue;
+      }
+      if (cells.length != headers.length) {
+        if (cells.length < headers.length) {
+          cells.addAll(List.filled(headers.length - cells.length, ''));
+        } else {
+          cells.removeRange(headers.length, cells.length);
+        }
+      }
+      rows.add(cells);
+    }
+
+    if (rows.isEmpty) {
+      return null;
+    }
+
+    return _TransactionPreview(
+      headers: headers,
+      rows: rows,
+      title: 'Transactions to add',
+    );
+  }
+
+  List<String> _parseTableRow(String line) {
+    final cells = line.split('|').map((cell) => cell.trim()).toList();
+    if (cells.isNotEmpty && cells.first.isEmpty) {
+      cells.removeAt(0);
+    }
+    if (cells.isNotEmpty && cells.last.isEmpty) {
+      cells.removeLast();
+    }
+    return cells;
+  }
+
   Future<GenerateContentResponse> _resolveFunctionCalls(
       GenerateContentResponse initialResponse) async {
     final chatSession = _chatSession;
@@ -1115,6 +1218,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     }
 
     final created = <Map<String, Object?>>[];
+    final noticeEntries = <_RecordedTransaction>[];
     for (final entry in transactionsArg) {
       if (entry is! Map<String, Object?>) {
         continue;
@@ -1154,9 +1258,14 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       final saved =
           await _transactionRepository.addTransaction(userId, transaction);
       created.add(_transactionSummary(saved));
+      noticeEntries.add(_toRecordedTransaction(saved));
     }
 
     _cachedContextText = null;
+
+    if (noticeEntries.isNotEmpty) {
+      _emitSuccessNotice(noticeEntries);
+    }
 
     return {
       'success': true,
@@ -1570,6 +1679,99 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         'date': transaction.date.toIso8601String(),
       };
 
+  void _emitSuccessNotice(List<_RecordedTransaction> transactions) {
+    if (!mounted || transactions.isEmpty) {
+      return;
+    }
+
+    final immutable = List<_RecordedTransaction>.unmodifiable(transactions);
+    final title = immutable.length == 1
+        ? 'Transaction added'
+        : '${immutable.length} transactions added';
+    final subtitle = immutable.length == 1
+        ? 'MoneyBase recorded this entry successfully.'
+        : 'MoneyBase recorded these entries successfully.';
+
+    final message = _AiMessage(
+      rawText: title,
+      displayText: title,
+      isUser: false,
+      timestamp: DateTime.now(),
+      successNotice: _SuccessNotice(
+        title: title,
+        subtitle: subtitle,
+        transactions: immutable,
+      ),
+    );
+
+    setState(() {
+      _messages.add(message);
+    });
+    _scrollToBottom();
+  }
+
+  _RecordedTransaction _toRecordedTransaction(
+      MoneyBaseTransaction transaction) {
+    final wallet = transaction.walletId.isEmpty
+        ? null
+        : _findWalletById(transaction.walletId);
+    final category = transaction.categoryId.isEmpty
+        ? null
+        : _findCategoryById(transaction.categoryId);
+    final walletName = wallet == null || wallet.name.trim().isEmpty
+        ? 'Wallet'
+        : wallet.name.trim();
+    final categoryName =
+        category == null || category.name.trim().isEmpty
+            ? 'Uncategorised'
+            : category.name.trim();
+    final currency = transaction.currencyCode.isEmpty
+        ? 'USD'
+        : transaction.currencyCode.toUpperCase();
+
+    return _RecordedTransaction(
+      description: transaction.description.trim().isEmpty
+          ? 'MoneyBase transaction'
+          : transaction.description.trim(),
+      amount: transaction.amount,
+      currencyCode: currency,
+      isIncome: transaction.isIncome,
+      walletName: walletName,
+      categoryName: categoryName,
+      dateLabel: _formatDateLabel(transaction.date),
+      formattedAmount: _formatAmountLabel(transaction.amount, currency,
+          isIncome: transaction.isIncome),
+    );
+  }
+
+  String _formatAmountLabel(double amount, String currency,
+      {required bool isIncome}) {
+    final prefix = isIncome ? '+' : '-';
+    return '$prefix${amount.toStringAsFixed(2)} $currency';
+  }
+
+  String _formatDateLabel(DateTime date) {
+    final local = date.toLocal();
+    final today = DateTime.now();
+    final normalizedToday = DateTime(today.year, today.month, today.day);
+    final normalizedDate = DateTime(local.year, local.month, local.day);
+    final difference = normalizedDate.difference(normalizedToday).inDays;
+
+    final buffer = StringBuffer();
+    if (difference == 0) {
+      buffer.write('Today • ');
+    } else if (difference == -1) {
+      buffer.write('Yesterday • ');
+    } else if (difference == 1) {
+      buffer.write('Tomorrow • ');
+    }
+
+    buffer.write(
+      '${local.month.toString().padLeft(2, '0')}/${local.day.toString().padLeft(2, '0')}/${local.year}',
+    );
+    return buffer.toString();
+  }
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_scrollController.hasClients) return;
@@ -1712,6 +1914,10 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
   }
 }
 
+class _SendMessageIntent extends Intent {
+  const _SendMessageIntent();
+}
+
 class _Composer extends StatelessWidget {
   const _Composer({
     required this.controller,
@@ -1738,6 +1944,7 @@ class _Composer extends StatelessWidget {
     final micTooltip = isListening ? 'Stop listening' : 'Voice input';
     final micIcon = isListening ? Icons.stop : Icons.mic_none;
     final micHandler = (!isEnabled || onMicPressed == null) ? null : onMicPressed;
+    final canSend = isEnabled && !isSending;
 
     final row = Row(
       children: [
@@ -1748,6 +1955,7 @@ class _Composer extends StatelessWidget {
             maxLines: 4,
             textCapitalization: TextCapitalization.sentences,
             enabled: isEnabled,
+            textInputAction: TextInputAction.send,
             decoration: InputDecoration(
               hintText: 'Describe what you need help with…',
               filled: true,
@@ -1758,7 +1966,7 @@ class _Composer extends StatelessWidget {
               ),
             ),
             onSubmitted: (_) {
-              if (!isSending && isEnabled) {
+              if (canSend) {
                 onSend();
               }
             },
@@ -1775,7 +1983,7 @@ class _Composer extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         FilledButton.icon(
-          onPressed: (!isEnabled || isSending) ? null : onSend,
+          onPressed: canSend ? onSend : null,
           icon: const Icon(Icons.send),
           label: const Text('Send'),
           style: FilledButton.styleFrom(
@@ -1788,25 +1996,46 @@ class _Composer extends StatelessWidget {
     );
 
     final voiceMessage = voiceError;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        row,
-        if (isListening || (voiceMessage?.isNotEmpty ?? false))
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              voiceMessage != null
-                  ? 'Voice input error: $voiceMessage'
-                  : 'Listening… speak naturally and tap send when you\'re ready.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: voiceMessage != null
-                    ? theme.colorScheme.error
-                    : onSurface.withOpacity(0.7),
-              ),
-            ),
+    return Shortcuts(
+      shortcuts: <ShortcutActivator, Intent>{
+        const SingleActivator(LogicalKeyboardKey.enter): const _SendMessageIntent(),
+        const SingleActivator(LogicalKeyboardKey.numpadEnter): const _SendMessageIntent(),
+      },
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          _SendMessageIntent: CallbackAction<_SendMessageIntent>(
+            onInvoke: (_) {
+              if (canSend) {
+                onSend();
+              }
+              return null;
+            },
           ),
-      ],
+        },
+        child: Focus(
+          autofocus: true,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              row,
+              if (isListening || (voiceMessage?.isNotEmpty ?? false))
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    voiceMessage != null
+                        ? 'Voice input error: $voiceMessage'
+                        : 'Listening… speak naturally and tap send when you\'re ready.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: voiceMessage != null
+                          ? theme.colorScheme.error
+                          : onSurface.withOpacity(0.7),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1825,6 +2054,46 @@ class _MessageBubble extends StatelessWidget {
         ? colorScheme.primary.withOpacity(0.85)
         : colorScheme.surface.withOpacity(0.85);
     final textColor = isUser ? colorScheme.onPrimary : colorScheme.onSurface;
+    final preview = message.preview;
+    final success = message.successNotice;
+    final displayText = message.displayText.trim();
+
+    final content = <Widget>[];
+    if (displayText.isNotEmpty) {
+      content.add(
+        Text(
+          displayText,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: textColor,
+            height: 1.4,
+          ),
+        ),
+      );
+    }
+    if (preview != null) {
+      if (content.isNotEmpty) {
+        content.add(const SizedBox(height: 12));
+      }
+      content.add(_TransactionPreviewCard(preview: preview));
+    }
+    if (success != null) {
+      if (content.isNotEmpty) {
+        content.add(const SizedBox(height: 12));
+      }
+      content.add(_SuccessNoticeCard(notice: success));
+    }
+
+    if (content.isEmpty) {
+      content.add(
+        Text(
+          message.rawText,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: textColor,
+            height: 1.4,
+          ),
+        ),
+      );
+    }
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6),
@@ -1846,12 +2115,10 @@ class _MessageBubble extends StatelessWidget {
           ),
         ],
       ),
-      child: Text(
-        message.text,
-        style: theme.textTheme.bodyMedium?.copyWith(
-          color: textColor,
-          height: 1.4,
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: content,
       ),
     );
   }
@@ -1859,19 +2126,277 @@ class _MessageBubble extends StatelessWidget {
 
 class _AiMessage {
   const _AiMessage({
-    required this.text,
+    required this.rawText,
+    required this.displayText,
     required this.isUser,
     required this.timestamp,
+    this.preview,
+    this.successNotice,
   });
 
-  final String text;
+  final String rawText;
+  final String displayText;
   final bool isUser;
   final DateTime timestamp;
+  final _TransactionPreview? preview;
+  final _SuccessNotice? successNotice;
 
   Content toContent() {
     return Content(
       isUser ? 'user' : 'model',
-      [TextPart(text)],
+      [TextPart(rawText)],
     );
   }
+}
+
+class _TransactionPreviewCard extends StatelessWidget {
+  const _TransactionPreviewCard({required this.preview});
+
+  final _TransactionPreview preview;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final headerStyle = theme.textTheme.labelLarge?.copyWith(
+      color: colorScheme.onSurface,
+      fontWeight: FontWeight.w600,
+    );
+    final cellStyle = theme.textTheme.bodyMedium?.copyWith(
+      color: colorScheme.onSurface.withOpacity(0.9),
+    );
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceVariant.withOpacity(0.7),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colorScheme.onSurface.withOpacity(0.08)),
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            preview.title,
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: colorScheme.onSurface,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Table(
+            columnWidths: {
+              for (var i = 0; i < preview.headers.length; i++)
+                i: const IntrinsicColumnWidth(),
+            },
+            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+            children: [
+              TableRow(
+                children: [
+                  for (final header in preview.headers)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 6,
+                        horizontal: 8,
+                      ),
+                      child: Text(header, style: headerStyle),
+                    ),
+                ],
+              ),
+              for (final row in preview.rows)
+                TableRow(
+                  children: [
+                    for (final cell in row)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 6,
+                          horizontal: 8,
+                        ),
+                        child: Text(cell, style: cellStyle),
+                      ),
+                  ],
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SuccessNoticeCard extends StatelessWidget {
+  const _SuccessNoticeCard({required this.notice});
+
+  final _SuccessNotice notice;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final highlight = Colors.green.shade400;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: highlight.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: highlight.withOpacity(0.4)),
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.check_circle_rounded, color: highlight, size: 22),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      notice.title,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (notice.subtitle != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        notice.subtitle!,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurface.withOpacity(0.85),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          for (final entry in notice.transactions) ...[
+            _SuccessTransactionRow(entry: entry),
+            if (entry != notice.transactions.last)
+              Divider(color: highlight.withOpacity(0.3), height: 16),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SuccessTransactionRow extends StatelessWidget {
+  const _SuccessTransactionRow({required this.entry});
+
+  final _RecordedTransaction entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final amountColor = entry.isIncome
+        ? Colors.green.shade400
+        : colorScheme.errorContainer.withOpacity(0.9);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                entry.description,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${entry.categoryName} • ${entry.walletName}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurface.withOpacity(0.7),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                entry.dateLabel,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurface.withOpacity(0.6),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          entry.formattedAmount,
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: amountColor,
+            fontWeight: FontWeight.w700,
+          ),
+          textAlign: TextAlign.right,
+        ),
+      ],
+    );
+  }
+}
+
+class _ParsedAssistantMessage {
+  const _ParsedAssistantMessage({
+    required this.displayText,
+    this.preview,
+  });
+
+  final String displayText;
+  final _TransactionPreview? preview;
+}
+
+class _TransactionPreview {
+  const _TransactionPreview({
+    required this.headers,
+    required this.rows,
+    required this.title,
+  });
+
+  final List<String> headers;
+  final List<List<String>> rows;
+  final String title;
+}
+
+class _SuccessNotice {
+  const _SuccessNotice({
+    required this.title,
+    this.subtitle,
+    required this.transactions,
+  });
+
+  final String title;
+  final String? subtitle;
+  final List<_RecordedTransaction> transactions;
+}
+
+class _RecordedTransaction {
+  const _RecordedTransaction({
+    required this.description,
+    required this.amount,
+    required this.currencyCode,
+    required this.isIncome,
+    required this.walletName,
+    required this.categoryName,
+    required this.dateLabel,
+    required this.formattedAmount,
+  });
+
+  final String description;
+  final double amount;
+  final String currencyCode;
+  final bool isIncome;
+  final String walletName;
+  final String categoryName;
+  final String dateLabel;
+  final String formattedAmount;
 }
