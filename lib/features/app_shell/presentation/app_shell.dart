@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../add_transaction/presentation/add_transaction_screen.dart';
@@ -18,6 +19,7 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int _currentIndex = 0;
+  bool _isRailCollapsed = false;
 
   void _handleTabSelected(int index) {
     setState(() => _currentIndex = index);
@@ -61,7 +63,6 @@ class _AppShellState extends State<AppShell> {
       builder: (context, constraints) {
         final useRail = constraints.maxWidth >= 900;
         final railExtended = constraints.maxWidth >= 1200;
-
         final theme = Theme.of(context);
 
         if (useRail) {
@@ -72,19 +73,40 @@ class _AppShellState extends State<AppShell> {
                   : const Color(0xFFF9F9F9));
           final dividerColor =
               theme.colorScheme.outlineVariant.withOpacity(0.4);
+          final allowCollapse = kIsWeb;
+          final isCollapsed = allowCollapse && _isRailCollapsed;
+          final effectiveExtended = !isCollapsed && railExtended;
 
           return Scaffold(
             backgroundColor: theme.colorScheme.background,
             body: Row(
               children: [
-                Container(
-                  color: railBackground,
-                  child: _AppNavigationRail(
-                    destinations: destinations,
-                    extended: railExtended,
-                    selectedIndex: _currentIndex,
-                    onDestinationSelected: _handleTabSelected,
-                  ),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  child: isCollapsed
+                      ? _CollapsedNavigationHandle(
+                          key: const ValueKey('collapsed-rail'),
+                          backgroundColor: railBackground,
+                          onExpand: () {
+                            setState(() => _isRailCollapsed = false);
+                          },
+                        )
+                      : Container(
+                          key: const ValueKey('expanded-rail'),
+                          color: railBackground,
+                          child: _AppNavigationRail(
+                            destinations: destinations,
+                            extended: effectiveExtended,
+                            selectedIndex: _currentIndex,
+                            onDestinationSelected: _handleTabSelected,
+                            showCollapseToggle: allowCollapse,
+                            onCollapseToggle: allowCollapse
+                                ? () {
+                                    setState(() => _isRailCollapsed = true);
+                                  }
+                                : null,
+                          ),
+                        ),
                 ),
                 VerticalDivider(width: 1, color: dividerColor),
                 Expanded(
@@ -160,12 +182,16 @@ class _AppNavigationRail extends StatelessWidget {
     required this.selectedIndex,
     required this.onDestinationSelected,
     required this.extended,
+    this.showCollapseToggle = false,
+    this.onCollapseToggle,
   });
 
   final List<_NavigationDestination> destinations;
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
   final bool extended;
+  final bool showCollapseToggle;
+  final VoidCallback? onCollapseToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -200,6 +226,16 @@ class _AppNavigationRail extends StatelessWidget {
           ],
         ),
       ),
+      trailing: showCollapseToggle
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: IconButton(
+                onPressed: onCollapseToggle,
+                icon: Icon(extended ? Icons.chevron_left : Icons.close),
+                tooltip: extended ? 'Collapse sidebar' : 'Hide sidebar',
+              ),
+            )
+          : null,
       destinations: [
         for (final destination in destinations)
           NavigationRailDestination(
@@ -208,6 +244,46 @@ class _AppNavigationRail extends StatelessWidget {
             label: Text(destination.label),
           ),
       ],
+    );
+  }
+}
+
+class _CollapsedNavigationHandle extends StatelessWidget {
+  const _CollapsedNavigationHandle({
+    required this.onExpand,
+    required this.backgroundColor,
+    super.key,
+  });
+
+  final VoidCallback onExpand;
+  final Color backgroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: backgroundColor,
+      width: 64,
+      child: SafeArea(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.asset(
+                'web/favicon.png',
+                width: 32,
+                height: 32,
+              ),
+            ),
+            const SizedBox(height: 12),
+            IconButton(
+              onPressed: onExpand,
+              icon: const Icon(Icons.chevron_right),
+              tooltip: 'Expand sidebar',
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

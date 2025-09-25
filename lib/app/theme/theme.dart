@@ -41,33 +41,33 @@ class MoneyBaseThemeColors extends ThemeExtension<MoneyBaseThemeColors> {
   factory MoneyBaseThemeColors.fallback({required bool darkMode}) {
     if (darkMode) {
       return const MoneyBaseThemeColors(
-        backgroundGradient: [Color(0xFF10172A), Color(0xFF080B16)],
-        surfaceBackground: Color(0xFF131A2A),
-        surfaceElevated: Color(0xFF1B2337),
-        surfaceBorder: Color(0x33FFFFFF),
-        surfaceShadow: Color(0x99000000),
-        primaryText: Colors.white,
-        mutedText: Color(0xB3FFFFFF),
-        primaryAccent: Color(0xFFA5B4FF),
-        secondaryAccent: Color(0xFF5BE4FF),
-        tertiaryAccent: Color(0xFFFFB86C),
+        backgroundGradient: [Color(0xFF000000), Color(0xFF000000)],
+        surfaceBackground: Color(0xFF050505),
+        surfaceElevated: Color(0xFF101010),
+        surfaceBorder: Color(0x26FFFFFF),
+        surfaceShadow: Color(0x80000000),
+        primaryText: Color(0xFFE8EAED),
+        mutedText: Color(0x99E8EAED),
+        primaryAccent: Color(0xFF818CF8),
+        secondaryAccent: Color(0xFF38BDF8),
+        tertiaryAccent: Color(0xFFFBBF24),
         positive: Color(0xFF34D399),
         negative: Color(0xFFF87171),
         warning: Color(0xFFFACC15),
-        info: Color(0xFF7DD3FC),
+        info: Color(0xFF60A5FA),
       );
     }
 
     return const MoneyBaseThemeColors(
-      backgroundGradient: [Color(0xFFF7F8FF), Color(0xFFEFF4FF)],
+      backgroundGradient: [Color(0xFFFFFFFF), Color(0xFFFFFFFF)],
       surfaceBackground: Color(0xFFFFFFFF),
-      surfaceElevated: Color(0xFFE8ECFF),
+      surfaceElevated: Color(0xFFF5F5F5),
       surfaceBorder: Color(0x1A1F2937),
       surfaceShadow: Color(0x14000000),
-      primaryText: Color(0xFF111827),
-      mutedText: Color(0x99111827),
-      primaryAccent: Color(0xFF4F46E5),
-      secondaryAccent: Color(0xFF06B6D4),
+      primaryText: Color(0xFF0F172A),
+      mutedText: Color(0x990F172A),
+      primaryAccent: Color(0xFF4C51BF),
+      secondaryAccent: Color(0xFF0EA5E9),
       tertiaryAccent: Color(0xFFF97316),
       positive: Color(0xFF16A34A),
       negative: Color(0xFFDC2626),
@@ -173,21 +173,17 @@ class MoneyBaseTheme {
   const MoneyBaseTheme._();
 
   static ThemeData buildTheme({required bool darkMode}) {
-    final backgroundColor = darkMode
-        ? const Color(0xFF080B16)
-        : const Color(0xFFF7F8FF);
     final baseColors = MoneyBaseThemeColors.fallback(darkMode: darkMode);
+    final backgroundColor = baseColors.backgroundGradient.first;
     final themeColors = baseColors.copyWith(
-      surfaceBackground: darkMode ? const Color(0xFF131A2A) : Colors.white,
-      surfaceElevated: darkMode
-          ? const Color(0xFF1E2740)
-          : const Color(0xFFE8ECFF),
-      surfaceBorder: darkMode
-          ? const Color(0x33FFFFFF)
-          : const Color(0x1A1F2937),
-      surfaceShadow: darkMode
-          ? const Color(0x99000000)
-          : const Color(0x14000000),
+      surfaceBackground:
+          darkMode ? const Color(0xFF050505) : const Color(0xFFFFFFFF),
+      surfaceElevated:
+          darkMode ? const Color(0xFF111111) : const Color(0xFFF5F5F5),
+      surfaceBorder:
+          darkMode ? const Color(0x26FFFFFF) : const Color(0x1A1F2937),
+      surfaceShadow:
+          darkMode ? const Color(0x66000000) : const Color(0x14000000),
     );
 
     final colorScheme =
@@ -256,9 +252,11 @@ class MoneyBaseTheme {
         elevation: 0, // optional, mirrors your flat surfaces
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: darkMode
-            ? const Color(0xFF10172A)
-            : const Color(0xFFEAF0FF),
+        backgroundColor: Color.lerp(
+          backgroundColor,
+          themeColors.surfaceBackground,
+          darkMode ? 0.45 : 0.12,
+        ),
         indicatorColor: themeColors.primaryAccent.withOpacity(
           darkMode ? 0.24 : 0.18,
         ),
@@ -281,9 +279,11 @@ class MoneyBaseTheme {
         }),
       ),
       navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: darkMode
-            ? const Color(0xFF10172A)
-            : const Color(0xFFEAF0FF),
+        backgroundColor: Color.lerp(
+          backgroundColor,
+          themeColors.surfaceBackground,
+          darkMode ? 0.45 : 0.12,
+        ),
         indicatorColor: themeColors.primaryAccent.withOpacity(
           darkMode ? 0.24 : 0.18,
         ),
@@ -300,7 +300,7 @@ class MoneyBaseTheme {
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: themeColors.secondaryAccent,
-        foregroundColor: darkMode ? Colors.black : Colors.white,
+        foregroundColor: darkMode ? const Color(0xFF020617) : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -331,7 +331,10 @@ class MoneyBaseTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: darkMode ? const Color(0xFF0F1526) : Colors.white,
+        fillColor: darkMode
+            ? Color.lerp(themeColors.surfaceBackground, Colors.black, 0.35) ??
+                themeColors.surfaceBackground
+            : Colors.white,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 20,
           vertical: 18,
