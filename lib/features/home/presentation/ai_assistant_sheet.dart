@@ -44,17 +44,12 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
   static final List<SafetySetting> _safetySettings = <SafetySetting>[
     SafetySetting(HarmCategory.harassment, HarmBlockThreshold.medium),
     SafetySetting(HarmCategory.hateSpeech, HarmBlockThreshold.medium),
-    SafetySetting(
-      HarmCategory.sexuallyExplicit,
-      HarmBlockThreshold.medium,
-    ),
-    SafetySetting(
-      HarmCategory.dangerousContent,
-      HarmBlockThreshold.medium,
-    ),
+    SafetySetting(HarmCategory.sexuallyExplicit, HarmBlockThreshold.medium),
+    SafetySetting(HarmCategory.dangerousContent, HarmBlockThreshold.medium),
   ];
-  static final List<String> _walletTypeNames =
-      WalletType.values.map((value) => value.name).toList(growable: false);
+  static final List<String> _walletTypeNames = WalletType.values
+      .map((value) => value.name)
+      .toList(growable: false);
   static final List<String> _budgetPeriodNames = BudgetPeriod.values
       .map((value) => value.name)
       .toList(growable: false);
@@ -64,10 +59,10 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
   static final List<String> _shoppingListTypeNames = ShoppingListType.values
       .map((value) => value.name)
       .toList(growable: false);
-  static final List<String> _shoppingItemPriorityNames =
-      ShoppingItemPriority.values
-          .map((value) => value.name)
-          .toList(growable: false);
+  static final List<String> _shoppingItemPriorityNames = ShoppingItemPriority
+      .values
+      .map((value) => value.name)
+      .toList(growable: false);
   static final List<Tool> _assistantTools = <Tool>[
     Tool(
       functionDeclarations: [
@@ -102,7 +97,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
                       description: 'Short description or memo for the entry.',
                     ),
                     'note': Schema.string(
-                      description: 'Optional note to append to the description.',
+                      description:
+                          'Optional note to append to the description.',
                       nullable: true,
                     ),
                     'date': Schema.string(
@@ -145,7 +141,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
                           nullable: true,
                         ),
                         'name': Schema.string(
-                          description: 'Wallet name when creating or matching by name.',
+                          description:
+                              'Wallet name when creating or matching by name.',
                           nullable: true,
                         ),
                         'currencyCode': Schema.string(
@@ -159,7 +156,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
                           nullable: true,
                         ),
                         'initialBalance': Schema.number(
-                          description: 'Optional initial balance for a new wallet.',
+                          description:
+                              'Optional initial balance for a new wallet.',
                           nullable: true,
                         ),
                         'setAsDefault': Schema.boolean(
@@ -232,7 +230,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
               ),
               'flow': Schema.enumString(
                 enumValues: ['income', 'expense'],
-                description: 'Alternative to isIncome indicating the flow direction.',
+                description:
+                    'Alternative to isIncome indicating the flow direction.',
                 nullable: true,
               ),
               'walletId': Schema.string(
@@ -244,7 +243,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
                 nullable: true,
               ),
               'categoryId': Schema.string(
-                description: 'Category id that should classify the transaction.',
+                description:
+                    'Category id that should classify the transaction.',
                 nullable: true,
               ),
               'categoryName': Schema.string(
@@ -278,7 +278,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
                     nullable: true,
                   ),
                   'setAsDefault': Schema.boolean(
-                    description: 'Whether the wallet should become the default.',
+                    description:
+                        'Whether the wallet should become the default.',
                     nullable: true,
                   ),
                 },
@@ -462,7 +463,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
               ),
               'flowType': Schema.enumString(
                 enumValues: _budgetFlowTypeNames,
-                description: 'Whether the budget tracks expenses, income, or both.',
+                description:
+                    'Whether the budget tracks expenses, income, or both.',
                 nullable: true,
               ),
               'startDate': Schema.string(
@@ -479,7 +481,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
                 items: Schema.string(description: 'Category id.'),
               ),
               'categoryNames': Schema.array(
-                description: 'Category names to associate when ids are unknown.',
+                description:
+                    'Category names to associate when ids are unknown.',
                 nullable: true,
                 items: Schema.string(description: 'Category name.'),
               ),
@@ -565,7 +568,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
                 items: Schema.string(description: 'Category id.'),
               ),
               'categoryNames': Schema.array(
-                description: 'Category names to match when replacing categories.',
+                description:
+                    'Category names to match when replacing categories.',
                 nullable: true,
                 items: Schema.string(description: 'Category name.'),
               ),
@@ -661,9 +665,12 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
           Schema.object(
             requiredProperties: ['title'],
             properties: {
-              'title': Schema.string(description: 'Display title for the item.'),
+              'title': Schema.string(
+                description: 'Display title for the item.',
+              ),
               'listId': Schema.string(
-                description: 'Identifier of the list that should contain the item.',
+                description:
+                    'Identifier of the list that should contain the item.',
                 nullable: true,
               ),
               'listName': Schema.string(
@@ -783,7 +790,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     ),
   ];
   static final ToolConfig _assistantToolConfig = ToolConfig(
-    functionCallingConfig: FunctionCallingConfig(mode: FunctionCallingMode.auto),
+    functionCallingConfig: FunctionCallingConfig(
+      mode: FunctionCallingMode.auto,
+    ),
   );
   static final Content _systemInstruction = Content.system(
     'You are MoneyBase Assistant, MoneyBase\'s budgeting copilot. Follow '
@@ -849,8 +858,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     _walletRepository = WalletRepository(firestore: _firestore);
     _categoryRepository = CategoryRepository(firestore: _firestore);
     _budgetRepository = BudgetRepository(firestore: _firestore);
-    _shoppingListRepository =
-        ShoppingListRepository(firestore: _firestore);
+    _shoppingListRepository = ShoppingListRepository(firestore: _firestore);
     const welcomeText =
         'Hi there! I\'m MoneyBase Assistant, your budgeting copilot. Ask me about tracking spending, wallets, or goals.';
     _welcomeMessage = _AiMessage(
@@ -898,7 +906,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         toolConfig: _assistantToolConfig,
       );
     } on GenerativeAIException catch (error, stackTrace) {
-      debugPrint('Failed to initialise MoneyBase Assistant: $error\n$stackTrace');
+      debugPrint(
+        'Failed to initialise MoneyBase Assistant: $error\n$stackTrace',
+      );
       if (!mounted) {
         return;
       }
@@ -909,7 +919,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       });
       return;
     } catch (error, stackTrace) {
-      debugPrint('Failed to initialise MoneyBase Assistant: $error\n$stackTrace');
+      debugPrint(
+        'Failed to initialise MoneyBase Assistant: $error\n$stackTrace',
+      );
       if (!mounted) {
         return;
       }
@@ -928,7 +940,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         threads = <_AssistantChatThread>[fallbackThread];
       }
     } on FirebaseException catch (error, stackTrace) {
-      debugPrint('Failed to load MoneyBase Assistant chats: $error\n$stackTrace');
+      debugPrint(
+        'Failed to load MoneyBase Assistant chats: $error\n$stackTrace',
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -937,15 +951,18 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         );
       }
     } catch (error, stackTrace) {
-      debugPrint('Failed to load MoneyBase Assistant chats: $error\n$stackTrace');
+      debugPrint(
+        'Failed to load MoneyBase Assistant chats: $error\n$stackTrace',
+      );
     }
 
     if (!mounted) {
       return;
     }
 
-    final initialChatId =
-        threads.isNotEmpty ? threads.first.id : _defaultChatId;
+    final initialChatId = threads.isNotEmpty
+        ? threads.first.id
+        : _defaultChatId;
 
     setState(() {
       _chatThreads = threads;
@@ -980,8 +997,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         return value;
       }
       if (value is num) {
-        final milliseconds =
-            value > 1e12 ? value.toInt() : (value * 1000).toInt();
+        final milliseconds = value > 1e12
+            ? value.toInt()
+            : (value * 1000).toInt();
         return DateTime.fromMillisecondsSinceEpoch(milliseconds);
       }
       return DateTime.now();
@@ -1071,17 +1089,22 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     try {
       history = await _loadMessageHistory(userId, chatId);
     } on FirebaseException catch (error, stackTrace) {
-      debugPrint('Failed to load MoneyBase Assistant history: $error\n$stackTrace');
+      debugPrint(
+        'Failed to load MoneyBase Assistant history: $error\n$stackTrace',
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content:
-                Text('Unable to load previous MoneyBase Assistant messages.'),
+            content: Text(
+              'Unable to load previous MoneyBase Assistant messages.',
+            ),
           ),
         );
       }
     } catch (error, stackTrace) {
-      debugPrint('Failed to load MoneyBase Assistant history: $error\n$stackTrace');
+      debugPrint(
+        'Failed to load MoneyBase Assistant history: $error\n$stackTrace',
+      );
     }
 
     if (!mounted) {
@@ -1106,7 +1129,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       });
       _scrollToBottom();
     } catch (error, stackTrace) {
-      debugPrint('Failed to initialise MoneyBase Assistant chat: $error\n$stackTrace');
+      debugPrint(
+        'Failed to initialise MoneyBase Assistant chat: $error\n$stackTrace',
+      );
       setState(() {
         _chatSession = null;
         _messages
@@ -1174,14 +1199,13 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
   }) {
     final existing = _chatThreadById(chatId);
     final now = updatedAt ?? DateTime.now();
-    final next = (existing ?? _AssistantChatThread(id: chatId))
-        .copyWith(
-          title: title ?? existing?.title,
-          lastMessagePreview: preview ?? existing?.lastMessagePreview,
-          updatedAt: now,
-          createdAt: existing?.createdAt ?? now,
-          autoTitle: autoTitle ?? existing?.autoTitle ?? true,
-        );
+    final next = (existing ?? _AssistantChatThread(id: chatId)).copyWith(
+      title: title ?? existing?.title,
+      lastMessagePreview: preview ?? existing?.lastMessagePreview,
+      updatedAt: now,
+      createdAt: existing?.createdAt ?? now,
+      autoTitle: autoTitle ?? existing?.autoTitle ?? true,
+    );
     _upsertChatThread(next);
   }
 
@@ -1227,7 +1251,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       _upsertChatThread(thread);
       await _loadChat(thread.id);
     } on FirebaseException catch (error, stackTrace) {
-      debugPrint('Failed to create MoneyBase Assistant chat: $error\n$stackTrace');
+      debugPrint(
+        'Failed to create MoneyBase Assistant chat: $error\n$stackTrace',
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -1236,7 +1262,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         );
       }
     } catch (error, stackTrace) {
-      debugPrint('Failed to create MoneyBase Assistant chat: $error\n$stackTrace');
+      debugPrint(
+        'Failed to create MoneyBase Assistant chat: $error\n$stackTrace',
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -1270,42 +1298,47 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
 
     final docs = querySnapshot.docs.reversed;
 
-    return docs.map((doc) {
-      final data = doc.data();
-      final text = (data['text'] as String?)?.trim();
-      if (text == null || text.isEmpty) {
-        return null;
-      }
+    return docs
+        .map((doc) {
+          final data = doc.data();
+          final text = (data['text'] as String?)?.trim();
+          if (text == null || text.isEmpty) {
+            return null;
+          }
 
-      final isUser = data['isUser'] as bool? ?? false;
-      final timestamp = data['timestamp'];
-      DateTime resolvedTimestamp;
-      if (timestamp is Timestamp) {
-        resolvedTimestamp = timestamp.toDate();
-      } else if (timestamp is DateTime) {
-        resolvedTimestamp = timestamp;
-      } else {
-        resolvedTimestamp = DateTime.now();
-      }
+          final isUser = data['isUser'] as bool? ?? false;
+          final timestamp = data['timestamp'];
+          DateTime resolvedTimestamp;
+          if (timestamp is Timestamp) {
+            resolvedTimestamp = timestamp.toDate();
+          } else if (timestamp is DateTime) {
+            resolvedTimestamp = timestamp;
+          } else {
+            resolvedTimestamp = DateTime.now();
+          }
 
-      if (isUser) {
-        return _AiMessage(
-          rawText: text,
-          displayText: text,
-          isUser: true,
-          timestamp: resolvedTimestamp,
-        );
-      }
+          if (isUser) {
+            return _AiMessage(
+              rawText: text,
+              displayText: text,
+              isUser: true,
+              timestamp: resolvedTimestamp,
+            );
+          }
 
-      final parsed = _parseAssistantMessage(text);
-      return _AiMessage(
-        rawText: text,
-        displayText: parsed.displayText.isNotEmpty ? parsed.displayText : text,
-        isUser: false,
-        timestamp: resolvedTimestamp,
-        preview: parsed.preview,
-      );
-    }).whereType<_AiMessage>().toList();
+          final parsed = _parseAssistantMessage(text);
+          return _AiMessage(
+            rawText: text,
+            displayText: parsed.displayText.isNotEmpty
+                ? parsed.displayText
+                : text,
+            isUser: false,
+            timestamp: resolvedTimestamp,
+            preview: parsed.preview,
+          );
+        })
+        .whereType<_AiMessage>()
+        .toList();
   }
 
   String? _readAssistantApiKey() {
@@ -1356,14 +1389,18 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
           onError: _onSpeechError,
         );
       } catch (error, stackTrace) {
-        debugPrint('Failed to initialise speech recognition: $error\n$stackTrace');
+        debugPrint(
+          'Failed to initialise speech recognition: $error\n$stackTrace',
+        );
         _speechInitialized = false;
       }
 
       if (!_speechInitialized) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Voice input is unavailable. Check your microphone permissions.'),
+            content: Text(
+              'Voice input is unavailable. Check your microphone permissions.',
+            ),
           ),
         );
         return;
@@ -1388,9 +1425,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     } catch (error, stackTrace) {
       debugPrint('Failed to start voice input: $error\n$stackTrace');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Voice input error: $error')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Voice input error: $error')));
       }
     }
   }
@@ -1426,7 +1463,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
   }
 
   void _onSpeechError(SpeechRecognitionError error) {
-    debugPrint('Voice input error: ${error.errorMsg} (permanent: ${error.permanent})');
+    debugPrint(
+      'Voice input error: ${error.errorMsg} (permanent: ${error.permanent})',
+    );
     if (mounted) {
       setState(() {
         _isListening = false;
@@ -1481,9 +1520,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
 
     if (_errorMessage != null) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_errorMessage!)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(_errorMessage!)));
       }
       return;
     }
@@ -1495,8 +1534,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content:
-                Text('MoneyBase Assistant is still getting ready. Please try again.'),
+            content: Text(
+              'MoneyBase Assistant is still getting ready. Please try again.',
+            ),
           ),
         );
       }
@@ -1559,7 +1599,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         contextSnapshot = await _loadUserContext(userId);
       } catch (error, stackTrace) {
         debugPrint(
-            'Failed to prepare MoneyBase Assistant context: $error\n$stackTrace');
+          'Failed to prepare MoneyBase Assistant context: $error\n$stackTrace',
+        );
       }
 
       final prompt = _buildPrompt(raw, contextSnapshot);
@@ -1571,8 +1612,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       final parsed = _parseAssistantMessage(replyText);
       final aiMessage = _AiMessage(
         rawText: replyText,
-        displayText:
-            parsed.displayText.isNotEmpty ? parsed.displayText : replyText,
+        displayText: parsed.displayText.isNotEmpty
+            ? parsed.displayText
+            : replyText,
         isUser: false,
         timestamp: DateTime.now(),
         preview: parsed.preview,
@@ -1595,20 +1637,16 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         'timestamp': FieldValue.serverTimestamp(),
       });
 
-      await chatRef.set(
-        {
-          'updatedAt': FieldValue.serverTimestamp(),
-          'lastMessagePreview': aiPreview,
-        },
-        SetOptions(merge: true),
-      );
+      await chatRef.set({
+        'updatedAt': FieldValue.serverTimestamp(),
+        'lastMessagePreview': aiPreview,
+      }, SetOptions(merge: true));
 
-      _touchChatThread(
-        chatId: chatId,
-        preview: aiPreview,
-      );
+      _touchChatThread(chatId: chatId, preview: aiPreview);
     } on GenerativeAIException catch (error, stackTrace) {
-      debugPrint('MoneyBase Assistant rejected the message: $error\n$stackTrace');
+      debugPrint(
+        'MoneyBase Assistant rejected the message: $error\n$stackTrace',
+      );
       const fallbackText =
           'MoneyBase Assistant could not process that request. Please double-check your question and try again.';
       final fallback = _AiMessage(
@@ -1636,23 +1674,23 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
           'isUser': false,
           'timestamp': FieldValue.serverTimestamp(),
         });
-        await chatRef.set(
-          {
-            'updatedAt': FieldValue.serverTimestamp(),
-            'lastMessagePreview': _truncatePreview(fallback.displayText),
-          },
-          SetOptions(merge: true),
-        );
+        await chatRef.set({
+          'updatedAt': FieldValue.serverTimestamp(),
+          'lastMessagePreview': _truncatePreview(fallback.displayText),
+        }, SetOptions(merge: true));
         _touchChatThread(
           chatId: chatId,
           preview: _truncatePreview(fallback.displayText),
         );
       } catch (writeError, writeStackTrace) {
         debugPrint(
-            'Failed to record MoneyBase Assistant error message: $writeError\n$writeStackTrace');
+          'Failed to record MoneyBase Assistant error message: $writeError\n$writeStackTrace',
+        );
       }
     } catch (error, stackTrace) {
-      debugPrint('Failed to send MoneyBase Assistant message: $error\n$stackTrace');
+      debugPrint(
+        'Failed to send MoneyBase Assistant message: $error\n$stackTrace',
+      );
       const fallbackText =
           'I had trouble reaching MoneyBase Assistant just now. Please try again in a moment.';
       final fallback = _AiMessage(
@@ -1670,7 +1708,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-                'Something went wrong while contacting MoneyBase Assistant. Please try again.'),
+              'Something went wrong while contacting MoneyBase Assistant. Please try again.',
+            ),
           ),
         );
       }
@@ -1681,20 +1720,18 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
           'isUser': false,
           'timestamp': FieldValue.serverTimestamp(),
         });
-        await chatRef.set(
-          {
-            'updatedAt': FieldValue.serverTimestamp(),
-            'lastMessagePreview': _truncatePreview(fallback.displayText),
-          },
-          SetOptions(merge: true),
-        );
+        await chatRef.set({
+          'updatedAt': FieldValue.serverTimestamp(),
+          'lastMessagePreview': _truncatePreview(fallback.displayText),
+        }, SetOptions(merge: true));
         _touchChatThread(
           chatId: chatId,
           preview: _truncatePreview(fallback.displayText),
         );
       } catch (writeError, writeStackTrace) {
         debugPrint(
-            'Failed to record fallback MoneyBase Assistant message: $writeError\n$writeStackTrace');
+          'Failed to record fallback MoneyBase Assistant message: $writeError\n$writeStackTrace',
+        );
       }
     } finally {
       if (mounted) {
@@ -1742,8 +1779,11 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
           .orderBy('date', descending: true)
           .limit(20)
           .get();
-      final budgetsFuture =
-          userRef.collection('budgets').orderBy('updatedAt', descending: true).limit(20).get();
+      final budgetsFuture = userRef
+          .collection('budgets')
+          .orderBy('updatedAt', descending: true)
+          .limit(20)
+          .get();
       final shoppingListsFuture = userRef
           .collection('shopping_lists')
           .orderBy('createdAt', descending: false)
@@ -1756,35 +1796,37 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       final budgetsSnapshot = await budgetsFuture;
       final shoppingListsSnapshot = await shoppingListsFuture;
 
-      final categories = categoriesSnapshot.docs
-          .map(
-            (doc) => Category.fromJson({
-              ...doc.data(),
-              'id': doc.id,
-              'userId': userId,
-            }),
-          )
-          .toList()
-        ..sort(
-          (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
-        );
+      final categories =
+          categoriesSnapshot.docs
+              .map(
+                (doc) => Category.fromJson({
+                  ...doc.data(),
+                  'id': doc.id,
+                  'userId': userId,
+                }),
+              )
+              .toList()
+            ..sort(
+              (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+            );
 
-      final wallets = walletsSnapshot.docs
-          .map(
-            (doc) => Wallet.fromJson({
-              ...doc.data(),
-              'id': doc.id,
-              'userId': userId,
-            }),
-          )
-          .toList()
-        ..sort((a, b) {
-          final positionComparison = a.position.compareTo(b.position);
-          if (positionComparison != 0) {
-            return positionComparison;
-          }
-          return a.name.toLowerCase().compareTo(b.name.toLowerCase());
-        });
+      final wallets =
+          walletsSnapshot.docs
+              .map(
+                (doc) => Wallet.fromJson({
+                  ...doc.data(),
+                  'id': doc.id,
+                  'userId': userId,
+                }),
+              )
+              .toList()
+            ..sort((a, b) {
+              final positionComparison = a.position.compareTo(b.position);
+              if (positionComparison != 0) {
+                return positionComparison;
+              }
+              return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+            });
 
       final transactions = transactionsSnapshot.docs
           .map(
@@ -1795,26 +1837,28 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
             }),
           )
           .toList();
-      final budgets = budgetsSnapshot.docs
-          .map(
-            (doc) => Budget.fromJson({
-              ...doc.data(),
-              'id': doc.id,
-              'userId': userId,
-            }),
-          )
-          .toList()
-        ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-      final shoppingLists = shoppingListsSnapshot.docs
-          .map(
-            (doc) => ShoppingList.fromJson({
-              ...doc.data(),
-              'id': doc.id,
-              'userId': userId,
-            }),
-          )
-          .toList()
-        ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      final budgets =
+          budgetsSnapshot.docs
+              .map(
+                (doc) => Budget.fromJson({
+                  ...doc.data(),
+                  'id': doc.id,
+                  'userId': userId,
+                }),
+              )
+              .toList()
+            ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+      final shoppingLists =
+          shoppingListsSnapshot.docs
+              .map(
+                (doc) => ShoppingList.fromJson({
+                  ...doc.data(),
+                  'id': doc.id,
+                  'userId': userId,
+                }),
+              )
+              .toList()
+            ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
       final shoppingItems = <String, List<ShoppingItem>>{};
       final listsForItems = shoppingLists.length > 5
@@ -1862,8 +1906,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       final rawDefaultWalletId = userDoc.data()?['defaultWalletId'];
       final defaultWalletId =
           rawDefaultWalletId is String && rawDefaultWalletId.isNotEmpty
-              ? rawDefaultWalletId
-              : null;
+          ? rawDefaultWalletId
+          : null;
       _defaultWalletId = defaultWalletId;
 
       String formatName(String value, String fallback) {
@@ -1887,7 +1931,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         buffer.writeln('No wallets recorded yet.');
       } else {
         buffer.writeln('Wallets (${wallets.length} total):');
-        final walletsToShow = wallets.length > 8 ? wallets.sublist(0, 8) : wallets;
+        final walletsToShow = wallets.length > 8
+            ? wallets.sublist(0, 8)
+            : wallets;
         for (final wallet in walletsToShow) {
           final currency = formatName(wallet.currencyCode.toUpperCase(), 'USD');
           buffer.writeln(
@@ -1901,7 +1947,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         }
         if (defaultWalletId != null) {
           final defaultName =
-              walletNames[defaultWalletId] ?? formatName(defaultWalletId, 'Wallet');
+              walletNames[defaultWalletId] ??
+              formatName(defaultWalletId, 'Wallet');
           buffer.writeln('Default wallet: $defaultName ($defaultWalletId).');
         } else {
           buffer.writeln('No default wallet set.');
@@ -1926,8 +1973,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         final categoryNamesList = categories
             .map((category) => categoryNames[category.id]!)
             .toList(growable: false);
-        final sampleSize =
-            categoryNamesList.length > 12 ? 12 : categoryNamesList.length;
+        final sampleSize = categoryNamesList.length > 12
+            ? 12
+            : categoryNamesList.length;
         final sampled = categoryNamesList.take(sampleSize).join(', ');
         buffer.writeln(
           'Categories (${categories.length} total): '
@@ -1954,7 +2002,10 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         var expenseCount = 0;
 
         for (final transaction in transactions) {
-          final currency = formatName(transaction.currencyCode.toUpperCase(), 'USD');
+          final currency = formatName(
+            transaction.currencyCode.toUpperCase(),
+            'USD',
+          );
           if (transaction.isIncome) {
             incomeCount += 1;
             incomeTotals.update(
@@ -1973,14 +2024,21 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         }
 
         buffer.writeln('Recent transactions (newest first):');
-        final transactionsToShow =
-            transactions.length > 12 ? transactions.sublist(0, 12) : transactions;
+        final transactionsToShow = transactions.length > 12
+            ? transactions.sublist(0, 12)
+            : transactions;
         for (final transaction in transactionsToShow) {
           final date = transaction.date.toIso8601String().split('T').first;
           final flowLabel = transaction.isIncome ? 'income' : 'expense';
           final amount = transaction.amount.toStringAsFixed(2);
-          final currency = formatName(transaction.currencyCode.toUpperCase(), 'USD');
-          final description = formatName(transaction.description, 'No description');
+          final currency = formatName(
+            transaction.currencyCode.toUpperCase(),
+            'USD',
+          );
+          final description = formatName(
+            transaction.description,
+            'No description',
+          );
           final categoryName =
               categoryNames[transaction.categoryId] ?? 'Uncategorised';
           final walletName =
@@ -2002,9 +2060,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
             return '0';
           }
           return totals.entries
-              .map(
-                (entry) => '${entry.value.toStringAsFixed(2)} ${entry.key}',
-              )
+              .map((entry) => '${entry.value.toStringAsFixed(2)} ${entry.key}')
               .join(', ');
         }
 
@@ -2019,23 +2075,25 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         buffer.writeln('No budgets configured yet.');
       } else {
         buffer.writeln('Budgets (${budgets.length} total):');
-        final budgetsToShow =
-            budgets.length > 8 ? budgets.sublist(0, 8) : budgets;
+        final budgetsToShow = budgets.length > 8
+            ? budgets.sublist(0, 8)
+            : budgets;
         for (final budget in budgetsToShow) {
           final name = budget.name.trim().isEmpty
               ? 'Budget'
               : budget.name.trim();
           final limit = budget.limit.toStringAsFixed(2);
-          final currency =
-              budget.currencyCode.isEmpty ? 'USD' : budget.currencyCode;
+          final currency = budget.currencyCode.isEmpty
+              ? 'USD'
+              : budget.currencyCode;
           final categoriesLabel = budget.categoryIds.isEmpty
               ? 'all categories'
               : budget.categoryIds
-                  .map(
-                    (id) =>
-                        categoryNames[id] ?? 'Category ${id.substring(0, 4)}',
-                  )
-                  .join(', ');
+                    .map(
+                      (id) =>
+                          categoryNames[id] ?? 'Category ${id.substring(0, 4)}',
+                    )
+                    .join(', ');
           buffer.writeln(
             '- $name • limit $limit $currency • period ${budget.period.name} • flow ${budget.flowType.name} • categories: $categoriesLabel',
           );
@@ -2068,8 +2126,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         buffer.writeln('No shopping lists recorded yet.');
       } else {
         buffer.writeln('Shopping lists (${shoppingLists.length} total):');
-        final listsToShow =
-            shoppingLists.length > 6 ? shoppingLists.sublist(0, 6) : shoppingLists;
+        final listsToShow = shoppingLists.length > 6
+            ? shoppingLists.sublist(0, 6)
+            : shoppingLists;
         for (final list in listsToShow) {
           final title = list.name.trim().isEmpty
               ? 'Shopping list'
@@ -2080,8 +2139,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
             '- $title • type ${list.type.name} • currency ${list.currency} • ${items.length} items ($boughtCount bought)',
           );
           if (items.isNotEmpty) {
-            final previewItems =
-                items.length > 3 ? items.sublist(0, 3) : items;
+            final previewItems = items.length > 3 ? items.sublist(0, 3) : items;
             for (final item in previewItems) {
               buffer.writeln(
                 '  • ${item.title} • priority ${item.priority.name} • bought ${item.bought ? 'yes' : 'no'}',
@@ -2124,9 +2182,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
               },
             )
             .toList(growable: false);
-        buffer.writeln(
-          'Shopping catalog JSON: ${jsonEncode(shoppingCatalog)}',
-        );
+        buffer.writeln('Shopping catalog JSON: ${jsonEncode(shoppingCatalog)}');
       }
 
       final context = buffer.toString().trim();
@@ -2135,10 +2191,12 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       return _cachedContextText;
     } on FirebaseException catch (error, stackTrace) {
       debugPrint(
-          'Failed to load MoneyBase Assistant context: $error\n$stackTrace');
+        'Failed to load MoneyBase Assistant context: $error\n$stackTrace',
+      );
     } catch (error, stackTrace) {
       debugPrint(
-          'Failed to load MoneyBase Assistant context: $error\n$stackTrace');
+        'Failed to load MoneyBase Assistant context: $error\n$stackTrace',
+      );
     }
 
     return cached;
@@ -2169,7 +2227,10 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
   }
 
   _ParsedAssistantMessage _parseAssistantMessage(String rawText) {
-    final match = RegExp(r'((?:^\|.*\|\s*\n?){2,})', multiLine: true).firstMatch(rawText);
+    final match = RegExp(
+      r'((?:^\|.*\|\s*\n?){2,})',
+      multiLine: true,
+    ).firstMatch(rawText);
     if (match == null) {
       return _ParsedAssistantMessage(displayText: rawText.trim());
     }
@@ -2182,14 +2243,13 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
 
     final before = rawText.substring(0, match.start);
     final after = rawText.substring(match.end);
-    final combined = ('$before$after').replaceAll(RegExp(r'\n{3,}'), '\n\n').trim();
+    final combined = ('$before$after')
+        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+        .trim();
     final fallback = before.trim().isNotEmpty ? before.trim() : preview.title;
     final display = combined.isNotEmpty ? combined : fallback;
 
-    return _ParsedAssistantMessage(
-      displayText: display,
-      preview: preview,
-    );
+    return _ParsedAssistantMessage(displayText: display, preview: preview);
   }
 
   _TransactionPreview? _tryParsePreview(String tableText) {
@@ -2249,7 +2309,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
   }
 
   Future<GenerateContentResponse> _resolveFunctionCalls(
-      GenerateContentResponse initialResponse) async {
+    GenerateContentResponse initialResponse,
+  ) async {
     final chatSession = _chatSession;
     if (chatSession == null) {
       return initialResponse;
@@ -2269,11 +2330,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
           payload = await _executeFunctionCall(call);
         } catch (error, stackTrace) {
           debugPrint(
-              'MoneyBase Assistant action ${call.name} failed: $error\n$stackTrace');
-          payload = {
-            'success': false,
-            'error': error.toString(),
-          };
+            'MoneyBase Assistant action ${call.name} failed: $error\n$stackTrace',
+          );
+          payload = {'success': false, 'error': error.toString()};
         }
         responses.add(FunctionResponse(call.name, payload));
       }
@@ -2323,7 +2382,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
   }
 
   Future<Map<String, Object?>> _handleAddTransactionCall(
-      Map<String, Object?> args) async {
+    Map<String, Object?> args,
+  ) async {
     final userId = _requireUserId();
     final rawTransactions = args['transactions'] ?? args['transaction'];
     final List transactionsArg;
@@ -2353,19 +2413,25 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
           entry['currencyCode'] ?? entry['currency'] ?? entry['currency_code'],
         ),
       );
-      final date =
-          _parseDate(entry['date'] ?? entry['datetime'] ?? entry['timestamp']);
-      final description = _parseString(
+      final date = _parseDate(
+        entry['date'] ?? entry['datetime'] ?? entry['timestamp'],
+      );
+      final description =
+          _parseString(
             entry['description'] ?? entry['title'] ?? entry['name'],
           ) ??
           'MoneyBase transaction';
-      final note =
-          _parseString(entry['note'] ?? entry['notes'] ?? entry['memo']);
-      final combinedDescription =
-          note == null || note.isEmpty ? description : '$description — $note';
+      final note = _parseString(
+        entry['note'] ?? entry['notes'] ?? entry['memo'],
+      );
+      final combinedDescription = note == null || note.isEmpty
+          ? description
+          : '$description — $note';
 
-      final walletId =
-          await _resolveWalletId(entry, currencyCode: currencyCode);
+      final walletId = await _resolveWalletId(
+        entry,
+        currencyCode: currencyCode,
+      );
       final categoryId = await _resolveCategoryId(entry);
 
       final transaction = MoneyBaseTransaction(
@@ -2379,8 +2445,10 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         createdAt: DateTime.now(),
       );
 
-      final saved =
-          await _transactionRepository.addTransaction(userId, transaction);
+      final saved = await _transactionRepository.addTransaction(
+        userId,
+        transaction,
+      );
       created.add(_transactionSummary(saved));
       noticeEntries.add(_toRecordedTransaction(saved));
       _knownTransactions = <MoneyBaseTransaction>[
@@ -2395,14 +2463,12 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       _emitSuccessNotice(noticeEntries);
     }
 
-    return {
-      'success': true,
-      'created': created,
-    };
+    return {'success': true, 'created': created};
   }
 
   Future<Map<String, Object?>> _handleUpdateTransactionCall(
-      Map<String, Object?> args) async {
+    Map<String, Object?> args,
+  ) async {
     final userId = _requireUserId();
     final transactionId = _parseString(args['transactionId']);
     if (transactionId == null) {
@@ -2436,10 +2502,13 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
 
     var resolvedIsIncome = transaction.isIncome;
     if (args.containsKey('isIncome') || args.containsKey('flow')) {
-      final signedAmount = amountOverride ??
+      final signedAmount =
+          amountOverride ??
           (transaction.isIncome ? transaction.amount : -transaction.amount);
-      resolvedIsIncome =
-          _determineIsIncome(args, signedAmount == 0 ? rawAmount : signedAmount);
+      resolvedIsIncome = _determineIsIncome(
+        args,
+        signedAmount == 0 ? rawAmount : signedAmount,
+      );
     }
 
     DateTime resolvedDate = transaction.date;
@@ -2452,8 +2521,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     if (args.containsKey('walletId') ||
         args.containsKey('walletName') ||
         args['wallet'] is Map<String, Object?>) {
-      resolvedWalletId =
-          await _resolveWalletId(args, currencyCode: currency);
+      resolvedWalletId = await _resolveWalletId(args, currencyCode: currency);
     }
 
     String resolvedCategoryId = transaction.categoryId;
@@ -2476,23 +2544,23 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     await _transactionRepository.updateTransaction(userId, transaction);
 
     _knownTransactions = <MoneyBaseTransaction>[
-      ..._knownTransactions.where((existing) => existing.id != transaction.id),
+      ..._knownTransactions.where((existing) => existing.id != transaction?.id),
       transaction,
     ];
 
     _cachedContextText = null;
 
-    return {
-      'success': true,
-      'transaction': _transactionSummary(transaction),
-    };
+    return {'success': true, 'transaction': _transactionSummary(transaction)};
   }
 
   Future<Map<String, Object?>> _handleCreateWalletCall(
-      Map<String, Object?> args) async {
+    Map<String, Object?> args,
+  ) async {
     final name = _parseString(args['name'] ?? args['walletName']);
     final currency = _normalizeCurrency(
-      _parseString(args['currencyCode'] ?? args['currency'] ?? args['currency_code']),
+      _parseString(
+        args['currencyCode'] ?? args['currency'] ?? args['currency_code'],
+      ),
     );
     if (name == null) {
       throw FormatException('Wallet name is required.');
@@ -2502,20 +2570,21 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       name: name,
       currencyCode: currency,
       typeName: _parseString(args['type']),
-      initialBalance:
-          _parseNumber(args['initialBalance'] ?? args['balance'] ?? args['startingBalance']),
+      initialBalance: _parseNumber(
+        args['initialBalance'] ?? args['balance'] ?? args['startingBalance'],
+      ),
       setAsDefault:
-          args['setAsDefault'] as bool? ?? args['makeDefault'] as bool? ?? false,
+          args['setAsDefault'] as bool? ??
+          args['makeDefault'] as bool? ??
+          false,
     );
 
-    return {
-      'success': true,
-      'wallet': _walletSummary(wallet),
-    };
+    return {'success': true, 'wallet': _walletSummary(wallet)};
   }
 
   Future<Map<String, Object?>> _handleUpdateWalletCall(
-      Map<String, Object?> args) async {
+    Map<String, Object?> args,
+  ) async {
     final userId = _requireUserId();
     Wallet? wallet;
     final walletId = _parseString(args['walletId']);
@@ -2534,8 +2603,10 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
 
     final updated = wallet.copyWith(
       name: _parseString(args['name']) ?? wallet.name,
-      currencyCode:
-          _normalizeCurrency(_parseString(args['currencyCode']), fallback: wallet.currencyCode),
+      currencyCode: _normalizeCurrency(
+        _parseString(args['currencyCode']),
+        fallback: wallet.currencyCode,
+      ),
       balance: _parseNumber(args['balance']) ?? wallet.balance,
       color: _parseString(args['color']) ?? wallet.color,
       iconName: _parseString(args['iconName']) ?? wallet.iconName,
@@ -2553,14 +2624,12 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
 
     _cachedContextText = null;
 
-    return {
-      'success': true,
-      'wallet': _walletSummary(updated),
-    };
+    return {'success': true, 'wallet': _walletSummary(updated)};
   }
 
   Future<Map<String, Object?>> _handleCreateCategoryCall(
-      Map<String, Object?> args) async {
+    Map<String, Object?> args,
+  ) async {
     final name = _parseString(args['name'] ?? args['categoryName']);
     if (name == null) {
       throw FormatException('Category name is required.');
@@ -2568,20 +2637,19 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
 
     final category = await _createCategoryInternal(
       name: name,
-      parentCategoryId:
-          _parseString(args['parentCategoryId'] ?? args['parentId']),
+      parentCategoryId: _parseString(
+        args['parentCategoryId'] ?? args['parentId'],
+      ),
       iconName: _parseString(args['iconName']),
       color: _parseString(args['color']),
     );
 
-    return {
-      'success': true,
-      'category': _categorySummary(category),
-    };
+    return {'success': true, 'category': _categorySummary(category)};
   }
 
   Future<Map<String, Object?>> _handleUpdateCategoryCall(
-      Map<String, Object?> args) async {
+    Map<String, Object?> args,
+  ) async {
     final categoryId = _parseString(args['categoryId']);
     final categoryName = _parseString(args['name']);
     Category? category;
@@ -2600,7 +2668,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       name: categoryName ?? category.name,
       parentCategoryId:
           _parseString(args['parentCategoryId'] ?? args['parentId']) ??
-              category.parentCategoryId,
+          category.parentCategoryId,
       iconName: _parseString(args['iconName']) ?? category.iconName,
       color: _parseString(args['color']) ?? category.color,
     );
@@ -2614,14 +2682,12 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
 
     _cachedContextText = null;
 
-    return {
-      'success': true,
-      'category': _categorySummary(updated),
-    };
+    return {'success': true, 'category': _categorySummary(updated)};
   }
 
   Future<Map<String, Object?>> _handleSetDefaultWalletCall(
-      Map<String, Object?> args) async {
+    Map<String, Object?> args,
+  ) async {
     final walletId = _parseString(args['walletId']);
     if (walletId == null) {
       throw FormatException('walletId is required.');
@@ -2635,14 +2701,12 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     await _setDefaultWalletInternal(wallet.id);
     _cachedContextText = null;
 
-    return {
-      'success': true,
-      'wallet': _walletSummary(wallet),
-    };
+    return {'success': true, 'wallet': _walletSummary(wallet)};
   }
 
   Future<Map<String, Object?>> _handleCreateBudgetCall(
-      Map<String, Object?> args) async {
+    Map<String, Object?> args,
+  ) async {
     final name = _parseString(args['name']);
     if (name == null) {
       throw FormatException('Budget name is required.');
@@ -2656,8 +2720,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     final budget = Budget(
       name: name,
       limit: limit,
-      currencyCode:
-          _normalizeCurrency(_parseString(args['currencyCode'])),
+      currencyCode: _normalizeCurrency(_parseString(args['currencyCode'])),
       notes: _parseString(args['notes']),
       period: _parseBudgetPeriod(_parseString(args['period'])),
       flowType: _parseBudgetFlowType(_parseString(args['flowType'])),
@@ -2673,14 +2736,12 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     ];
     _cachedContextText = null;
 
-    return {
-      'success': true,
-      'budget': _budgetSummary(created),
-    };
+    return {'success': true, 'budget': _budgetSummary(created)};
   }
 
   Future<Map<String, Object?>> _handleUpdateBudgetCall(
-      Map<String, Object?> args) async {
+    Map<String, Object?> args,
+  ) async {
     final userId = _requireUserId();
     Budget? budget;
     final budgetId = _parseString(args['budgetId']);
@@ -2698,7 +2759,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     }
 
     List<String>? categoryIds;
-    final hasCategoryArgs = args.containsKey('categoryIds') ||
+    final hasCategoryArgs =
+        args.containsKey('categoryIds') ||
         args.containsKey('categoryNames') ||
         args.containsKey('categories');
     if (hasCategoryArgs) {
@@ -2743,10 +2805,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
 
     _cachedContextText = null;
 
-    return {
-      'success': true,
-      'budget': _budgetSummary(updated),
-    };
+    return {'success': true, 'budget': _budgetSummary(updated)};
   }
 
   Future<Wallet> _createWalletInternal({
@@ -2806,15 +2865,15 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
 
   Future<void> _setDefaultWalletInternal(String walletId) async {
     final userId = _requireUserId();
-    await _firestore
-        .collection('users')
-        .doc(userId)
-        .set({'defaultWalletId': walletId}, SetOptions(merge: true));
+    await _firestore.collection('users').doc(userId).set({
+      'defaultWalletId': walletId,
+    }, SetOptions(merge: true));
     _defaultWalletId = walletId;
   }
 
   Future<Map<String, Object?>> _handleCreateShoppingListCall(
-      Map<String, Object?> args) async {
+    Map<String, Object?> args,
+  ) async {
     final name = _parseString(args['name']);
     if (name == null) {
       throw FormatException('Shopping list name is required.');
@@ -2830,8 +2889,10 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       ),
     );
 
-    final created =
-        await _shoppingListRepository.addShoppingList(_requireUserId(), list);
+    final created = await _shoppingListRepository.addShoppingList(
+      _requireUserId(),
+      list,
+    );
 
     _knownShoppingLists = <ShoppingList>[
       ..._knownShoppingLists.where((existing) => existing.id != created.id),
@@ -2840,14 +2901,12 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     _knownShoppingItems.putIfAbsent(created.id, () => const <ShoppingItem>[]);
     _cachedContextText = null;
 
-    return {
-      'success': true,
-      'shoppingList': _shoppingListSummary(created),
-    };
+    return {'success': true, 'shoppingList': _shoppingListSummary(created)};
   }
 
   Future<Map<String, Object?>> _handleUpdateShoppingListCall(
-      Map<String, Object?> args) async {
+    Map<String, Object?> args,
+  ) async {
     final userId = _requireUserId();
     ShoppingList? list;
     final listId = _parseString(args['listId']);
@@ -2898,7 +2957,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
   }
 
   Future<Map<String, Object?>> _handleCreateShoppingItemCall(
-      Map<String, Object?> args) async {
+    Map<String, Object?> args,
+  ) async {
     final title = _parseString(args['title']);
     if (title == null) {
       throw FormatException('Shopping item title is required.');
@@ -2925,13 +2985,18 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       iconUrl: _parseString(args['iconUrl']),
     );
 
-    final created =
-        await _shoppingListRepository.addItem(_requireUserId(), listId, item);
+    final created = await _shoppingListRepository.addItem(
+      _requireUserId(),
+      listId,
+      item,
+    );
 
-    final updatedItems = List<ShoppingItem>.from(
-        _knownShoppingItems[listId] ?? const <ShoppingItem>[])
-      ..removeWhere((existing) => existing.id == created.id)
-      ..add(created);
+    final updatedItems =
+        List<ShoppingItem>.from(
+            _knownShoppingItems[listId] ?? const <ShoppingItem>[],
+          )
+          ..removeWhere((existing) => existing.id == created.id)
+          ..add(created);
     updatedItems.sort((a, b) => a.createdAt.compareTo(b.createdAt));
     _knownShoppingItems[listId] = List<ShoppingItem>.unmodifiable(updatedItems);
 
@@ -2948,7 +3013,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
   }
 
   Future<Map<String, Object?>> _handleUpdateShoppingItemCall(
-      Map<String, Object?> args) async {
+    Map<String, Object?> args,
+  ) async {
     final userId = _requireUserId();
     final itemId = _parseString(args['itemId']);
     if (itemId == null) {
@@ -3012,10 +3078,12 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
 
     await _shoppingListRepository.updateItem(userId, listId, updatedItem);
 
-    final updatedItems = List<ShoppingItem>.from(
-        _knownShoppingItems[listId] ?? const <ShoppingItem>[])
-      ..removeWhere((existing) => existing.id == updatedItem.id)
-      ..add(updatedItem);
+    final updatedItems =
+        List<ShoppingItem>.from(
+            _knownShoppingItems[listId] ?? const <ShoppingItem>[],
+          )
+          ..removeWhere((existing) => existing.id == updatedItem.id)
+          ..add(updatedItem);
     updatedItems.sort((a, b) => a.createdAt.compareTo(b.createdAt));
     _knownShoppingItems[listId] = List<ShoppingItem>.unmodifiable(updatedItems);
 
@@ -3032,12 +3100,15 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
   }
 
   Future<Map<String, Object?>> _handleGetDataSnapshotCall(
-      Map<String, Object?> args) async {
+    Map<String, Object?> args,
+  ) async {
     final userId = _requireUserId();
     try {
       await _loadUserContext(userId);
     } catch (error, stackTrace) {
-      debugPrint('Failed to refresh MoneyBase Assistant snapshot: $error\n$stackTrace');
+      debugPrint(
+        'Failed to refresh MoneyBase Assistant snapshot: $error\n$stackTrace',
+      );
     }
 
     final includeTransactions = args['includeTransactions'] as bool? ?? true;
@@ -3045,7 +3116,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     final snapshot = <String, Object?>{
       'defaultWalletId': _defaultWalletId,
       'wallets': _knownWallets.map(_walletSummary).toList(growable: false),
-      'categories': _knownCategories.map(_categorySummary).toList(growable: false),
+      'categories': _knownCategories
+          .map(_categorySummary)
+          .toList(growable: false),
       'budgets': _knownBudgets.map(_budgetSummary).toList(growable: false),
       'shoppingLists': _knownShoppingLists
           .map(
@@ -3058,14 +3131,12 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     };
 
     if (includeTransactions) {
-      snapshot['transactions'] =
-          _knownTransactions.map(_transactionSummary).toList(growable: false);
+      snapshot['transactions'] = _knownTransactions
+          .map(_transactionSummary)
+          .toList(growable: false);
     }
 
-    return {
-      'success': true,
-      'snapshot': snapshot,
-    };
+    return {'success': true, 'snapshot': snapshot};
   }
 
   String _requireUserId() {
@@ -3323,10 +3394,12 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       'userId': userId,
       'listId': listId,
     });
-    final updatedItems = List<ShoppingItem>.from(
-        _knownShoppingItems[listId] ?? const <ShoppingItem>[])
-      ..removeWhere((existing) => existing.id == item.id)
-      ..add(item);
+    final updatedItems =
+        List<ShoppingItem>.from(
+            _knownShoppingItems[listId] ?? const <ShoppingItem>[],
+          )
+          ..removeWhere((existing) => existing.id == item.id)
+          ..add(item);
     updatedItems.sort((a, b) => a.createdAt.compareTo(b.createdAt));
     _knownShoppingItems[listId] = List<ShoppingItem>.unmodifiable(updatedItems);
     return item;
@@ -3361,7 +3434,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       return DateTime.tryParse(value) ?? DateTime.now();
     }
     if (value is num) {
-      final milliseconds = value > 1e12 ? value.toInt() : (value * 1000).toInt();
+      final milliseconds = value > 1e12
+          ? value.toInt()
+          : (value * 1000).toInt();
       return DateTime.fromMillisecondsSinceEpoch(milliseconds, isUtc: false);
     }
     return DateTime.now();
@@ -3381,7 +3456,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       return DateTime.tryParse(value);
     }
     if (value is num) {
-      final milliseconds = value > 1e12 ? value.toInt() : (value * 1000).toInt();
+      final milliseconds = value > 1e12
+          ? value.toInt()
+          : (value * 1000).toInt();
       return DateTime.fromMillisecondsSinceEpoch(milliseconds, isUtc: false);
     }
     return null;
@@ -3397,8 +3474,10 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     return const <String>[];
   }
 
-  BudgetPeriod _parseBudgetPeriod(String? value,
-      {BudgetPeriod fallback = BudgetPeriod.month}) {
+  BudgetPeriod _parseBudgetPeriod(
+    String? value, {
+    BudgetPeriod fallback = BudgetPeriod.month,
+  }) {
     if (value == null) {
       return fallback;
     }
@@ -3409,8 +3488,10 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     );
   }
 
-  BudgetFlowType _parseBudgetFlowType(String? value,
-      {BudgetFlowType fallback = BudgetFlowType.expenses}) {
+  BudgetFlowType _parseBudgetFlowType(
+    String? value, {
+    BudgetFlowType fallback = BudgetFlowType.expenses,
+  }) {
     if (value == null) {
       return fallback;
     }
@@ -3421,8 +3502,10 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     );
   }
 
-  ShoppingListType _parseShoppingListType(String? value,
-      {ShoppingListType fallback = ShoppingListType.grocery}) {
+  ShoppingListType _parseShoppingListType(
+    String? value, {
+    ShoppingListType fallback = ShoppingListType.grocery,
+  }) {
     if (value == null) {
       return fallback;
     }
@@ -3433,8 +3516,10 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     );
   }
 
-  ShoppingItemPriority _parseShoppingItemPriority(String? value,
-      {ShoppingItemPriority fallback = ShoppingItemPriority.medium}) {
+  ShoppingItemPriority _parseShoppingItemPriority(
+    String? value, {
+    ShoppingItemPriority fallback = ShoppingItemPriority.medium,
+  }) {
     if (value == null) {
       return fallback;
     }
@@ -3445,8 +3530,10 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     );
   }
 
-  WalletType _parseWalletType(String? value,
-      {WalletType fallback = WalletType.physical}) {
+  WalletType _parseWalletType(
+    String? value, {
+    WalletType fallback = WalletType.physical,
+  }) {
     if (value == null) {
       return fallback;
     }
@@ -3496,8 +3583,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     Map<String, Object?> data, {
     required String currencyCode,
   }) async {
-    final directId =
-        _parseString(data['walletId'] ?? data['wallet_id'] ?? data['walletID']);
+    final directId = _parseString(
+      data['walletId'] ?? data['wallet_id'] ?? data['walletID'],
+    );
     if (directId != null) {
       final wallet = _findWalletById(directId);
       if (wallet != null) {
@@ -3505,8 +3593,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       }
     }
 
-    String? directName =
-        _parseString(data['walletName'] ?? data['wallet_name']);
+    String? directName = _parseString(
+      data['walletName'] ?? data['wallet_name'],
+    );
     final walletField = data['wallet'];
     if (directName == null && walletField is String) {
       directName = _parseString(walletField);
@@ -3562,7 +3651,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
                 walletData['balance'] ??
                 walletData['startingBalance'],
           ),
-          setAsDefault: walletData['setAsDefault'] as bool? ??
+          setAsDefault:
+              walletData['setAsDefault'] as bool? ??
               walletData['makeDefault'] as bool? ??
               false,
         );
@@ -3578,7 +3668,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
           data['initialBalance'] ?? data['balance'] ?? data['startingBalance'],
         ),
         setAsDefault:
-            data['setAsDefault'] as bool? ?? data['makeDefault'] as bool? ?? false,
+            data['setAsDefault'] as bool? ??
+            data['makeDefault'] as bool? ??
+            false,
       );
       return created.id;
     }
@@ -3611,7 +3703,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
 
   Future<String> _resolveCategoryId(Map<String, Object?> data) async {
     final directId = _parseString(
-        data['categoryId'] ?? data['category_id'] ?? data['categoryID']);
+      data['categoryId'] ?? data['category_id'] ?? data['categoryID'],
+    );
     if (directId != null) {
       final category = _findCategoryById(directId);
       if (category != null) {
@@ -3619,8 +3712,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       }
     }
 
-    String? directName =
-        _parseString(data['categoryName'] ?? data['category_name']);
+    String? directName = _parseString(
+      data['categoryName'] ?? data['category_name'],
+    );
     final rawCategory = data['category'];
     if (directName == null && rawCategory is String) {
       directName = _parseString(rawCategory);
@@ -3642,7 +3736,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         }
       }
 
-      final nestedName = _parseString(
+      final nestedName =
+          _parseString(
             categoryData['name'] ??
                 categoryData['categoryName'] ??
                 categoryData['title'] ??
@@ -3657,14 +3752,19 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
 
         final created = await _createCategoryInternal(
           name: nestedName,
-          parentCategoryId:
-              _parseString(categoryData['parentId'] ??
-                  categoryData['parentCategoryId'] ??
-                  categoryData['parent']),
-          iconName: _parseString(
-            categoryData['iconName'] ?? categoryData['icon'] ?? categoryData['emoji'],
+          parentCategoryId: _parseString(
+            categoryData['parentId'] ??
+                categoryData['parentCategoryId'] ??
+                categoryData['parent'],
           ),
-          color: _parseString(categoryData['color'] ?? categoryData['hexColor']),
+          iconName: _parseString(
+            categoryData['iconName'] ??
+                categoryData['icon'] ??
+                categoryData['emoji'],
+          ),
+          color: _parseString(
+            categoryData['color'] ?? categoryData['hexColor'],
+          ),
         );
         return created.id;
       }
@@ -3690,7 +3790,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
   }
 
   Future<List<String>> _resolveBudgetCategoryIds(
-      Map<String, Object?> data) async {
+    Map<String, Object?> data,
+  ) async {
     final ids = <String>{};
 
     void addId(String? id) {
@@ -3738,8 +3839,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
 
           final created = await _createCategoryInternal(
             name: name,
-            parentCategoryId:
-                _parseString(entry['parentCategoryId'] ?? entry['parentId']),
+            parentCategoryId: _parseString(
+              entry['parentCategoryId'] ?? entry['parentId'],
+            ),
             iconName: _parseString(entry['iconName']),
             color: _parseString(entry['color']),
           );
@@ -3760,8 +3862,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       }
     }
 
-    final directName =
-        _parseString(data['listName'] ?? data['shoppingListName'] ?? data['name']);
+    final directName = _parseString(
+      data['listName'] ?? data['shoppingListName'] ?? data['name'],
+    );
     if (directName != null) {
       final existing = _findShoppingListByName(directName);
       if (existing != null) {
@@ -3797,21 +3900,20 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
   }
 
   Map<String, Object?> _walletSummary(Wallet wallet) => {
-        'id': wallet.id,
-        'name': wallet.name,
-        'currencyCode': wallet.currencyCode,
-        'type': wallet.type.name,
-        'isDefault': wallet.id == _defaultWalletId,
-      };
+    'id': wallet.id,
+    'name': wallet.name,
+    'currencyCode': wallet.currencyCode,
+    'type': wallet.type.name,
+    'isDefault': wallet.id == _defaultWalletId,
+  };
 
   Map<String, Object?> _categorySummary(Category category) => {
-        'id': category.id,
-        'name': category.name,
-        'parentCategoryId': category.parentCategoryId,
-      };
+    'id': category.id,
+    'name': category.name,
+    'parentCategoryId': category.parentCategoryId,
+  };
 
-  Map<String, Object?> _transactionSummary(
-          MoneyBaseTransaction transaction) =>
+  Map<String, Object?> _transactionSummary(MoneyBaseTransaction transaction) =>
       {
         'id': transaction.id,
         'amount': transaction.amount,
@@ -3824,43 +3926,43 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       };
 
   Map<String, Object?> _budgetSummary(Budget budget) => {
-        'id': budget.id,
-        'name': budget.name,
-        'currencyCode': budget.currencyCode,
-        'limit': budget.limit,
-        'period': budget.period.name,
-        'flowType': budget.flowType.name,
-        'categoryIds': budget.categoryIds,
-        'notes': budget.notes,
-        'startDate': budget.startDate?.toIso8601String(),
-        'endDate': budget.endDate?.toIso8601String(),
-      };
+    'id': budget.id,
+    'name': budget.name,
+    'currencyCode': budget.currencyCode,
+    'limit': budget.limit,
+    'period': budget.period.name,
+    'flowType': budget.flowType.name,
+    'categoryIds': budget.categoryIds,
+    'notes': budget.notes,
+    'startDate': budget.startDate?.toIso8601String(),
+    'endDate': budget.endDate?.toIso8601String(),
+  };
 
   Map<String, Object?> _shoppingListSummary(
     ShoppingList list, {
     List<ShoppingItem> items = const <ShoppingItem>[],
   }) => {
-        'id': list.id,
-        'name': list.name,
-        'type': list.type.name,
-        'currency': list.currency,
-        'notes': list.notes,
-        'createdAt': list.createdAt.toIso8601String(),
-        'items': items.map(_shoppingItemSummary).toList(growable: false),
-      };
+    'id': list.id,
+    'name': list.name,
+    'type': list.type.name,
+    'currency': list.currency,
+    'notes': list.notes,
+    'createdAt': list.createdAt.toIso8601String(),
+    'items': items.map(_shoppingItemSummary).toList(growable: false),
+  };
 
   Map<String, Object?> _shoppingItemSummary(ShoppingItem item) => {
-        'id': item.id,
-        'title': item.title,
-        'bought': item.bought,
-        'priority': item.priority.name,
-        'price': item.price,
-        'currency': item.currency,
-        'iconEmoji': item.iconEmoji,
-        'iconUrl': item.iconUrl,
-        'purchaseDate': item.purchaseDate?.toIso8601String(),
-        'expiryDate': item.expiryDate?.toIso8601String(),
-      };
+    'id': item.id,
+    'title': item.title,
+    'bought': item.bought,
+    'priority': item.priority.name,
+    'price': item.price,
+    'currency': item.currency,
+    'iconEmoji': item.iconEmoji,
+    'iconUrl': item.iconUrl,
+    'purchaseDate': item.purchaseDate?.toIso8601String(),
+    'expiryDate': item.expiryDate?.toIso8601String(),
+  };
 
   void _emitSuccessNotice(List<_RecordedTransaction> transactions) {
     if (!mounted || transactions.isEmpty) {
@@ -3894,7 +3996,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
   }
 
   _RecordedTransaction _toRecordedTransaction(
-      MoneyBaseTransaction transaction) {
+    MoneyBaseTransaction transaction,
+  ) {
     final wallet = transaction.walletId.isEmpty
         ? null
         : _findWalletById(transaction.walletId);
@@ -3904,10 +4007,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     final walletName = wallet == null || wallet.name.trim().isEmpty
         ? 'Wallet'
         : wallet.name.trim();
-    final categoryName =
-        category == null || category.name.trim().isEmpty
-            ? 'Uncategorised'
-            : category.name.trim();
+    final categoryName = category == null || category.name.trim().isEmpty
+        ? 'Uncategorised'
+        : category.name.trim();
     final currency = transaction.currencyCode.isEmpty
         ? 'USD'
         : transaction.currencyCode.toUpperCase();
@@ -3922,13 +4024,19 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       walletName: walletName,
       categoryName: categoryName,
       dateLabel: _formatDateLabel(transaction.date),
-      formattedAmount: _formatAmountLabel(transaction.amount, currency,
-          isIncome: transaction.isIncome),
+      formattedAmount: _formatAmountLabel(
+        transaction.amount,
+        currency,
+        isIncome: transaction.isIncome,
+      ),
     );
   }
 
-  String _formatAmountLabel(double amount, String currency,
-      {required bool isIncome}) {
+  String _formatAmountLabel(
+    double amount,
+    String currency, {
+    required bool isIncome,
+  }) {
     final prefix = isIncome ? '+' : '-';
     return '$prefix${amount.toStringAsFixed(2)} $currency';
   }
@@ -4086,13 +4194,15 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
                             isExpanded: true,
-                            value: _chatThreads.any(
-                              (thread) => thread.id == _activeChatId,
-                            )
+                            value:
+                                _chatThreads.any(
+                                  (thread) => thread.id == _activeChatId,
+                                )
                                 ? _activeChatId
                                 : null,
                             hint: const Text('Select a conversation'),
-                            onChanged: (_isInitializing ||
+                            onChanged:
+                                (_isInitializing ||
                                     _isLoadingMessages ||
                                     _chatThreads.isEmpty)
                                 ? null
@@ -4107,23 +4217,24 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
                                       children: [
                                         Text(
                                           thread.displayTitle,
-                                          style:
-                                              textTheme.bodyMedium?.copyWith(
+                                          style: textTheme.bodyMedium?.copyWith(
                                             color: onSurface,
                                             fontWeight: FontWeight.w600,
                                           ),
                                         ),
-                                        if (thread.lastMessagePreview
+                                        if (thread
+                                                .lastMessagePreview
                                                 ?.isNotEmpty ??
                                             false)
                                           Text(
                                             thread.lastMessagePreview!,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: textTheme.bodySmall?.copyWith(
-                                              color:
-                                                  mutedOnSurface.withOpacity(0.8),
-                                            ),
+                                            style: textTheme.bodySmall
+                                                ?.copyWith(
+                                                  color: mutedOnSurface
+                                                      .withOpacity(0.8),
+                                                ),
                                           ),
                                       ],
                                     ),
@@ -4178,8 +4289,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
                   itemCount: _messages.length,
                   itemBuilder: (context, index) {
                     final message = _messages[index];
-                    final alignment =
-                        message.isUser ? Alignment.centerRight : Alignment.centerLeft;
+                    final alignment = message.isUser
+                        ? Alignment.centerRight
+                        : Alignment.centerLeft;
                     return Align(
                       alignment: alignment,
                       child: _MessageBubble(message: message),
@@ -4234,7 +4346,9 @@ class _Composer extends StatelessWidget {
     final onSurface = theme.colorScheme.onSurface;
     final micTooltip = isListening ? 'Stop listening' : 'Voice input';
     final micIcon = isListening ? Icons.stop : Icons.mic_none;
-    final micHandler = (!isEnabled || onMicPressed == null) ? null : onMicPressed;
+    final micHandler = (!isEnabled || onMicPressed == null)
+        ? null
+        : onMicPressed;
     final canSend = isEnabled && !isSending;
 
     final row = Row(
@@ -4289,8 +4403,10 @@ class _Composer extends StatelessWidget {
     final voiceMessage = voiceError;
     return Shortcuts(
       shortcuts: <ShortcutActivator, Intent>{
-        const SingleActivator(LogicalKeyboardKey.enter): const _SendMessageIntent(),
-        const SingleActivator(LogicalKeyboardKey.numpadEnter): const _SendMessageIntent(),
+        const SingleActivator(LogicalKeyboardKey.enter):
+            const _SendMessageIntent(),
+        const SingleActivator(LogicalKeyboardKey.numpadEnter):
+            const _SendMessageIntent(),
       },
       child: Actions(
         actions: <Type, Action<Intent>>{
@@ -4416,16 +4532,16 @@ class _MessageBubble extends StatelessWidget {
 }
 
 class _AssistantChatThread {
-  const _AssistantChatThread({
+  _AssistantChatThread({
     required this.id,
     String? title,
     DateTime? createdAt,
     DateTime? updatedAt,
     this.lastMessagePreview,
     this.autoTitle = true,
-  })  : title = title,
-        createdAt = createdAt ?? DateTime.now(),
-        updatedAt = updatedAt ?? DateTime.now();
+  }) : title = title,
+       createdAt = createdAt ?? DateTime.now(),
+       updatedAt = updatedAt ?? DateTime.now();
 
   final String id;
   final String? title;
@@ -4473,10 +4589,7 @@ class _AiMessage {
   final _SuccessNotice? successNotice;
 
   Content toContent() {
-    return Content(
-      isUser ? 'user' : 'model',
-      [TextPart(rawText)],
-    );
+    return Content(isUser ? 'user' : 'model', [TextPart(rawText)]);
   }
 }
 
@@ -4677,10 +4790,7 @@ class _SuccessTransactionRow extends StatelessWidget {
 }
 
 class _ParsedAssistantMessage {
-  const _ParsedAssistantMessage({
-    required this.displayText,
-    this.preview,
-  });
+  const _ParsedAssistantMessage({required this.displayText, this.preview});
 
   final String displayText;
   final _TransactionPreview? preview;
