@@ -151,7 +151,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     String userId, {
     Wallet? wallet,
   }) async {
-    final result = await showDialog<Wallet>(
+    final result = await showDialog<_WalletDialogResult>(
       context: context,
       builder: (context) => _WalletDialog(initial: wallet),
     );
@@ -160,15 +160,41 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       return;
     }
 
+    if (result.deleteRequested) {
+      if (wallet == null) {
+        return;
+      }
+
+      try {
+        await _walletRepository.deleteWallet(userId, wallet.id);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Wallet removed.')),
+        );
+      } catch (error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete wallet: $error')),
+        );
+      }
+
+      return;
+    }
+
+    final walletResult = result.wallet;
+    if (walletResult == null) {
+      return;
+    }
+
     try {
       if (wallet == null) {
-        await _walletRepository.addWallet(userId, result);
+        await _walletRepository.addWallet(userId, walletResult);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Wallet added successfully.')),
         );
       } else {
-        await _walletRepository.updateWallet(userId, result);
+        await _walletRepository.updateWallet(userId, walletResult);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Wallet updated successfully.')),
@@ -182,60 +208,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     }
   }
 
-  Future<void> _confirmDeleteWallet(
-    BuildContext context,
-    String userId,
-    Wallet wallet,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete wallet?'),
-        content: Text(
-          'This will remove "${wallet.name.isEmpty ? 'Untitled wallet' : wallet.name}" and any linked balances.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFE54C4C),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) {
-      return;
-    }
-
-    try {
-      await _walletRepository.deleteWallet(userId, wallet.id);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Wallet removed.')),
-      );
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete wallet: $error')),
-      );
-    }
-  }
-
   Future<void> _openCategoryDialog(
     BuildContext context,
     String userId,
     List<Category> categories, {
     Category? category,
   }) async {
-    final result = await showDialog<Category>(
+    final result = await showDialog<_CategoryDialogResult>(
       context: context,
       builder: (context) => _CategoryDialog(
         initial: category,
@@ -247,15 +226,41 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       return;
     }
 
+    if (result.deleteRequested) {
+      if (category == null) {
+        return;
+      }
+
+      try {
+        await _categoryRepository.deleteCategory(userId, category.id);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Category removed.')),
+        );
+      } catch (error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete category: $error')),
+        );
+      }
+
+      return;
+    }
+
+    final categoryResult = result.category;
+    if (categoryResult == null) {
+      return;
+    }
+
     try {
       if (category == null) {
-        await _categoryRepository.addCategory(userId, result);
+        await _categoryRepository.addCategory(userId, categoryResult);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Category added successfully.')),
         );
       } else {
-        await _categoryRepository.updateCategory(userId, result);
+        await _categoryRepository.updateCategory(userId, categoryResult);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Category updated successfully.')),
@@ -267,127 +272,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         SnackBar(content: Text('Failed to save category: $error')),
       );
     }
-  }
-
-  Future<void> _confirmDeleteCategory(
-    BuildContext context,
-    String userId,
-    Category category,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete category?'),
-        content: Text(
-          'This will remove "${category.name.isEmpty ? 'Untitled category' : category.name}" from your library.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFE54C4C),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) {
-      return;
-    }
-
-    try {
-      await _categoryRepository.deleteCategory(userId, category.id);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Category removed.')),
-      );
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to delete category: $error')),
-      );
-    }
-  }
-
-  Future<void> _showWalletActions(
-    BuildContext context,
-    String userId,
-    Wallet wallet,
-  ) {
-    return showModalBottomSheet<void>(
-      context: context,
-      builder: (context) {
-        return SafeArea(
-          child: Wrap(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.edit_outlined),
-                title: const Text('Edit wallet'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _openWalletDialog(context, userId, wallet: wallet);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.delete_outline),
-                title: const Text('Delete wallet'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _confirmDeleteWallet(context, userId, wallet);
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _showCategoryActions(
-    BuildContext context,
-    String userId,
-    List<Category> categories,
-    Category category,
-  ) {
-    return showModalBottomSheet<void>(
-      context: context,
-      builder: (context) {
-        return SafeArea(
-          child: Wrap(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.edit_outlined),
-                title: const Text('Edit category'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _openCategoryDialog(
-                    context,
-                    userId,
-                    categories,
-                    category: category,
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.delete_outline),
-                title: const Text('Delete category'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _confirmDeleteCategory(context, userId, category);
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   Future<void> _handleSubmit(
@@ -692,26 +576,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         ),
                       ),
                       const SizedBox(height: 28),
-                      Row(
-                        children: [
-                          Text(
-                            'Categories',
-                            style: textTheme.titleMedium?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const Spacer(),
-                          FilledButton.icon(
-                            onPressed: () => _openCategoryDialog(
-                              context,
-                              user.uid,
-                              categories,
-                            ),
-                            icon: const Icon(Icons.category_outlined),
-                            label: const Text('New category'),
-                          ),
-                        ],
+                      Text(
+                        'Categories',
+                        style: textTheme.titleMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       if (!missingCategories) ...[
                         const SizedBox(height: 8),
@@ -724,65 +594,44 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       ],
                       const SizedBox(height: 16),
                       if (missingCategories)
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const _InlineNotice(
-                              message:
-                                  'Create a category to organise this transaction.',
-                            ),
-                            const SizedBox(height: 12),
-                            FilledButton.icon(
-                              onPressed: () => _openCategoryDialog(
+                        const _InlineNotice(
+                          message:
+                              'Create a category to organise this transaction.',
+                        ),
+                      if (missingCategories) const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          for (final category in categories)
+                            _CategoryChip(
+                              category: category,
+                              selected: category.id == _selectedCategoryId,
+                              onTap: () =>
+                                  setState(() => _selectedCategoryId = category.id),
+                              onLongPress: () => _openCategoryDialog(
                                 context,
                                 user.uid,
                                 categories,
-                              ),
-                              icon: const Icon(Icons.add_outlined),
-                              label: const Text('Create category'),
-                            ),
-                          ],
-                        )
-                      else
-                        Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
-                          children: [
-                            for (final category in categories)
-                              _CategoryChip(
                                 category: category,
-                                selected: category.id == _selectedCategoryId,
-                                onTap: () =>
-                                    setState(() => _selectedCategoryId = category.id),
-                                onLongPress: () => _showCategoryActions(
-                                  context,
-                                  user.uid,
-                                  categories,
-                                  category,
-                                ),
                               ),
-                          ],
-                        ),
-                      const SizedBox(height: 32),
-                      Row(
-                        children: [
-                          Text(
-                            'Wallets',
-                            style: textTheme.titleMedium?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
                             ),
-                          ),
-                          const Spacer(),
-                          FilledButton.icon(
-                            onPressed: () => _openWalletDialog(
+                          _AddCategoryChip(
+                            onTap: () => _openCategoryDialog(
                               context,
                               user.uid,
+                              categories,
                             ),
-                            icon: const Icon(Icons.account_balance_wallet_outlined),
-                            label: const Text('New wallet'),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 32),
+                      Text(
+                        'Wallets',
+                        style: textTheme.titleMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       if (!missingWallets) ...[
                         const SizedBox(height: 8),
@@ -795,68 +644,79 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       ],
                       const SizedBox(height: 16),
                       if (missingWallets)
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const _InlineNotice(
-                              message:
-                                  'Add a wallet to track where the money moves.',
-                            ),
-                            const SizedBox(height: 12),
-                            FilledButton.icon(
-                              onPressed: () => _openWalletDialog(
-                                context,
-                                user.uid,
-                              ),
-                              icon: const Icon(Icons.add_outlined),
-                              label: const Text('Create wallet'),
-                            ),
-                          ],
-                        )
-                      else
-                        SizedBox(
-                          height: 220,
-                          child: ReorderableListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            padding: EdgeInsets.zero,
-                            itemCount: wallets.length,
-                            onReorder: (oldIndex, newIndex) =>
-                                _handleReorderWallets(
+                        const _InlineNotice(
+                          message:
+                              'Add a wallet to track where the money moves.',
+                        ),
+                      if (missingWallets) const SizedBox(height: 12),
+                      SizedBox(
+                        height: 220,
+                        child: ReorderableListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          padding: EdgeInsets.zero,
+                          itemCount: wallets.length + 1,
+                          onReorder: (oldIndex, newIndex) {
+                            final placeholderIndex = wallets.length;
+                            if (oldIndex == placeholderIndex) {
+                              return;
+                            }
+                            final targetIndex = newIndex > placeholderIndex
+                                ? placeholderIndex
+                                : newIndex;
+                            _handleReorderWallets(
                               oldIndex,
-                              newIndex,
+                              targetIndex,
                               wallets,
                               user.uid,
-                            ),
-                            proxyDecorator:
-                                (child, index, animation) => Material(
-                              color: Colors.transparent,
-                              child: FadeTransition(
-                                opacity: CurvedAnimation(
-                                  parent: animation,
-                                  curve: Curves.easeInOut,
-                                ),
-                                child: child,
+                            );
+                          },
+                          proxyDecorator: (child, index, animation) => Material(
+                            color: Colors.transparent,
+                            child: FadeTransition(
+                              opacity: CurvedAnimation(
+                                parent: animation,
+                                curve: Curves.easeInOut,
                               ),
+                              child: child,
                             ),
-                            itemBuilder: (context, index) {
-                              final wallet = wallets[index];
+                          ),
+                          itemBuilder: (context, index) {
+                            if (index == wallets.length) {
                               return Padding(
-                                key: ValueKey(wallet.id),
+                                key: const ValueKey('__add_wallet__'),
                                 padding: EdgeInsets.only(
-                                  right: index == wallets.length - 1 ? 0 : 16,
+                                  right: 0,
                                 ),
-                                child: _WalletCard(
-                                  wallet: wallet,
-                                  selected: wallet.id == _selectedWalletId,
-                                  onTap: () =>
-                                      setState(() => _selectedWalletId = wallet.id),
-                                  onLongPress: () =>
-                                      _showWalletActions(context, user.uid, wallet),
+                                child: _AddWalletCard(
+                                  onTap: () => _openWalletDialog(
+                                    context,
+                                    user.uid,
+                                  ),
                                 ),
                               );
-                            },
-                          ),
+                            }
+
+                            final wallet = wallets[index];
+                            return Padding(
+                              key: ValueKey(wallet.id),
+                              padding: EdgeInsets.only(
+                                right: 16,
+                              ),
+                              child: _WalletCard(
+                                wallet: wallet,
+                                selected: wallet.id == _selectedWalletId,
+                                onTap: () =>
+                                    setState(() => _selectedWalletId = wallet.id),
+                                onLongPress: () => _openWalletDialog(
+                                  context,
+                                  user.uid,
+                                  wallet: wallet,
+                                ),
+                              ),
+                            );
+                          },
                         ),
+                      ),
                       const SizedBox(height: 36),
                       Row(
                         children: [
@@ -984,6 +844,53 @@ class _GlassField extends StatelessWidget {
   }
 }
 
+class _AddCategoryChip extends StatelessWidget {
+  const _AddCategoryChip({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white.withOpacity(0.12)),
+          color: const Color(0xFF2A2C35),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.add_outlined,
+                color: Colors.white70,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'Add category',
+              style: textTheme.titleSmall?.copyWith(
+                color: Colors.white.withOpacity(0.75),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _CategoryChip extends StatelessWidget {
   const _CategoryChip({
     required this.category,
@@ -1005,17 +912,38 @@ class _CategoryChip extends StatelessWidget {
     final label =
         category.name.isNotEmpty ? category.name : 'Untitled category';
 
-    final borderColor =
-        selected ? (accent ?? Colors.white) : Colors.white.withOpacity(0.18);
-    final backgroundColor = selected
-        ? (accent ?? Colors.white).withOpacity(0.18)
-        : Colors.white.withOpacity(0.05);
-
+    final Color borderColor;
+    final Color backgroundColor;
     final Color iconColor;
+    final Color labelColor;
+
     if (accent != null) {
-      iconColor = selected ? Colors.white : accent.withOpacity(0.9);
+      backgroundColor = Color.lerp(
+        accent,
+        Colors.white,
+        selected ? 0.6 : 0.75,
+      )!;
+      borderColor = Color.lerp(
+        accent,
+        Colors.white,
+        selected ? 0.4 : 0.55,
+      )!;
+      final brightness =
+          ThemeData.estimateBrightnessForColor(backgroundColor);
+      labelColor = brightness == Brightness.dark
+          ? Colors.white
+          : Colors.black.withOpacity(0.85);
+      iconColor = brightness == Brightness.dark
+          ? Colors.white
+          : accent.withOpacity(selected ? 0.85 : 0.9);
     } else {
-      iconColor = selected ? Colors.white : Colors.white.withOpacity(0.75);
+      backgroundColor =
+          Colors.white.withOpacity(selected ? 0.24 : 0.08);
+      borderColor =
+          Colors.white.withOpacity(selected ? 0.8 : 0.18);
+      labelColor = Colors.white;
+      iconColor =
+          selected ? Colors.white : Colors.white.withOpacity(0.75);
     }
 
     return GestureDetector(
@@ -1041,7 +969,7 @@ class _CategoryChip extends StatelessWidget {
             Text(
               label,
               style: textTheme.titleSmall?.copyWith(
-                color: Colors.white,
+                color: labelColor,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1069,10 +997,28 @@ class _WalletCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final accent = parseHexColor(wallet.color) ?? const Color(0xFF7B5BFF);
+    final brightness = ThemeData.estimateBrightnessForColor(accent);
     final gradient = [
-      accent,
-      Color.lerp(accent, Colors.black, 0.3)!,
+      Color.lerp(accent, Colors.white, brightness == Brightness.dark ? 0.1 : 0.3)!,
+      Color.lerp(accent, Colors.black, brightness == Brightness.dark ? 0.3 : 0.15)!,
     ];
+    final borderColor = selected
+        ? (brightness == Brightness.dark
+            ? Colors.white
+            : Colors.black.withOpacity(0.6))
+        : (brightness == Brightness.dark
+            ? Colors.white.withOpacity(0.22)
+            : Colors.black.withOpacity(0.25));
+    final iconBackground = brightness == Brightness.dark
+        ? Colors.white.withOpacity(0.18)
+        : Colors.black.withOpacity(0.08);
+    final iconColor =
+        brightness == Brightness.dark ? Colors.white : Colors.black.withOpacity(0.75);
+    final primaryTextColor =
+        brightness == Brightness.dark ? Colors.white : Colors.black.withOpacity(0.9);
+    final secondaryTextColor = brightness == Brightness.dark
+        ? Colors.white.withOpacity(0.9)
+        : Colors.black.withOpacity(0.7);
     final icon = IconLibrary.iconForWallet(wallet.iconName);
     final name = wallet.name.isNotEmpty ? wallet.name : 'Untitled wallet';
     final balanceText = wallet.balance == 0
@@ -1095,7 +1041,7 @@ class _WalletCard extends StatelessWidget {
             colors: gradient,
           ),
           border: Border.all(
-            color: selected ? Colors.white : Colors.white.withOpacity(0.2),
+            color: borderColor,
             width: selected ? 2 : 1,
           ),
           boxShadow: const [
@@ -1113,16 +1059,16 @@ class _WalletCard extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.18),
+                color: iconBackground,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(icon, color: Colors.white),
+              child: Icon(icon, color: iconColor),
             ),
             const SizedBox(height: 20),
             Text(
               name,
               style: textTheme.titleMedium?.copyWith(
-                color: Colors.white,
+                color: primaryTextColor,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1130,7 +1076,64 @@ class _WalletCard extends StatelessWidget {
             Text(
               balanceText,
               style: textTheme.bodyMedium?.copyWith(
-                color: Colors.white.withOpacity(0.9),
+                color: secondaryTextColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AddWalletCard extends StatelessWidget {
+  const _AddWalletCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(28),
+      child: Container(
+        width: 180,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          color: const Color(0xFF242731),
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(
+                Icons.add_outlined,
+                color: Colors.white70,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Add wallet',
+              style: textTheme.titleMedium?.copyWith(
+                color: Colors.white.withOpacity(0.78),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Create a wallet to organise balances.',
+              style: textTheme.bodyMedium?.copyWith(
+                color: Colors.white.withOpacity(0.6),
               ),
             ),
           ],
@@ -1186,6 +1189,19 @@ String _walletTypeLabel(WalletType type) {
     case WalletType.other:
       return 'Other';
   }
+}
+
+class _WalletDialogResult {
+  const _WalletDialogResult._({this.wallet, required this.deleteRequested});
+
+  final Wallet? wallet;
+  final bool deleteRequested;
+
+  factory _WalletDialogResult.save(Wallet wallet) =>
+      _WalletDialogResult._(wallet: wallet, deleteRequested: false);
+
+  factory _WalletDialogResult.delete() =>
+      const _WalletDialogResult._(wallet: null, deleteRequested: true);
 }
 
 class _WalletDialog extends StatefulWidget {
@@ -1265,7 +1281,7 @@ class _WalletDialogState extends State<_WalletDialog> {
       currencyCode: currency,
     );
 
-    Navigator.of(context).pop(wallet);
+    Navigator.of(context).pop(_WalletDialogResult.save(wallet));
   }
 
   @override
@@ -1382,6 +1398,47 @@ class _WalletDialogState extends State<_WalletDialog> {
         ),
       ),
       actions: [
+        if (isEditing)
+          TextButton(
+            onPressed: () async {
+              final wallet = widget.initial;
+              if (wallet == null) {
+                return;
+              }
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Delete wallet?'),
+                  content: Text(
+                    'This will remove "${wallet.name.isEmpty ? 'Untitled wallet' : wallet.name}" and any linked balances.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('Cancel'),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFFE54C4C),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Delete'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirmed == true && mounted) {
+                Navigator.of(context)
+                    .pop(_WalletDialogResult.delete());
+              }
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFE54C4C),
+            ),
+            child: const Text('Delete'),
+          ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
@@ -1393,6 +1450,19 @@ class _WalletDialogState extends State<_WalletDialog> {
       ],
     );
   }
+}
+
+class _CategoryDialogResult {
+  const _CategoryDialogResult._({this.category, required this.deleteRequested});
+
+  final Category? category;
+  final bool deleteRequested;
+
+  factory _CategoryDialogResult.save(Category category) =>
+      _CategoryDialogResult._(category: category, deleteRequested: false);
+
+  factory _CategoryDialogResult.delete() =>
+      const _CategoryDialogResult._(category: null, deleteRequested: true);
 }
 
 class _CategoryDialog extends StatefulWidget {
@@ -1460,7 +1530,7 @@ class _CategoryDialogState extends State<_CategoryDialog> {
       parentCategoryId: _parentCategoryId,
     );
 
-    Navigator.of(context).pop(category);
+    Navigator.of(context).pop(_CategoryDialogResult.save(category));
   }
 
   @override
@@ -1565,6 +1635,47 @@ class _CategoryDialogState extends State<_CategoryDialog> {
         ),
       ),
       actions: [
+        if (isEditing)
+          TextButton(
+            onPressed: () async {
+              final category = widget.initial;
+              if (category == null) {
+                return;
+              }
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Delete category?'),
+                  content: Text(
+                    'This will remove "${category.name.isEmpty ? 'Untitled category' : category.name}" from your library.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('Cancel'),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFFE54C4C),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Delete'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirmed == true && mounted) {
+                Navigator.of(context)
+                    .pop(_CategoryDialogResult.delete());
+              }
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFE54C4C),
+            ),
+            child: const Text('Delete'),
+          ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancel'),

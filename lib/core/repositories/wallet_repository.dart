@@ -14,18 +14,28 @@ class WalletRepository {
 
   Stream<List<Wallet>> watchWallets(String userId) {
     return _walletsRef(userId)
-        .orderBy('position')
-        .orderBy('name')
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map(
-              (doc) => Wallet.fromJson({
-                ...doc.data(),
-                'id': doc.id,
-                'userId': userId,
-              }),
-            )
-            .toList());
+        .map((snapshot) {
+          final wallets = snapshot.docs
+              .map(
+                (doc) => Wallet.fromJson({
+                  ...doc.data(),
+                  'id': doc.id,
+                  'userId': userId,
+                }),
+              )
+              .toList();
+
+          wallets.sort((a, b) {
+            final positionComparison = a.position.compareTo(b.position);
+            if (positionComparison != 0) {
+              return positionComparison;
+            }
+            return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+          });
+
+          return wallets;
+        });
   }
 
   Future<Wallet> addWallet(String userId, Wallet wallet) async {

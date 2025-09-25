@@ -547,8 +547,8 @@ class _AuthMarketingPanel extends StatelessWidget {
         text: 'Optimized layouts tailored to desktop, tablet, and mobile.',
       ),
       _MarketingBullet(
-        icon: Icons.palette_outlined,
-        text: 'Adaptive theming that reflects your MoneyBase palette.',
+        icon: Icons.smart_toy_outlined,
+        text: 'AI budgeting assistance to answer finance questions fast.',
       ),
     ];
 

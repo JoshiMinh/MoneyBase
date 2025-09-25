@@ -16,12 +16,44 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import java.util.Date
+import java.util.Locale
 
 @Suppress("unused")
 class FirebaseRepositories {
 
     private val db = Firebase.firestore
     private val auth = Firebase.auth
+
+    private fun List<Wallet>.sortedForDisplay(): List<Wallet> {
+        return this.sortedWith(
+            compareBy<Wallet> { it.position }
+                .thenBy { it.name.lowercase(Locale.getDefault()) }
+        )
+    }
+
+    private fun DocumentSnapshot.toWalletOrNull(): Wallet? {
+        val payload = data ?: return null
+        val userId = (payload["userId"] as? String)
+            ?.takeIf { it.isNotBlank() }
+            ?: reference?.parent?.parent?.id.orEmpty()
+        val typeRaw = payload["type"] as? String
+        val type = typeRaw?.let { raw ->
+            Wallet.WalletType.values().firstOrNull { it.name.equals(raw, ignoreCase = true) }
+        } ?: Wallet.WalletType.PHYSICAL
+        val balance = (payload["balance"] as? Number)?.toDouble() ?: 0.0
+        val position = (payload["position"] as? Number)?.toLong() ?: 0L
+        return Wallet(
+            id = id,
+            userId = userId,
+            name = (payload["name"] as? String).orEmpty(),
+            balance = balance,
+            iconName = (payload["iconName"] as? String) ?: "account_balance_wallet",
+            color = (payload["color"] as? String).orEmpty(),
+            type = type,
+            currencyCode = (payload["currencyCode"] as? String) ?: "USD",
+            position = position
+        )
+    }
 
     // ----------------------------
     // Authentication Functions
@@ -77,11 +109,12 @@ class FirebaseRepositories {
             Wallet(name = "Cash", userId = userId, balance = 0.0, iconName = "account_balance_wallet", color = "#4CAF50"),
             Wallet(name = "Bank Account", userId = userId, balance = 0.0, iconName = "account_balance", color = "#1976D2")
         )
-        defaults.forEach { wallet ->
+        defaults.forEachIndexed { index, wallet ->
             val doc = db
                 .collection("users").document(userId)
                 .collection("wallets").document()
-            doc.set(wallet.copy(id = doc.id)).await()
+            val position = if (wallet.position != 0L) wallet.position else (index + 1).toLong()
+            doc.set(wallet.copy(id = doc.id, position = position)).await()
         }
     }
 
@@ -219,7 +252,7 @@ class FirebaseRepositories {
             db.runTransaction { tx ->
                 val wallets = db.collection("users").document(userId).collection("wallets")
                 val walletRef = wallets.document(transaction.walletId)
-                val wallet = tx.get(walletRef).toObject(Wallet::class.java)
+                val wallet = tx.get(walletRef).toWalletOrNull()
                     ?: throw IllegalStateException("Wallet not found")
                 tx.update(walletRef, "balance", wallet.balance + transaction.amount)
                 val txRef = db.collection("users").document(userId)
@@ -243,12 +276,12 @@ class FirebaseRepositories {
                 val original = originalSnap.toTransactionSafe()
 
                 val oldWalletRef = userRef.collection("wallets").document(original.walletId)
-                val oldWallet = tx.get(oldWalletRef).toObject(Wallet::class.java)
+                val oldWallet = tx.get(oldWalletRef).toWalletOrNull()
                     ?: throw IllegalStateException("Wallet not found")
                 tx.update(oldWalletRef, "balance", oldWallet.balance - original.amount)
 
                 val newWalletRef = userRef.collection("wallets").document(transaction.walletId)
-                val newWallet = tx.get(newWalletRef).toObject(Wallet::class.java)
+                val newWallet = tx.get(newWalletRef).toWalletOrNull()
                     ?: throw IllegalStateException("Wallet not found")
                 tx.update(newWalletRef, "balance", newWallet.balance + transaction.amount)
 
@@ -270,7 +303,7 @@ class FirebaseRepositories {
                 val original = originalSnap.toTransactionSafe()
 
                 val walletRef = userRef.collection("wallets").document(original.walletId)
-                val wallet = tx.get(walletRef).toObject(Wallet::class.java)
+                val wallet = tx.get(walletRef).toWalletOrNull()
                     ?: throw IllegalStateException("Wallet not found")
                 tx.update(walletRef, "balance", wallet.balance - original.amount)
 
@@ -305,7 +338,10 @@ class FirebaseRepositories {
             db.collection("users").document(userId).collection("wallets")
                 .addSnapshotListener { snap, err ->
                     if (err != null) { close(err); return@addSnapshotListener }
-                    trySend(snap?.toObjects(Wallet::class.java).orEmpty())
+                    val wallets = snap?.documents
+                        ?.mapNotNull { it.toWalletOrNull() }
+                        .orEmpty()
+                    trySend(wallets.sortedForDisplay())
                 }
         } catch (e: Exception) {
             Log.e("MoneyBase", "Error in getWalletsFlow: ${e.message}", e)
@@ -324,9 +360,9 @@ class FirebaseRepositories {
                 val base = db.collection("users").document(userId)
                 val srcRef = base.collection("wallets").document(sourceWalletId)
                 val tgtRef = base.collection("wallets").document(targetWalletId)
-                val src = tx.get(srcRef).toObject(Wallet::class.java)
+                val src = tx.get(srcRef).toWalletOrNull()
                     ?: throw IllegalStateException("Source wallet not found")
-                val tgt = tx.get(tgtRef).toObject(Wallet::class.java)
+                val tgt = tx.get(tgtRef).toWalletOrNull()
                     ?: throw IllegalStateException("Target wallet not found")
                 if (src.balance < amount) throw FirebaseFirestoreException("Insufficient funds", FirebaseFirestoreException.Code.ABORTED)
                 tx.update(srcRef, "balance", src.balance - amount)
@@ -343,7 +379,17 @@ class FirebaseRepositories {
         return try {
             val doc = db.collection("users").document(userId)
                 .collection("wallets").document()
-            doc.set(wallet.copy(id = doc.id)).await()
+            val position = if (wallet.position != 0L) {
+                wallet.position
+            } else {
+                System.currentTimeMillis() * 1000
+            }
+            val payload = wallet.copy(
+                id = doc.id,
+                userId = wallet.userId.ifBlank { userId },
+                position = position
+            )
+            doc.set(payload).await()
             doc.id
         } catch (_: Exception) {
             ""
@@ -354,7 +400,16 @@ class FirebaseRepositories {
         return try {
             db.collection("users").document(userId)
                 .collection("wallets").document(wallet.id)
-                .set(wallet).await()
+                .set(
+                    wallet.copy(
+                        userId = wallet.userId.ifBlank { userId },
+                        position = if (wallet.position != 0L) {
+                            wallet.position
+                        } else {
+                            System.currentTimeMillis() * 1000
+                        }
+                    )
+                ).await()
             true
         } catch (_: Exception) {
             false
@@ -375,7 +430,9 @@ class FirebaseRepositories {
     suspend fun getAllWallets(userId: String): List<Wallet> = try {
         db.collection("users").document(userId)
             .collection("wallets").get().await()
-            .toObjects(Wallet::class.java)
+            .documents
+            .mapNotNull { it.toWalletOrNull() }
+            .sortedForDisplay()
     } catch (e: Exception) {
         Log.e("MoneyBase", "Failed to get all wallets", e)
         emptyList()

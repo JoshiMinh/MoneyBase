@@ -13,18 +13,29 @@ class CategoryRepository {
   }
 
   Stream<List<Category>> watchCategories(String userId) {
-    return _categoriesRef(userId)
-        .orderBy('name')
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map(
-              (doc) => Category.fromJson({
-                ...doc.data(),
-                'id': doc.id,
-                'userId': userId,
-              }),
-            )
-            .toList());
+    return _categoriesRef(userId).snapshots().map((snapshot) {
+      final categories = snapshot.docs
+          .map(
+            (doc) => Category.fromJson({
+              ...doc.data(),
+              'id': doc.id,
+              'userId': userId,
+            }),
+          )
+          .toList();
+
+      categories.sort((a, b) {
+        final nameComparison = a.name.toLowerCase().compareTo(
+              b.name.toLowerCase(),
+            );
+        if (nameComparison != 0) {
+          return nameComparison;
+        }
+        return a.id.compareTo(b.id);
+      });
+
+      return categories;
+    });
   }
 
   Future<Category> addCategory(String userId, Category category) async {

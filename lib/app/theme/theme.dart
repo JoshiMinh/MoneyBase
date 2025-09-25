@@ -4,8 +4,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'palettes.dart';
-
 @immutable
 class MoneyBaseThemeColors extends ThemeExtension<MoneyBaseThemeColors> {
   const MoneyBaseThemeColors({
@@ -43,38 +41,38 @@ class MoneyBaseThemeColors extends ThemeExtension<MoneyBaseThemeColors> {
   factory MoneyBaseThemeColors.fallback({required bool darkMode}) {
     if (darkMode) {
       return const MoneyBaseThemeColors(
-        backgroundGradient: [Color(0xFF141822), Color(0xFF0C0F16)],
-        surfaceBackground: Color(0xFF181B25),
-        surfaceElevated: Color(0xFF202433),
+        backgroundGradient: [Color(0xFF10172A), Color(0xFF080B16)],
+        surfaceBackground: Color(0xFF131A2A),
+        surfaceElevated: Color(0xFF1B2337),
         surfaceBorder: Color(0x33FFFFFF),
         surfaceShadow: Color(0x99000000),
         primaryText: Colors.white,
-        mutedText: Color(0xCCFFFFFF),
-        primaryAccent: Color(0xFF7E9CFF),
-        secondaryAccent: Color(0xFF5EEAD4),
-        tertiaryAccent: Color(0xFFFFB74D),
-        positive: Color(0xFF66BB6A),
-        negative: Color(0xFFFF8A80),
-        warning: Color(0xFFFFCA28),
-        info: Color(0xFF64B5F6),
+        mutedText: Color(0xB3FFFFFF),
+        primaryAccent: Color(0xFFA5B4FF),
+        secondaryAccent: Color(0xFF5BE4FF),
+        tertiaryAccent: Color(0xFFFFB86C),
+        positive: Color(0xFF34D399),
+        negative: Color(0xFFF87171),
+        warning: Color(0xFFFACC15),
+        info: Color(0xFF7DD3FC),
       );
     }
 
     return const MoneyBaseThemeColors(
-      backgroundGradient: [Color(0xFFF8FAFF), Color(0xFFF1F4FF)],
+      backgroundGradient: [Color(0xFFF7F8FF), Color(0xFFEFF4FF)],
       surfaceBackground: Color(0xFFFFFFFF),
-      surfaceElevated: Color(0xFFF5F7FF),
-      surfaceBorder: Color(0x190C1A4B),
-      surfaceShadow: Color(0x1A000000),
-      primaryText: Color(0xFF20242F),
-      mutedText: Color(0xB320242F),
-      primaryAccent: Color(0xFF3D5AFE),
-      secondaryAccent: Color(0xFF00B0FF),
-      tertiaryAccent: Color(0xFF8E24AA),
-      positive: Color(0xFF2E7D32),
-      negative: Color(0xFFC62828),
-      warning: Color(0xFFF57F17),
-      info: Color(0xFF1565C0),
+      surfaceElevated: Color(0xFFE8ECFF),
+      surfaceBorder: Color(0x1A1F2937),
+      surfaceShadow: Color(0x14000000),
+      primaryText: Color(0xFF111827),
+      mutedText: Color(0x99111827),
+      primaryAccent: Color(0xFF4F46E5),
+      secondaryAccent: Color(0xFF06B6D4),
+      tertiaryAccent: Color(0xFFF97316),
+      positive: Color(0xFF16A34A),
+      negative: Color(0xFFDC2626),
+      warning: Color(0xFFF59E0B),
+      info: Color(0xFF2563EB),
     );
   }
 
@@ -163,48 +161,54 @@ class MoneyBaseTheme {
   const MoneyBaseTheme._();
 
   static ThemeData buildTheme({
-    required MoneyBasePalette palette,
     required bool darkMode,
-    Color? customPrimary,
   }) {
-    final gradient = darkMode ? palette.darkGradient : palette.lightGradient;
-    final backgroundColor = darkMode ? palette.darkBackground : palette.lightBackground;
+    final backgroundColor =
+        darkMode ? const Color(0xFF080B16) : const Color(0xFFF7F8FF);
     final baseColors = MoneyBaseThemeColors.fallback(darkMode: darkMode);
     final themeColors = baseColors.copyWith(
-      backgroundGradient: gradient,
-      surfaceBackground: darkMode ? const Color(0xFF1C1F2B) : Colors.white,
-      surfaceElevated: darkMode ? const Color(0xFF262A3A) : const Color(0xFFF5F7FF),
-      surfaceBorder: darkMode ? const Color(0x40FFFFFF) : const Color(0x1A0F1A3F),
-      surfaceShadow: darkMode ? const Color(0x88000000) : const Color(0x14000000),
-      primaryAccent: customPrimary ?? palette.primary,
-      secondaryAccent: palette.secondary,
-      tertiaryAccent: darkMode
-          ? palette.secondary.withOpacity(0.85)
-          : (customPrimary ?? palette.primary).withOpacity(0.7),
+      surfaceBackground: darkMode ? const Color(0xFF131A2A) : Colors.white,
+      surfaceElevated: darkMode ? const Color(0xFF1E2740) : const Color(0xFFE8ECFF),
+      surfaceBorder: darkMode ? const Color(0x33FFFFFF) : const Color(0x1A1F2937),
+      surfaceShadow: darkMode ? const Color(0x99000000) : const Color(0x14000000),
     );
 
-    final colorScheme = (darkMode ? const ColorScheme.dark() : const ColorScheme.light()).copyWith(
+    final colorScheme =
+        (darkMode ? const ColorScheme.dark() : const ColorScheme.light()).copyWith(
       primary: themeColors.primaryAccent,
       onPrimary: Colors.white,
+      primaryContainer:
+          darkMode ? const Color(0xFF2C3268) : const Color(0xFFE0E7FF),
+      onPrimaryContainer: darkMode ? Colors.white : themeColors.primaryText,
       secondary: themeColors.secondaryAccent,
       onSecondary: darkMode ? Colors.black : Colors.white,
+      secondaryContainer:
+          themeColors.secondaryAccent.withOpacity(darkMode ? 0.32 : 0.18),
+      onSecondaryContainer:
+          darkMode ? Colors.black : themeColors.primaryText,
       tertiary: themeColors.tertiaryAccent,
+      onTertiary: Colors.white,
       background: backgroundColor,
+      onBackground: themeColors.primaryText,
       surface: themeColors.surfaceBackground,
       surfaceTint: Colors.transparent,
       onSurface: themeColors.primaryText,
-      onBackground: themeColors.primaryText,
+      onSurfaceVariant: themeColors.mutedText,
       error: themeColors.negative,
       onError: Colors.white,
       outline: themeColors.surfaceBorder,
       outlineVariant: themeColors.surfaceBorder,
       surfaceContainerHigh: themeColors.surfaceElevated,
       surfaceContainerHighest: themeColors.surfaceElevated,
-      secondaryContainer: themeColors.secondaryAccent.withOpacity(darkMode ? 0.28 : 0.18),
+      shadow: themeColors.surfaceShadow,
+      scrim: Colors.black.withOpacity(darkMode ? 0.6 : 0.3),
+      inversePrimary:
+          darkMode ? const Color(0xFF4F46E5) : const Color(0xFFA5B4FF),
     );
 
     return ThemeData(
       colorScheme: colorScheme,
+      brightness: darkMode ? Brightness.dark : Brightness.light,
       useMaterial3: true,
       scaffoldBackgroundColor: backgroundColor,
       canvasColor: backgroundColor,
@@ -214,10 +218,19 @@ class MoneyBaseTheme {
         foregroundColor: themeColors.primaryText,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
+        iconTheme: IconThemeData(color: themeColors.primaryText),
+        titleTextStyle: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          color: themeColors.primaryText,
+        ),
       ),
+      bottomAppBarColor: themeColors.surfaceBackground,
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: darkMode ? const Color(0xFF161926) : const Color(0xFFF1F4FF),
-        indicatorColor: themeColors.secondaryAccent.withOpacity(darkMode ? 0.26 : 0.18),
+        backgroundColor:
+            darkMode ? const Color(0xFF10172A) : const Color(0xFFEAF0FF),
+        indicatorColor:
+            themeColors.primaryAccent.withOpacity(darkMode ? 0.24 : 0.18),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         iconTheme: MaterialStateProperty.resolveWith((states) {
@@ -237,8 +250,10 @@ class MoneyBaseTheme {
         }),
       ),
       navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: darkMode ? const Color(0xFF161926) : const Color(0xFFF1F4FF),
-        indicatorColor: themeColors.secondaryAccent.withOpacity(darkMode ? 0.26 : 0.18),
+        backgroundColor:
+            darkMode ? const Color(0xFF10172A) : const Color(0xFFEAF0FF),
+        indicatorColor:
+            themeColors.primaryAccent.withOpacity(darkMode ? 0.24 : 0.18),
         selectedLabelTextStyle: TextStyle(
           fontWeight: FontWeight.w600,
           color: themeColors.primaryAccent,
@@ -256,6 +271,116 @@ class MoneyBaseTheme {
         backgroundColor: themeColors.secondaryAccent,
         foregroundColor: darkMode ? Colors.black : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: themeColors.primaryAccent,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: themeColors.primaryAccent,
+          textStyle: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: themeColors.primaryAccent,
+          side: BorderSide(
+            color: themeColors.primaryAccent.withOpacity(0.5),
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: darkMode ? const Color(0xFF0F1526) : Colors.white,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide(color: themeColors.surfaceBorder),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide(color: themeColors.surfaceBorder),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: BorderSide(color: themeColors.primaryAccent),
+        ),
+        hintStyle: TextStyle(color: themeColors.mutedText),
+        labelStyle: TextStyle(color: themeColors.mutedText),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor:
+            themeColors.secondaryAccent.withOpacity(darkMode ? 0.16 : 0.12),
+        selectedColor:
+            themeColors.secondaryAccent.withOpacity(darkMode ? 0.26 : 0.2),
+        disabledColor: themeColors.surfaceBorder.withOpacity(0.4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        labelStyle: TextStyle(color: themeColors.primaryText),
+        secondaryLabelStyle: TextStyle(color: themeColors.primaryText),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        brightness: darkMode ? Brightness.dark : Brightness.light,
+      ),
+      cardTheme: CardTheme(
+        color: themeColors.surfaceBackground,
+        shadowColor: themeColors.surfaceShadow,
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28),
+          side: BorderSide(color: themeColors.surfaceBorder),
+        ),
+      ),
+      dialogTheme: DialogTheme(
+        backgroundColor: themeColors.surfaceBackground,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28),
+        ),
+      ),
+      dividerTheme: DividerThemeData(
+        color: themeColors.surfaceBorder,
+        thickness: 1,
+        space: 32,
+      ),
+      listTileTheme: ListTileThemeData(
+        iconColor: themeColors.primaryAccent,
+        textColor: themeColors.primaryText,
+        tileColor: themeColors.surfaceBackground,
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: themeColors.surfaceBackground,
+        modalBackgroundColor: themeColors.surfaceBackground,
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: themeColors.primaryAccent,
+        contentTextStyle: const TextStyle(color: Colors.white),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: themeColors.primaryAccent,
+        linearTrackColor: themeColors.surfaceBorder,
+        circularTrackColor: themeColors.surfaceBorder,
       ),
       extensions: [
         themeColors,
@@ -277,18 +402,11 @@ class ThemeController extends ChangeNotifier {
   ThemeController();
 
   bool _darkMode = false;
-  int _paletteIndex = 0;
-  Color? _customPrimary;
   SharedPreferences? _prefs;
 
   static const _darkModeKey = 'theme.darkMode';
-  static const _paletteKey = 'theme.palette';
-  static const _customPrimaryKey = 'theme.customPrimary';
 
   bool get darkMode => _darkMode;
-  MoneyBasePalette get palette =>
-      kMoneyBasePalettes[_paletteIndex.clamp(0, kMoneyBasePalettes.length - 1)];
-  Color? get customPrimary => _customPrimary;
 
   Future<SharedPreferences> _ensurePrefs() async {
     return _prefs ??= await SharedPreferences.getInstance();
@@ -297,9 +415,6 @@ class ThemeController extends ChangeNotifier {
   Future<void> loadFromStorage() async {
     final prefs = await _ensurePrefs();
     _darkMode = prefs.getBool(_darkModeKey) ?? _darkMode;
-    _paletteIndex = prefs.getInt(_paletteKey) ?? _paletteIndex;
-    final customColorValue = prefs.getInt(_customPrimaryKey);
-    _customPrimary = customColorValue != null ? Color(customColorValue) : null;
     notifyListeners();
   }
 
@@ -310,38 +425,9 @@ class ThemeController extends ChangeNotifier {
     unawaited(_saveDarkMode());
   }
 
-  void selectPalette(int index) {
-    if (index == _paletteIndex) return;
-    if (index < 0 || index >= kMoneyBasePalettes.length) return;
-    _paletteIndex = index;
-    notifyListeners();
-    unawaited(_savePalette());
-  }
-
-  void updateCustomPrimary(Color? color) {
-    if (color == _customPrimary) return;
-    _customPrimary = color;
-    notifyListeners();
-    unawaited(_saveCustomPrimary());
-  }
-
   Future<void> _saveDarkMode() async {
     final prefs = await _ensurePrefs();
     await prefs.setBool(_darkModeKey, _darkMode);
-  }
-
-  Future<void> _savePalette() async {
-    final prefs = await _ensurePrefs();
-    await prefs.setInt(_paletteKey, _paletteIndex);
-  }
-
-  Future<void> _saveCustomPrimary() async {
-    final prefs = await _ensurePrefs();
-    if (_customPrimary == null) {
-      await prefs.remove(_customPrimaryKey);
-    } else {
-      await prefs.setInt(_customPrimaryKey, _customPrimary!.value);
-    }
   }
 }
 
