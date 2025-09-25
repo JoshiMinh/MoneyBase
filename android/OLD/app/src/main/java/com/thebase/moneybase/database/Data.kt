@@ -44,7 +44,8 @@ data class Wallet(
     val iconName: String = "account_balance_wallet",
     val color: String = "",
     val type: WalletType = WalletType.PHYSICAL,
-    val currencyCode: String = "USD"
+    val currencyCode: String = "USD",
+    val position: Long = 0
 ) {
     enum class WalletType { PHYSICAL, BANK_ACCOUNT, CRYPTO, INVESTMENT, OTHER }
 }

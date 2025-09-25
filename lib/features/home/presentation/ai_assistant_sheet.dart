@@ -6,6 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 
+import '../../../core/models/category.dart';
+import '../../../core/models/transaction.dart';
+import '../../../core/models/wallet.dart';
 import '../../common/presentation/moneybase_shell.dart';
 
 class AiAssistantSheet extends StatefulWidget {
@@ -40,7 +43,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
   static final Content _systemInstruction = Content.system(
     "You are MoneyBase's AI budgeting assistant. Provide concise, safe "
     'financial guidance that helps people understand their spending, '
-    'budgets, and savings progress using the information they share.',
+    'budgets, and savings progress using the information they share. '
+    'When a MoneyBase data snapshot is provided, rely on it for context '
+    'and explain how your answer relates to the user\'s records.',
   );
   late final _AiMessage _welcomeMessage;
   late final FirebaseFirestore _firestore;
@@ -50,8 +55,11 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
   String? _errorMessage;
   String? _userId;
   static const String _defaultChatId = 'default';
+  static const Duration _contextTtl = Duration(minutes: 5);
   GenerativeModel? _model;
   ChatSession? _chatSession;
+  String? _cachedContextText;
+  DateTime? _contextFetchedAt;
 
   @override
   void initState() {
@@ -284,7 +292,16 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         'timestamp': FieldValue.serverTimestamp(),
       });
 
-      final response = await chatSession.sendMessage(Content.text(raw));
+      String? contextSnapshot;
+      try {
+        contextSnapshot = await _loadUserContext(userId);
+      } catch (error, stackTrace) {
+        debugPrint('Failed to prepare Gemini context: $error\n$stackTrace');
+      }
+
+      final prompt = _buildPrompt(raw, contextSnapshot);
+
+      final response = await chatSession.sendMessage(Content.text(prompt));
       final replyText = _extractReplyText(response);
 
       final aiMessage = _AiMessage(
@@ -380,6 +397,221 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     }
   }
 
+  String _buildPrompt(String userMessage, String? context) {
+    if (context == null || context.trim().isEmpty) {
+      return userMessage;
+    }
+
+    final buffer = StringBuffer()
+      ..writeln(userMessage)
+      ..writeln()
+      ..writeln('---')
+      ..writeln('MoneyBase data snapshot:')
+      ..writeln(context.trim())
+      ..writeln()
+      ..writeln(
+        'Use the snapshot for context and let the user know when data is missing or uncertain.',
+      );
+
+    return buffer.toString();
+  }
+
+  Future<String?> _loadUserContext(String userId) async {
+    final cached = _cachedContextText;
+    final lastFetched = _contextFetchedAt;
+    if (cached != null &&
+        lastFetched != null &&
+        DateTime.now().difference(lastFetched) < _contextTtl) {
+      return cached;
+    }
+
+    try {
+      final userRef = _firestore.collection('users').doc(userId);
+      final categoriesFuture = userRef.collection('categories').limit(50).get();
+      final walletsFuture = userRef.collection('wallets').limit(25).get();
+      final transactionsFuture = userRef
+          .collection('transactions')
+          .orderBy('date', descending: true)
+          .limit(20)
+          .get();
+
+      final categoriesSnapshot = await categoriesFuture;
+      final walletsSnapshot = await walletsFuture;
+      final transactionsSnapshot = await transactionsFuture;
+
+      final categories = categoriesSnapshot.docs
+          .map(
+            (doc) => Category.fromJson({
+              ...doc.data(),
+              'id': doc.id,
+              'userId': userId,
+            }),
+          )
+          .toList()
+        ..sort(
+          (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+        );
+
+      final wallets = walletsSnapshot.docs
+          .map(
+            (doc) => Wallet.fromJson({
+              ...doc.data(),
+              'id': doc.id,
+              'userId': userId,
+            }),
+          )
+          .toList()
+        ..sort((a, b) {
+          final positionComparison = a.position.compareTo(b.position);
+          if (positionComparison != 0) {
+            return positionComparison;
+          }
+          return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        });
+
+      final transactions = transactionsSnapshot.docs
+          .map(
+            (doc) => MoneyBaseTransaction.fromJson({
+              ...doc.data(),
+              'id': doc.id,
+              'userId': userId,
+            }),
+          )
+          .toList();
+
+      String formatName(String value, String fallback) {
+        final trimmed = value.trim();
+        return trimmed.isEmpty ? fallback : trimmed;
+      }
+
+      final categoryNames = <String, String>{};
+      for (final category in categories) {
+        categoryNames[category.id] = formatName(category.name, 'Uncategorised');
+      }
+
+      final walletNames = <String, String>{};
+      for (final wallet in wallets) {
+        walletNames[wallet.id] = formatName(wallet.name, 'Unassigned wallet');
+      }
+
+      final buffer = StringBuffer();
+
+      if (wallets.isEmpty) {
+        buffer.writeln('No wallets recorded yet.');
+      } else {
+        buffer.writeln('Wallets (${wallets.length} total):');
+        final walletsToShow = wallets.length > 8 ? wallets.sublist(0, 8) : wallets;
+        for (final wallet in walletsToShow) {
+          final currency = formatName(wallet.currencyCode.toUpperCase(), 'USD');
+          buffer.writeln(
+            '- ${walletNames[wallet.id]} • balance ${wallet.balance.toStringAsFixed(2)} $currency • type ${wallet.type.name}',
+          );
+        }
+        if (wallets.length > walletsToShow.length) {
+          buffer.writeln(
+            '- ...${wallets.length - walletsToShow.length} more wallets not listed.',
+          );
+        }
+      }
+
+      if (categories.isEmpty) {
+        buffer.writeln('No categories configured.');
+      } else {
+        final categoryNamesList = categories
+            .map((category) => categoryNames[category.id]!)
+            .toList(growable: false);
+        final sampleSize =
+            categoryNamesList.length > 12 ? 12 : categoryNamesList.length;
+        final sampled = categoryNamesList.take(sampleSize).join(', ');
+        buffer.writeln(
+          'Categories (${categories.length} total): '
+          '$sampled${categoryNamesList.length > sampleSize ? ', …' : ''}.',
+        );
+      }
+
+      if (transactions.isEmpty) {
+        buffer.writeln('No transactions recorded yet.');
+      } else {
+        final incomeTotals = <String, double>{};
+        final expenseTotals = <String, double>{};
+        var incomeCount = 0;
+        var expenseCount = 0;
+
+        for (final transaction in transactions) {
+          final currency = formatName(transaction.currencyCode.toUpperCase(), 'USD');
+          if (transaction.isIncome) {
+            incomeCount += 1;
+            incomeTotals.update(
+              currency,
+              (value) => value + transaction.amount,
+              ifAbsent: () => transaction.amount,
+            );
+          } else {
+            expenseCount += 1;
+            expenseTotals.update(
+              currency,
+              (value) => value + transaction.amount,
+              ifAbsent: () => transaction.amount,
+            );
+          }
+        }
+
+        buffer.writeln('Recent transactions (newest first):');
+        final transactionsToShow =
+            transactions.length > 12 ? transactions.sublist(0, 12) : transactions;
+        for (final transaction in transactionsToShow) {
+          final date = transaction.date.toIso8601String().split('T').first;
+          final flowLabel = transaction.isIncome ? 'income' : 'expense';
+          final amount = transaction.amount.toStringAsFixed(2);
+          final currency = formatName(transaction.currencyCode.toUpperCase(), 'USD');
+          final description = formatName(transaction.description, 'No description');
+          final categoryName =
+              categoryNames[transaction.categoryId] ?? 'Uncategorised';
+          final walletName =
+              walletNames[transaction.walletId] ?? 'Unassigned wallet';
+          buffer.writeln(
+            '- $date • $flowLabel • $currency $amount • $description '
+            '• category: $categoryName • wallet: $walletName',
+          );
+        }
+        if (transactions.length > transactionsToShow.length) {
+          buffer.writeln(
+            '- ...${transactions.length - transactionsToShow.length} more '
+            'historical transactions not listed.',
+          );
+        }
+
+        String describeTotals(Map<String, double> totals) {
+          if (totals.isEmpty) {
+            return '0';
+          }
+          return totals.entries
+              .map(
+                (entry) => '${entry.value.toStringAsFixed(2)} ${entry.key}',
+              )
+              .join(', ');
+        }
+
+        buffer.writeln(
+          'Summary: $incomeCount income (${describeTotals(incomeTotals)}) and '
+          '$expenseCount expense (${describeTotals(expenseTotals)}). Values '
+          "use each entry's currency and may mix different currencies.",
+        );
+      }
+
+      final context = buffer.toString().trim();
+      _cachedContextText = context.isEmpty ? null : context;
+      _contextFetchedAt = DateTime.now();
+      return _cachedContextText;
+    } on FirebaseException catch (error, stackTrace) {
+      debugPrint('Failed to load Gemini context: $error\n$stackTrace');
+    } catch (error, stackTrace) {
+      debugPrint('Failed to load Gemini context: $error\n$stackTrace');
+    }
+
+    return cached;
+  }
+
   String _extractReplyText(GenerateContentResponse response) {
     final primaryText = response.text?.trim();
     if (primaryText != null && primaryText.isNotEmpty) {
@@ -435,7 +667,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
             children: [
               Row(
                 children: [
-                  Icon(Icons.smart_toy_outlined, color: onSurface),
+                  Icon(Icons.chat_bubble_outline, color: onSurface),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(

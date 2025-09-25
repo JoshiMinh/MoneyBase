@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../app/theme/palettes.dart';
 import '../../../app/theme/theme.dart';
 import '../../../core/services/google_sign_in_service.dart';
 import '../../../core/repositories/transaction_repository.dart';
@@ -228,7 +227,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Personalise reminders and theming to mirror the Android build across web.',
+              'Personalise reminders to mirror the Android build across web.',
               style: textTheme.bodyLarge?.copyWith(
                 color: Colors.white.withOpacity(0.7),
               ),
@@ -297,30 +296,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         'Match Android\'s amethyst dark finish instantly.',
                     value: controller.darkMode,
                     onChanged: controller.setDarkMode,
-                  ),
-                  const SizedBox(height: 28),
-                  Text(
-                    'Select Color Scheme',
-                    style: textTheme.titleMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 16,
-                    runSpacing: 16,
-                    children: [
-                      for (var i = 0; i < kMoneyBasePalettes.length; i++)
-                        _PaletteOption(
-                          color: kMoneyBasePalettes[i].primary,
-                          selected: controller.palette == kMoneyBasePalettes[i],
-                          onTap: () {
-                            controller.updateCustomPrimary(null);
-                            controller.selectPalette(i);
-                          },
-                        ),
-                    ],
                   ),
                   const SizedBox(height: 32),
                   Wrap(
@@ -781,54 +756,6 @@ class _SettingsToggleTile extends StatelessWidget {
           ),
           if (footer != null) ...[const SizedBox(height: 18), footer!],
         ],
-      ),
-    );
-  }
-}
-
-class _PaletteOption extends StatelessWidget {
-  const _PaletteOption({
-    required this.color,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final Color color;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: 56,
-        height: 56,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: LinearGradient(
-            colors: [color, Color.lerp(color, Colors.white, 0.25)!],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          border: Border.all(
-            color: selected ? Colors.white : Colors.white.withOpacity(0.2),
-            width: selected ? 3 : 1.6,
-          ),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: color.withOpacity(0.4),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ]
-              : null,
-        ),
-        child: selected
-            ? const Icon(Icons.check, color: Colors.white, size: 24)
-            : null,
       ),
     );
   }

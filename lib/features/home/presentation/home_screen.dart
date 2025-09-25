@@ -117,34 +117,51 @@ List<_BudgetView> _buildBudgetViews({
     for (final category in categories) category.id: category,
   };
 
+  final now = DateTime.now();
+
   return budgets.map((budget) {
+    final resolvedRange = _resolveBudgetRange(budget, now);
+    final selectedCategories = budget.categoryIds
+        .map((id) => categoryById[id])
+        .whereType<Category>()
+        .toList();
+
+    final includeIncome =
+        budget.flowType == BudgetFlowType.income || budget.flowType == BudgetFlowType.both;
+    final includeExpenses =
+        budget.flowType == BudgetFlowType.expenses || budget.flowType == BudgetFlowType.both;
+
     final relevantTransactions = transactions.where((transaction) {
-      if (transaction.isIncome) return false;
+      if (transaction.isIncome && !includeIncome) return false;
+      if (!transaction.isIncome && !includeExpenses) return false;
       if (budget.currencyCode.isNotEmpty &&
           transaction.currencyCode.toUpperCase() !=
               budget.currencyCode.toUpperCase()) {
         return false;
       }
 
-      final matchesCategory =
-          budget.categoryId.isEmpty || transaction.categoryId == budget.categoryId;
-      final matchesStart =
-          budget.startDate == null || !transaction.date.isBefore(budget.startDate!);
-      final matchesEnd =
-          budget.endDate == null || !transaction.date.isAfter(budget.endDate!);
+      if (budget.categoryIds.isNotEmpty &&
+          !budget.categoryIds.contains(transaction.categoryId)) {
+        return false;
+      }
 
-      return matchesCategory && matchesStart && matchesEnd;
+      if (!_isWithinRange(transaction.date, resolvedRange)) {
+        return false;
+      }
+
+      return true;
     });
 
-    final spent = relevantTransactions.fold<double>(
+    final total = relevantTransactions.fold<double>(
       0.0,
       (sum, transaction) => sum + transaction.amount,
     );
 
     return _BudgetView(
       budget: budget,
-      category: categoryById[budget.categoryId],
-      spent: spent,
+      categories: selectedCategories,
+      spent: total,
+      range: resolvedRange,
     );
   }).toList();
 }
@@ -196,15 +213,16 @@ class _BudgetAnalyticsCard extends StatelessWidget {
 
     for (var index = 0; index < views.length; index++) {
       final view = views[index];
-      final color =
-          parseHexColor(view.category?.color) ?? _budgetFallbackColors[index % _budgetFallbackColors.length];
+      final primaryCategory = view.primaryCategory;
+      final color = parseHexColor(primaryCategory?.color) ??
+          _budgetFallbackColors[index % _budgetFallbackColors.length];
       final limit = view.budget.limit;
       final spent = view.spent;
       final currency = view.currency;
       final name = view.budget.name.isNotEmpty
           ? view.budget.name
-          : (view.category?.name.isNotEmpty == true
-              ? view.category!.name
+          : (primaryCategory?.name.isNotEmpty == true
+              ? primaryCategory!.name
               : 'Budget ${index + 1}');
 
       segments.add(
@@ -375,8 +393,9 @@ class _BudgetListTile extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = context.moneyBaseColors;
     final onSurface = colors.primaryText;
+    final primaryCategory = view.primaryCategory;
     final accent =
-        parseHexColor(view.category?.color) ?? colors.primaryAccent;
+        parseHexColor(primaryCategory?.color) ?? colors.primaryAccent;
     final limit = view.budget.limit;
     final spent = view.spent;
     final remaining = limit - spent;
@@ -384,11 +403,32 @@ class _BudgetListTile extends StatelessWidget {
     final progress = limit <= 0 ? 0.0 : (spent / limit).clamp(0.0, 1.0);
     final title = view.budget.name.isNotEmpty
         ? view.budget.name
-        : (view.category?.name.isNotEmpty == true
-            ? view.category!.name
+        : (primaryCategory?.name.isNotEmpty == true
+            ? primaryCategory!.name
             : 'Budget');
-    final rangeLabel = _formatBudgetRange(view.budget);
+    final rangeLabel = _formatBudgetRange(
+      view.budget,
+      reference: DateTime.now(),
+      resolvedRange: view.range,
+    );
     final notes = view.budget.notes;
+    final categoryLabel = view.budget.categoryIds.isEmpty
+        ? 'All categories'
+        : (view.categories.isNotEmpty
+            ? view.categories
+                .map((category) =>
+                    category.name.isNotEmpty ? category.name : 'Unnamed category')
+                .join(', ')
+            : 'Selected categories');
+    final flowLabel = _describeFlowType(view.budget.flowType);
+    final subtitleParts = <String>[];
+    if (flowLabel.isNotEmpty) {
+      subtitleParts.add(flowLabel);
+    }
+    if (categoryLabel.isNotEmpty) {
+      subtitleParts.add(categoryLabel);
+    }
+    final subtitle = subtitleParts.join(' · ');
     final remainingLabel = remaining >= 0
         ? '${_formatCurrency(remaining, currency)} remaining'
         : 'Over by ${_formatCurrency(remaining.abs(), currency)}';
@@ -424,9 +464,7 @@ class _BudgetListTile extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        view.category?.name.isNotEmpty == true
-                            ? view.category!.name
-                            : 'All categories',
+                        subtitle.isNotEmpty ? subtitle : 'All categories',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: colors.mutedText,
                         ),
@@ -475,6 +513,11 @@ class _BudgetListTile extends StatelessWidget {
                   icon: Icons.timeline_outlined,
                   label: remainingLabel,
                   color: remaining >= 0 ? colors.positive : colors.negative,
+                ),
+                _BudgetChip(
+                  icon: Icons.swap_vert_circle_outlined,
+                  label: flowLabel,
+                  color: colors.tertiaryAccent,
                 ),
                 if (rangeLabel.isNotEmpty)
                   _BudgetChip(
@@ -542,12 +585,15 @@ class _BudgetChip extends StatelessWidget {
         children: [
           Icon(icon, size: 16, color: color),
           const SizedBox(width: 6),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w600,
-                ),
+          Flexible(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                  ),
+              softWrap: true,
+            ),
           ),
         ],
       ),
@@ -557,16 +603,28 @@ class _BudgetChip extends StatelessWidget {
 
 enum _BudgetAction { edit, delete }
 
+class _ResolvedBudgetRange {
+  const _ResolvedBudgetRange({this.start, this.end});
+
+  final DateTime? start;
+  final DateTime? end;
+}
+
 class _BudgetView {
   const _BudgetView({
     required this.budget,
-    required this.category,
+    required this.categories,
     required this.spent,
+    required this.range,
   });
 
   final Budget budget;
-  final Category? category;
+  final List<Category> categories;
   final double spent;
+  final _ResolvedBudgetRange? range;
+
+  Category? get primaryCategory =>
+      categories.isNotEmpty ? categories.first : null;
 
   String get currency => budget.currencyCode.toUpperCase();
 }
@@ -583,9 +641,86 @@ String _formatCurrency(double value, String currency) {
   return '$currency ${value.toStringAsFixed(2)}';
 }
 
-String _formatBudgetRange(Budget budget) {
-  final start = budget.startDate;
-  final end = budget.endDate;
+const List<String> _monthNames = <String>[
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
+_ResolvedBudgetRange? _resolveBudgetRange(Budget budget, DateTime reference) {
+  DateTime endOfExclusive(DateTime exclusive) {
+    return exclusive.subtract(const Duration(milliseconds: 1));
+  }
+
+  switch (budget.period) {
+    case BudgetPeriod.day:
+      final start = DateTime(reference.year, reference.month, reference.day);
+      final end = endOfExclusive(start.add(const Duration(days: 1)));
+      return _ResolvedBudgetRange(start: start, end: end);
+    case BudgetPeriod.week:
+      final startOfDay = DateTime(reference.year, reference.month, reference.day);
+      final start =
+          startOfDay.subtract(Duration(days: reference.weekday - DateTime.monday));
+      final end = endOfExclusive(start.add(const Duration(days: 7)));
+      return _ResolvedBudgetRange(start: start, end: end);
+    case BudgetPeriod.month:
+      final start = DateTime(reference.year, reference.month, 1);
+      final end = endOfExclusive(DateTime(reference.year, reference.month + 1, 1));
+      return _ResolvedBudgetRange(start: start, end: end);
+    case BudgetPeriod.year:
+      final start = DateTime(reference.year, 1, 1);
+      final end = endOfExclusive(DateTime(reference.year + 1, 1, 1));
+      return _ResolvedBudgetRange(start: start, end: end);
+    case BudgetPeriod.custom:
+      if (budget.startDate == null && budget.endDate == null) {
+        return null;
+      }
+      return _ResolvedBudgetRange(start: budget.startDate, end: budget.endDate);
+  }
+}
+
+bool _isWithinRange(DateTime date, _ResolvedBudgetRange? range) {
+  if (range == null) {
+    return true;
+  }
+  if (range.start != null && date.isBefore(range.start!)) {
+    return false;
+  }
+  if (range.end != null && date.isAfter(range.end!)) {
+    return false;
+  }
+  return true;
+}
+
+String _monthName(int month) {
+  if (month < 1 || month > 12) {
+    return '';
+  }
+  return _monthNames[month - 1];
+}
+
+String _formatMonthDay(DateTime date) {
+  final month = _monthName(date.month);
+  final day = date.day.toString().padLeft(2, '0');
+  final year = date.year.toString();
+  return '$month $day, $year';
+}
+
+String _formatMonthYear(DateTime date) {
+  final month = _monthName(date.month);
+  return '$month ${date.year}';
+}
+
+String _formatCustomBudgetRange(DateTime? start, DateTime? end) {
   if (start == null && end == null) {
     return '';
   }
@@ -598,25 +733,59 @@ String _formatBudgetRange(Budget budget) {
   return 'Until ${_formatMonthDay(end!)}';
 }
 
-String _formatMonthDay(DateTime date) {
-  const months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-  final month = months[date.month - 1];
-  final day = date.day.toString().padLeft(2, '0');
-  final year = date.year.toString();
-  return '$month $day, $year';
+String _formatBudgetRange(
+  Budget budget, {
+  required DateTime reference,
+  _ResolvedBudgetRange? resolvedRange,
+}) {
+  resolvedRange ??= _resolveBudgetRange(budget, reference);
+  switch (budget.period) {
+    case BudgetPeriod.day:
+      if (resolvedRange?.start != null) {
+        return 'Today (${_formatMonthDay(resolvedRange!.start!)})';
+      }
+      return 'Today';
+    case BudgetPeriod.week:
+      if (resolvedRange?.start != null && resolvedRange?.end != null) {
+        return 'This week (${_formatMonthDay(resolvedRange!.start!)} – '
+            '${_formatMonthDay(resolvedRange.end!)})';
+      }
+      return 'This week';
+    case BudgetPeriod.month:
+      final start = resolvedRange?.start ?? reference;
+      return 'This month (${_formatMonthYear(start)})';
+    case BudgetPeriod.year:
+      final start = resolvedRange?.start ?? reference;
+      return 'This year (${start.year})';
+    case BudgetPeriod.custom:
+      return _formatCustomBudgetRange(budget.startDate, budget.endDate);
+  }
+}
+
+String _describeFlowType(BudgetFlowType flowType) {
+  switch (flowType) {
+    case BudgetFlowType.expenses:
+      return 'Expenses only';
+    case BudgetFlowType.income:
+      return 'Income only';
+    case BudgetFlowType.both:
+      return 'Income & expenses';
+  }
+}
+
+String _periodLabel(BudgetPeriod period) {
+  switch (period) {
+    case BudgetPeriod.day:
+      return 'Daily';
+    case BudgetPeriod.week:
+      return 'Weekly';
+    case BudgetPeriod.month:
+      return 'Monthly';
+    case BudgetPeriod.year:
+      return 'Yearly';
+    case BudgetPeriod.custom:
+      return 'Custom range';
+  }
 }
 
 class _BudgetDialog extends StatefulWidget {
@@ -637,10 +806,12 @@ class _BudgetDialogState extends State<_BudgetDialog> {
   late final TextEditingController _nameController;
   late final TextEditingController _limitController;
   late final TextEditingController _notesController;
-  String? _selectedCategoryId;
+  late final Set<String> _selectedCategoryIds;
   DateTime? _startDate;
   DateTime? _endDate;
   late String _currencyCode;
+  late BudgetPeriod _period;
+  late BudgetFlowType _flowType;
 
   @override
   void initState() {
@@ -654,10 +825,15 @@ class _BudgetDialogState extends State<_BudgetDialog> {
     );
     _currencyCode = currencyOptionFor(initial?.currencyCode).code;
     _notesController = TextEditingController(text: initial?.notes ?? '');
-    _selectedCategoryId =
-        (initial?.categoryId.isNotEmpty ?? false) ? initial!.categoryId : null;
-    _startDate = initial?.startDate;
-    _endDate = initial?.endDate;
+    _selectedCategoryIds = {
+      if (initial != null) ...initial.categoryIds,
+    };
+    _period = initial?.period ?? BudgetPeriod.month;
+    _flowType = initial?.flowType ?? BudgetFlowType.expenses;
+    if (_period == BudgetPeriod.custom) {
+      _startDate = initial?.startDate;
+      _endDate = initial?.endDate;
+    }
   }
 
   @override
@@ -684,6 +860,7 @@ class _BudgetDialogState extends State<_BudgetDialog> {
 
     if (result != null) {
       setState(() {
+        _period = BudgetPeriod.custom;
         _startDate = result.start;
         _endDate = result.end;
       });
@@ -715,35 +892,60 @@ class _BudgetDialogState extends State<_BudgetDialog> {
 
     final base = widget.initial ?? Budget();
     final notes = _notesController.text.trim();
+    final categoryOrder = <String, int>{
+      for (var i = 0; i < widget.categories.length; i++)
+        widget.categories[i].id: i,
+    };
+    final selectedCategoryIds = _selectedCategoryIds.toList()
+      ..sort(
+        (a, b) => (categoryOrder[a] ?? widget.categories.length)
+            .compareTo(categoryOrder[b] ?? widget.categories.length),
+      );
 
     Navigator.of(context).pop(
       base.copyWith(
         name: _nameController.text.trim(),
         limit: parsedLimit,
         currencyCode: currency,
-        categoryId: _selectedCategoryId ?? '',
+        categoryIds: selectedCategoryIds,
+        period: _period,
+        flowType: _flowType,
         notes: notes.isEmpty ? null : notes,
-        startDate: _startDate,
-        endDate: _endDate,
+        startDate: _period == BudgetPeriod.custom ? _startDate : null,
+        endDate: _period == BudgetPeriod.custom ? _endDate : null,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final categoryItems = [
-      const DropdownMenuItem<String?>(
-        value: null,
-        child: Text('All categories'),
-      ),
-      for (final category in widget.categories)
-        DropdownMenuItem<String?>(
-          value: category.id,
-          child: Text(
-            category.name.isNotEmpty ? category.name : 'Untitled category',
-          ),
-        ),
+    String categoryLabel(Category category) {
+      return category.name.isNotEmpty ? category.name : 'Untitled category';
+    }
+
+    final sortedCategories = [...widget.categories]
+      ..sort((a, b) {
+        final nameA = a.name.toLowerCase();
+        final nameB = b.name.toLowerCase();
+        if (nameA.isEmpty && nameB.isEmpty) {
+          return a.id.compareTo(b.id);
+        }
+        if (nameA.isEmpty) return 1;
+        if (nameB.isEmpty) return -1;
+        return nameA.compareTo(nameB);
+      });
+
+    final allowCustom =
+        widget.initial?.period == BudgetPeriod.custom || _period == BudgetPeriod.custom;
+    final periodOptions = <BudgetPeriod>[
+      BudgetPeriod.day,
+      BudgetPeriod.week,
+      BudgetPeriod.month,
+      BudgetPeriod.year,
+      if (allowCustom) BudgetPeriod.custom,
     ];
+
+    final customRangeLabel = _formatCustomBudgetRange(_startDate, _endDate);
 
     return AlertDialog(
       title: Text(widget.initial == null ? 'New budget' : 'Edit budget'),
@@ -779,11 +981,97 @@ class _BudgetDialogState extends State<_BudgetDialog> {
                 onChanged: (code) => setState(() => _currencyCode = code),
               ),
               const SizedBox(height: 12),
-              DropdownButtonFormField<String?>(
-                value: _selectedCategoryId,
-                decoration: const InputDecoration(labelText: 'Category'),
-                items: categoryItems,
-                onChanged: (value) => setState(() => _selectedCategoryId = value),
+              DropdownButtonFormField<BudgetPeriod>(
+                value: _period,
+                decoration: const InputDecoration(labelText: 'Budget period'),
+                items: [
+                  for (final period in periodOptions)
+                    DropdownMenuItem<BudgetPeriod>(
+                      value: period,
+                      child: Text(_periodLabel(period)),
+                    ),
+                ],
+                onChanged: (value) {
+                  if (value == null) {
+                    return;
+                  }
+                  setState(() {
+                    _period = value;
+                    if (_period != BudgetPeriod.custom) {
+                      _startDate = null;
+                      _endDate = null;
+                    }
+                  });
+                },
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<BudgetFlowType>(
+                value: _flowType,
+                decoration: const InputDecoration(labelText: 'Tracking'),
+                items: [
+                  for (final option in BudgetFlowType.values)
+                    DropdownMenuItem<BudgetFlowType>(
+                      value: option,
+                      child: Text(_describeFlowType(option)),
+                    ),
+                ],
+                onChanged: (value) {
+                  if (value == null) {
+                    return;
+                  }
+                  setState(() => _flowType = value);
+                },
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Categories',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  FilterChip(
+                    label: const Text('All categories'),
+                    selected: _selectedCategoryIds.isEmpty,
+                    onSelected: (selected) {
+                      setState(() {
+                        if (selected) {
+                          _selectedCategoryIds.clear();
+                        }
+                      });
+                    },
+                  ),
+                  for (final category in sortedCategories)
+                    FilterChip(
+                      label: Text(categoryLabel(category)),
+                      selected: _selectedCategoryIds.contains(category.id),
+                      onSelected: (selected) {
+                        setState(() {
+                          if (selected) {
+                            _selectedCategoryIds.add(category.id);
+                          } else {
+                            _selectedCategoryIds.remove(category.id);
+                          }
+                        });
+                      },
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Leave unselected to include every category.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.color
+                              ?.withOpacity(0.7) ??
+                          Colors.grey,
+                    ),
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -791,30 +1079,30 @@ class _BudgetDialogState extends State<_BudgetDialog> {
                 decoration: const InputDecoration(labelText: 'Notes'),
                 maxLines: 3,
               ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: _pickRange,
-                    icon: const Icon(Icons.calendar_today_outlined),
-                    label: Text(
-                      _startDate != null || _endDate != null
-                          ? _formatBudgetRange(
-                              Budget(startDate: _startDate, endDate: _endDate),
-                            )
-                          : 'Set date range',
+              if (_period == BudgetPeriod.custom) ...[
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _pickRange,
+                      icon: const Icon(Icons.calendar_today_outlined),
+                      label: Text(
+                        customRangeLabel.isNotEmpty
+                            ? customRangeLabel
+                            : 'Select custom range',
+                      ),
                     ),
-                  ),
-                  if (_startDate != null || _endDate != null) ...[
-                    const SizedBox(width: 8),
-                    IconButton(
-                      onPressed: _clearRange,
-                      tooltip: 'Clear range',
-                      icon: const Icon(Icons.close),
-                    ),
+                    if (_startDate != null || _endDate != null) ...[
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: _clearRange,
+                        tooltip: 'Clear range',
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
                   ],
-                ],
-              ),
+                ),
+              ],
             ],
           ),
         ),

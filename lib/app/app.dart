@@ -45,9 +45,7 @@ class _MoneyBaseAppState extends State<MoneyBaseApp> {
         animation: _themeController,
         builder: (context, _) {
           final theme = MoneyBaseTheme.buildTheme(
-            palette: _themeController.palette,
             darkMode: _themeController.darkMode,
-            customPrimary: _themeController.customPrimary,
           );
 
           return StreamBuilder<User?>(
