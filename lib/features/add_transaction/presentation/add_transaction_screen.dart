@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/constants/currencies.dart';
 import '../../../core/constants/icon_library.dart';
@@ -16,6 +17,14 @@ import '../../common/presentation/color_picker.dart';
 import '../../common/presentation/currency_dropdown_field.dart';
 
 enum _TransactionType { expense, income }
+
+class _SubmitIntent extends Intent {
+  const _SubmitIntent();
+}
+
+class _BackIntent extends Intent {
+  const _BackIntent();
+}
 
 class AddTransactionScreen extends StatefulWidget {
   const AddTransactionScreen({super.key});
@@ -110,6 +119,79 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         });
       });
     }
+  }
+
+  List<DropdownMenuItem<String>> _buildCategoryDropdownItems(
+      List<Category> categories) {
+    final byId = <String, Category>{
+      for (final category in categories) category.id: category,
+    };
+    final children = <String?, List<Category>>{};
+    for (final category in categories) {
+      final parentKey =
+          (category.parentCategoryId?.isNotEmpty ?? false)
+              ? category.parentCategoryId
+              : null;
+      children.putIfAbsent(parentKey, () => <Category>[]).add(category);
+    }
+
+    void sortByName(List<Category> list) {
+      list.sort((a, b) =>
+          a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    }
+
+    for (final list in children.values) {
+      sortByName(list);
+    }
+
+    final visited = <String>{};
+    final items = <DropdownMenuItem<String>>[];
+
+    void addCategory(Category category, int depth) {
+      if (!visited.add(category.id)) {
+        return;
+      }
+      items.add(
+        DropdownMenuItem<String>(
+          value: category.id,
+          child: Padding(
+            padding: EdgeInsets.only(left: depth * 16.0),
+            child: Text(
+              category.name.isNotEmpty
+                  ? category.name
+                  : 'Untitled category',
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+        ),
+      );
+
+      final nested = children[category.id];
+      if (nested != null) {
+        for (final child in nested) {
+          addCategory(child, depth + 1);
+        }
+      }
+    }
+
+    final roots = categories.where((category) {
+      final parentId = category.parentCategoryId;
+      return parentId == null || parentId.isEmpty || !byId.containsKey(parentId);
+    }).toList();
+    sortByName(roots);
+    for (final root in roots) {
+      addCategory(root, 0);
+    }
+
+    final remaining = categories
+        .where((category) => !visited.contains(category.id))
+        .toList();
+    sortByName(remaining);
+    for (final category in remaining) {
+      addCategory(category, 0);
+    }
+
+    return items;
   }
 
   void _handleReorderWallets(
@@ -424,6 +506,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 _syncSelections(wallets, categories);
 
                 Widget panelChild;
+                VoidCallback? submitAction;
                 if (errorMessage != null) {
                   panelChild = _InlineNotice(
                     message:
@@ -443,9 +526,24 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           orElse: () => wallets.first,
                         )
                       : const Wallet();
+                  final selectedCategory = !missingCategories
+                      ? categories.firstWhere(
+                          (category) => category.id == _selectedCategoryId,
+                          orElse: () => categories.first,
+                        )
+                      : null;
                   final currencyPrefix = selectedWallet.currencyCode.isEmpty
                       ? 'USD'
                       : selectedWallet.currencyCode.toUpperCase();
+
+                  submitAction = canSubmit && !_submitting
+                      ? () => _handleSubmit(
+                            context,
+                            user.uid,
+                            wallets,
+                            categories,
+                          )
+                      : null;
 
                   panelChild = Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -577,52 +675,72 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       ),
                       const SizedBox(height: 28),
                       Text(
-                        'Categories',
+                        'Category',
                         style: textTheme.titleMedium?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      if (!missingCategories) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          'Long press a category to edit or remove it.',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: Colors.white.withOpacity(0.6),
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                       if (missingCategories)
                         const _InlineNotice(
                           message:
                               'Create a category to organise this transaction.',
                         ),
-                      if (missingCategories) const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        children: [
-                          for (final category in categories)
-                            _CategoryChip(
-                              category: category,
-                              selected: category.id == _selectedCategoryId,
-                              onTap: () =>
-                                  setState(() => _selectedCategoryId = category.id),
-                              onLongPress: () => _openCategoryDialog(
-                                context,
-                                user.uid,
-                                categories,
-                                category: category,
+                      if (!missingCategories) ...[
+                        _GlassField(
+                          label: 'Choose category',
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: selectedCategory?.id,
+                              items: _buildCategoryDropdownItems(categories),
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setState(() => _selectedCategoryId = value);
+                                }
+                              },
+                              isExpanded: true,
+                              dropdownColor: const Color(0xFF281C46),
+                              iconEnabledColor: Colors.white,
+                              style: textTheme.titleMedium?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                          _AddCategoryChip(
-                            onTap: () => _openCategoryDialog(
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      Row(
+                        children: [
+                          TextButton.icon(
+                            onPressed: () => _openCategoryDialog(
                               context,
                               user.uid,
                               categories,
                             ),
+                            icon: const Icon(Icons.add, size: 18),
+                            label: const Text('Add category'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.white,
+                            ),
                           ),
+                          if (!missingCategories && selectedCategory != null) ...[
+                            const SizedBox(width: 12),
+                            TextButton.icon(
+                              onPressed: () => _openCategoryDialog(
+                                context,
+                                user.uid,
+                                categories,
+                                category: selectedCategory,
+                              ),
+                              icon: const Icon(Icons.edit_outlined, size: 18),
+                              label: const Text('Edit selected'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.white.withOpacity(0.85),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                       const SizedBox(height: 32),
@@ -734,14 +852,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                   borderRadius: BorderRadius.circular(24),
                                 ),
                               ),
-                              onPressed: canSubmit && !_submitting
-                                  ? () => _handleSubmit(
-                                        context,
-                                        user.uid,
-                                        wallets,
-                                        categories,
-                                      )
-                                  : null,
+                              onPressed: submitAction,
                               child: _submitting
                                   ? const SizedBox(
                                       height: 20,
@@ -760,24 +871,43 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   );
                 }
 
-                return Column(
+                final content = Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Add transaction',
-                      style: textTheme.headlineMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        IconButton(
+                          tooltip: 'Back',
+                          onPressed: () => Navigator.of(context).maybePop(),
+                          icon: const Icon(Icons.arrow_back),
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Add transaction',
+                                style: textTheme.headlineMedium?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Capture new spending in the refreshed MoneyBase glass surface shared between Android and web.',
+                                style: textTheme.bodyLarge?.copyWith(
+                                  color: Colors.white.withOpacity(0.7),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Capture new spending in the refreshed MoneyBase glass surface shared between Android and web.',
-                      style: textTheme.bodyLarge?.copyWith(
-                        color: Colors.white.withOpacity(0.7),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
                     MoneyBaseFrostedPanel(
                       padding: EdgeInsets.symmetric(
                         horizontal: layout.isWide ? 36 : 28,
@@ -793,6 +923,37 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       child: panelChild,
                     ),
                   ],
+                );
+
+                return Shortcuts(
+                  shortcuts: <ShortcutActivator, Intent>{
+                    const SingleActivator(LogicalKeyboardKey.escape):
+                        const _BackIntent(),
+                    const SingleActivator(LogicalKeyboardKey.enter):
+                        const _SubmitIntent(),
+                    const SingleActivator(LogicalKeyboardKey.numpadEnter):
+                        const _SubmitIntent(),
+                  },
+                  child: Actions(
+                    actions: <Type, Action<Intent>>{
+                      _BackIntent: CallbackAction<_BackIntent>(
+                        onInvoke: (_) {
+                          Navigator.of(context).maybePop();
+                          return null;
+                        },
+                      ),
+                      _SubmitIntent: CallbackAction<_SubmitIntent>(
+                        onInvoke: (_) {
+                          submitAction?.call();
+                          return null;
+                        },
+                      ),
+                    },
+                    child: Focus(
+                      autofocus: true,
+                      child: content,
+                    ),
+                  ),
                 );
               },
             );
@@ -840,142 +1001,6 @@ class _GlassField extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _AddCategoryChip extends StatelessWidget {
-  const _AddCategoryChip({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white.withOpacity(0.12)),
-          color: const Color(0xFF2A2C35),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.add_outlined,
-                color: Colors.white70,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              'Add category',
-              style: textTheme.titleSmall?.copyWith(
-                color: Colors.white.withOpacity(0.75),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CategoryChip extends StatelessWidget {
-  const _CategoryChip({
-    required this.category,
-    required this.selected,
-    required this.onTap,
-    this.onLongPress,
-  });
-
-  final Category category;
-  final bool selected;
-  final VoidCallback onTap;
-  final VoidCallback? onLongPress;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final icon = IconLibrary.iconForCategory(category.iconName);
-    final accent = parseHexColor(category.color);
-    final label =
-        category.name.isNotEmpty ? category.name : 'Untitled category';
-
-    final Color borderColor;
-    final Color backgroundColor;
-    final Color iconColor;
-    final Color labelColor;
-
-    if (accent != null) {
-      backgroundColor = Color.lerp(
-        accent,
-        Colors.white,
-        selected ? 0.6 : 0.75,
-      )!;
-      borderColor = Color.lerp(
-        accent,
-        Colors.white,
-        selected ? 0.4 : 0.55,
-      )!;
-      final brightness =
-          ThemeData.estimateBrightnessForColor(backgroundColor);
-      labelColor = brightness == Brightness.dark
-          ? Colors.white
-          : Colors.black.withOpacity(0.85);
-      iconColor = brightness == Brightness.dark
-          ? Colors.white
-          : accent.withOpacity(selected ? 0.85 : 0.9);
-    } else {
-      backgroundColor =
-          Colors.white.withOpacity(selected ? 0.24 : 0.08);
-      borderColor =
-          Colors.white.withOpacity(selected ? 0.8 : 0.18);
-      labelColor = Colors.white;
-      iconColor =
-          selected ? Colors.white : Colors.white.withOpacity(0.75);
-    }
-
-    return GestureDetector(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      onSecondaryTap: onLongPress,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: borderColor),
-          color: backgroundColor,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: iconColor,
-            ),
-            const SizedBox(width: 10),
-            Text(
-              label,
-              style: textTheme.titleSmall?.copyWith(
-                color: labelColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
