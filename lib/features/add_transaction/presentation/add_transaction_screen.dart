@@ -121,8 +121,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     }
   }
 
-  List<DropdownMenuItem<String>> _buildCategoryDropdownItems(
-      List<Category> categories) {
+  List<_CategoryOption> _buildCategoryOptions(List<Category> categories) {
     final byId = <String, Category>{
       for (final category in categories) category.id: category,
     };
@@ -145,26 +144,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     }
 
     final visited = <String>{};
-    final items = <DropdownMenuItem<String>>[];
+    final options = <_CategoryOption>[];
 
     void addCategory(Category category, int depth) {
       if (!visited.add(category.id)) {
         return;
       }
-      items.add(
-        DropdownMenuItem<String>(
-          value: category.id,
-          child: Padding(
-            padding: EdgeInsets.only(left: depth * 16.0),
-            child: Text(
-              category.name.isNotEmpty
-                  ? category.name
-                  : 'Untitled category',
-              style: const TextStyle(color: Colors.white),
-            ),
-          ),
-        ),
-      );
+      options.add(_CategoryOption(category: category, depth: depth));
 
       final nested = children[category.id];
       if (nested != null) {
@@ -191,7 +177,29 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       addCategory(category, 0);
     }
 
-    return items;
+    return options;
+  }
+
+  Future<void> _showCategoryPicker(
+    BuildContext context,
+    List<Category> categories,
+  ) async {
+    final options = _buildCategoryOptions(categories);
+    if (options.isEmpty) {
+      return;
+    }
+
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (context) => _CategoryPickerDialog(
+        options: options,
+        initialSelectedId: _selectedCategoryId,
+      ),
+    );
+
+    if (selected != null && mounted) {
+      setState(() => _selectedCategoryId = selected);
+    }
   }
 
   void _handleReorderWallets(
@@ -690,24 +698,37 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       if (!missingCategories) ...[
                         _GlassField(
                           label: 'Choose category',
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: selectedCategory?.id,
-                              items: _buildCategoryDropdownItems(categories),
-                              onChanged: (value) {
-                                if (value != null) {
-                                  setState(() => _selectedCategoryId = value);
-                                }
-                              },
-                              isExpanded: true,
-                              dropdownColor: const Color(0xFF281C46),
-                              iconEnabledColor: Colors.white,
-                              style: textTheme.titleMedium?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                          onTap: () => _showCategoryPicker(
+                            context,
+                            categories,
                           ),
+                          backgroundColor: selectedCategory != null
+                              ? Colors.transparent
+                              : null,
+                          borderColor: selectedCategory != null
+                              ? Colors.transparent
+                              : null,
+                          child: selectedCategory != null
+                              ? _CategorySummaryChip(category: selectedCategory)
+                              : Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        'Select a category',
+                                        style:
+                                            textTheme.titleMedium?.copyWith(
+                                          color:
+                                              Colors.white.withOpacity(0.85),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                    Icon(
+                                      Icons.chevron_right,
+                                      color: Colors.white.withOpacity(0.75),
+                                    ),
+                                  ],
+                                ),
                         ),
                         const SizedBox(height: 8),
                       ],
@@ -965,11 +986,19 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 }
 
 class _GlassField extends StatelessWidget {
-  const _GlassField({required this.label, required this.child, this.onTap});
+  const _GlassField({
+    required this.label,
+    required this.child,
+    this.onTap,
+    this.backgroundColor,
+    this.borderColor,
+  });
 
   final String label;
   final Widget child;
   final VoidCallback? onTap;
+  final Color? backgroundColor;
+  final Color? borderColor;
 
   @override
   Widget build(BuildContext context) {
@@ -994,8 +1023,10 @@ class _GlassField extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withOpacity(0.12)),
-              color: Colors.white.withOpacity(0.06),
+              border: Border.all(
+                color: borderColor ?? Colors.white.withOpacity(0.12),
+              ),
+              color: backgroundColor ?? Colors.white.withOpacity(0.06),
             ),
             child: child,
           ),
@@ -1023,26 +1054,17 @@ class _WalletCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final accent = parseHexColor(wallet.color) ?? const Color(0xFF7B5BFF);
     final brightness = ThemeData.estimateBrightnessForColor(accent);
-    final gradient = [
-      Color.lerp(accent, Colors.white, brightness == Brightness.dark ? 0.1 : 0.3)!,
-      Color.lerp(accent, Colors.black, brightness == Brightness.dark ? 0.3 : 0.15)!,
-    ];
+    final contrastColor =
+        brightness == Brightness.dark ? Colors.white : Colors.black.withOpacity(0.85);
     final borderColor = selected
-        ? (brightness == Brightness.dark
-            ? Colors.white
-            : Colors.black.withOpacity(0.6))
-        : (brightness == Brightness.dark
-            ? Colors.white.withOpacity(0.22)
-            : Colors.black.withOpacity(0.25));
-    final iconBackground = brightness == Brightness.dark
-        ? Colors.white.withOpacity(0.18)
-        : Colors.black.withOpacity(0.08);
-    final iconColor =
-        brightness == Brightness.dark ? Colors.white : Colors.black.withOpacity(0.75);
+        ? contrastColor.withOpacity(0.7)
+        : contrastColor.withOpacity(0.3);
+    final iconBackground = contrastColor.withOpacity(0.18);
+    final iconColor = contrastColor;
     final primaryTextColor =
         brightness == Brightness.dark ? Colors.white : Colors.black.withOpacity(0.9);
     final secondaryTextColor = brightness == Brightness.dark
-        ? Colors.white.withOpacity(0.9)
+        ? Colors.white.withOpacity(0.85)
         : Colors.black.withOpacity(0.7);
     final icon = IconLibrary.iconForWallet(wallet.iconName);
     final name = wallet.name.isNotEmpty ? wallet.name : 'Untitled wallet';
@@ -1060,11 +1082,7 @@ class _WalletCard extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(28),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: gradient,
-          ),
+          color: accent,
           border: Border.all(
             color: borderColor,
             width: selected ? 2 : 1,
@@ -1109,6 +1127,187 @@ class _WalletCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _CategorySummaryChip extends StatelessWidget {
+  const _CategorySummaryChip({required this.category});
+
+  final Category category;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final accent =
+        parseHexColor(category.color) ?? theme.colorScheme.primary;
+    final brightness = ThemeData.estimateBrightnessForColor(accent);
+    final foreground =
+        brightness == Brightness.dark ? Colors.white : Colors.black87;
+    final icon = IconLibrary.iconForCategory(category.iconName);
+    final name =
+        category.name.isNotEmpty ? category.name : 'Untitled category';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: accent,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: foreground.withOpacity(0.18),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: foreground),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              name,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: foreground,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Icon(
+            Icons.chevron_right,
+            color: foreground.withOpacity(0.85),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryPickerDialog extends StatelessWidget {
+  const _CategoryPickerDialog({
+    required this.options,
+    this.initialSelectedId,
+  });
+
+  final List<_CategoryOption> options;
+  final String? initialSelectedId;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+
+    return AlertDialog(
+      title: const Text('Choose category'),
+      content: SizedBox(
+        width: 420,
+        child: options.isEmpty
+            ? const Text('No categories available.')
+            : ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 420),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: options.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final option = options[index];
+                    final category = option.category;
+                    final accent = parseHexColor(category.color) ??
+                        theme.colorScheme.primary;
+                    final brightness =
+                        ThemeData.estimateBrightnessForColor(accent);
+                    final foreground = brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black87;
+                    final isSelected = initialSelectedId == category.id;
+                    final icon =
+                        IconLibrary.iconForCategory(category.iconName);
+                    final name = category.name.isNotEmpty
+                        ? category.name
+                        : 'Untitled category';
+
+                    return Padding(
+                      padding: EdgeInsets.only(left: option.depth * 12.0),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: () =>
+                              Navigator.of(context).pop(category.id),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: accent,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: isSelected
+                                    ? foreground.withOpacity(0.7)
+                                    : foreground.withOpacity(0.25),
+                                width: isSelected ? 2 : 1,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.08),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: foreground.withOpacity(0.18),
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  child: Icon(icon, color: foreground),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Text(
+                                    name,
+                                    style:
+                                        textTheme.titleMedium?.copyWith(
+                                      color: foreground,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                if (isSelected)
+                                  Icon(
+                                    Icons.check_circle,
+                                    color: foreground,
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+      ],
+    );
+  }
+}
+
+class _CategoryOption {
+  const _CategoryOption({required this.category, required this.depth});
+
+  final Category category;
+  final int depth;
 }
 
 class _AddWalletCard extends StatelessWidget {

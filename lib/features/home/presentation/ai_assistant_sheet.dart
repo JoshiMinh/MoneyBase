@@ -11,10 +11,15 @@ import 'package:speech_to_text/speech_recognition_error.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
+import '../../../core/models/budget.dart';
 import '../../../core/models/category.dart';
+import '../../../core/models/shopping_item.dart';
+import '../../../core/models/shopping_list.dart';
 import '../../../core/models/transaction.dart';
 import '../../../core/models/wallet.dart';
+import '../../../core/repositories/budget_repository.dart';
 import '../../../core/repositories/category_repository.dart';
+import '../../../core/repositories/shopping_list_repository.dart';
 import '../../../core/repositories/transaction_repository.dart';
 import '../../../core/repositories/wallet_repository.dart';
 import '../../common/presentation/moneybase_shell.dart';
@@ -50,6 +55,19 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
   ];
   static final List<String> _walletTypeNames =
       WalletType.values.map((value) => value.name).toList(growable: false);
+  static final List<String> _budgetPeriodNames = BudgetPeriod.values
+      .map((value) => value.name)
+      .toList(growable: false);
+  static final List<String> _budgetFlowTypeNames = BudgetFlowType.values
+      .map((value) => value.name)
+      .toList(growable: false);
+  static final List<String> _shoppingListTypeNames = ShoppingListType.values
+      .map((value) => value.name)
+      .toList(growable: false);
+  static final List<String> _shoppingItemPriorityNames =
+      ShoppingItemPriority.values
+          .map((value) => value.name)
+          .toList(growable: false);
   static final List<Tool> _assistantTools = <Tool>[
     Tool(
       functionDeclarations: [
@@ -178,6 +196,116 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
           ),
         ),
         FunctionDeclaration(
+          'update_transaction',
+          'Update an existing MoneyBase transaction with corrected details.',
+          Schema.object(
+            description:
+                'Provide the transaction id and any fields that should be updated.',
+            requiredProperties: ['transactionId'],
+            properties: {
+              'transactionId': Schema.string(
+                description: 'Identifier of the transaction to update.',
+              ),
+              'amount': Schema.number(
+                description: 'Absolute amount as a positive decimal.',
+                nullable: true,
+              ),
+              'currencyCode': Schema.string(
+                description: 'Currency code in ISO 4217 format.',
+                nullable: true,
+              ),
+              'description': Schema.string(
+                description: 'Updated description or memo.',
+                nullable: true,
+              ),
+              'note': Schema.string(
+                description: 'Optional note appended to the description.',
+                nullable: true,
+              ),
+              'date': Schema.string(
+                description: 'ISO 8601 date or datetime for the transaction.',
+                nullable: true,
+              ),
+              'isIncome': Schema.boolean(
+                description: 'Whether the entry should be marked as income.',
+                nullable: true,
+              ),
+              'flow': Schema.enumString(
+                enumValues: ['income', 'expense'],
+                description: 'Alternative to isIncome indicating the flow direction.',
+                nullable: true,
+              ),
+              'walletId': Schema.string(
+                description: 'Wallet id that should own the transaction.',
+                nullable: true,
+              ),
+              'walletName': Schema.string(
+                description: 'Wallet name if the id is unknown.',
+                nullable: true,
+              ),
+              'categoryId': Schema.string(
+                description: 'Category id that should classify the transaction.',
+                nullable: true,
+              ),
+              'categoryName': Schema.string(
+                description: 'Category name if the id is unknown.',
+                nullable: true,
+              ),
+              'wallet': Schema.object(
+                description:
+                    'Optional wallet details to resolve or create a wallet when updating.',
+                nullable: true,
+                properties: {
+                  'id': Schema.string(
+                    description: 'Existing wallet id to use.',
+                    nullable: true,
+                  ),
+                  'name': Schema.string(
+                    description: 'Wallet name when matching by name.',
+                    nullable: true,
+                  ),
+                  'currencyCode': Schema.string(
+                    description: 'Currency for a new wallet.',
+                    nullable: true,
+                  ),
+                  'type': Schema.enumString(
+                    enumValues: _walletTypeNames,
+                    description: 'Wallet type for new wallets.',
+                    nullable: true,
+                  ),
+                  'initialBalance': Schema.number(
+                    description: 'Initial balance when creating a wallet.',
+                    nullable: true,
+                  ),
+                  'setAsDefault': Schema.boolean(
+                    description: 'Whether the wallet should become the default.',
+                    nullable: true,
+                  ),
+                },
+              ),
+              'category': Schema.object(
+                description:
+                    'Optional category details to resolve or create a category.',
+                nullable: true,
+                properties: {
+                  'id': Schema.string(
+                    description: 'Existing category id to use.',
+                    nullable: true,
+                  ),
+                  'name': Schema.string(
+                    description: 'Category name to match or create.',
+                    nullable: true,
+                  ),
+                  'parentId': Schema.string(
+                    description: 'Parent category id when creating a new one.',
+                    nullable: true,
+                  ),
+                },
+              ),
+            },
+          ),
+        ),
+        FunctionDeclaration(
           'create_wallet',
           'Create a new wallet for the user.',
           Schema.object(
@@ -199,6 +327,61 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
               'setAsDefault': Schema.boolean(
                 description: 'Whether this wallet should become the default.',
                 nullable: true,
+              ),
+            },
+          ),
+        ),
+        FunctionDeclaration(
+          'update_wallet',
+          'Update details for an existing wallet. Provide walletId or walletName '
+              'to identify the wallet.',
+          Schema.object(
+            requiredProperties: [],
+            properties: {
+              'walletId': Schema.string(
+                description: 'Identifier of the wallet to update.',
+                nullable: true,
+              ),
+              'walletName': Schema.string(
+                description: 'Wallet name if the id is not available.',
+                nullable: true,
+              ),
+              'name': Schema.string(
+                description: 'Updated wallet display name.',
+                nullable: true,
+              ),
+              'currencyCode': Schema.string(
+                description: 'Updated ISO 4217 currency code.',
+                nullable: true,
+              ),
+              'type': Schema.enumString(
+                enumValues: _walletTypeNames,
+                description: 'Updated wallet type classification.',
+                nullable: true,
+              ),
+              'balance': Schema.number(
+                description: 'Updated balance for the wallet.',
+                nullable: true,
+              ),
+              'color': Schema.string(
+                description: 'Hex colour string for the wallet accent.',
+                nullable: true,
+              ),
+              'iconName': Schema.string(
+                description: 'Material icon name used for the wallet.',
+                nullable: true,
+              ),
+            },
+          ),
+        ),
+        FunctionDeclaration(
+          'set_default_wallet',
+          'Set the wallet used by default when the user does not specify one.',
+          Schema.object(
+            requiredProperties: ['walletId'],
+            properties: {
+              'walletId': Schema.string(
+                description: 'Existing wallet id to mark as default.',
               ),
             },
           ),
@@ -226,13 +409,372 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
           ),
         ),
         FunctionDeclaration(
-          'set_default_wallet',
-          'Set the wallet used by default when the user does not specify one.',
+          'update_category',
+          'Update an existing category. Provide either categoryId or name to '
+              'identify the entry.',
           Schema.object(
-            requiredProperties: ['walletId'],
+            requiredProperties: [],
             properties: {
-              'walletId': Schema.string(
-                description: 'Existing wallet id to mark as default.',
+              'categoryId': Schema.string(
+                description: 'Identifier of the category to update.',
+                nullable: true,
+              ),
+              'name': Schema.string(
+                description: 'Updated category name.',
+                nullable: true,
+              ),
+              'parentCategoryId': Schema.string(
+                description: 'Updated parent category id.',
+                nullable: true,
+              ),
+              'iconName': Schema.string(
+                description: 'Updated Material icon name.',
+                nullable: true,
+              ),
+              'color': Schema.string(
+                description: 'Updated hex colour string.',
+                nullable: true,
+              ),
+            },
+          ),
+        ),
+        FunctionDeclaration(
+          'create_budget',
+          'Create a new budget that can track limits for categories or flows.',
+          Schema.object(
+            requiredProperties: ['name', 'currencyCode', 'limit'],
+            properties: {
+              'name': Schema.string(description: 'Budget display name.'),
+              'currencyCode': Schema.string(
+                description: 'ISO 4217 currency code used for the budget.',
+              ),
+              'limit': Schema.number(
+                description: 'Spending or saving limit for the budget.',
+              ),
+              'notes': Schema.string(
+                description: 'Optional notes that describe the budget.',
+                nullable: true,
+              ),
+              'period': Schema.enumString(
+                enumValues: _budgetPeriodNames,
+                description: 'Budget period such as month or week.',
+                nullable: true,
+              ),
+              'flowType': Schema.enumString(
+                enumValues: _budgetFlowTypeNames,
+                description: 'Whether the budget tracks expenses, income, or both.',
+                nullable: true,
+              ),
+              'startDate': Schema.string(
+                description: 'ISO 8601 start date when using custom periods.',
+                nullable: true,
+              ),
+              'endDate': Schema.string(
+                description: 'ISO 8601 end date for custom periods.',
+                nullable: true,
+              ),
+              'categoryIds': Schema.array(
+                description: 'Category ids governed by the budget.',
+                nullable: true,
+                items: Schema.string(description: 'Category id.'),
+              ),
+              'categoryNames': Schema.array(
+                description: 'Category names to associate when ids are unknown.',
+                nullable: true,
+                items: Schema.string(description: 'Category name.'),
+              ),
+              'categories': Schema.array(
+                description:
+                    'Category descriptors used to match or create categories.',
+                nullable: true,
+                items: Schema.object(
+                  properties: {
+                    'id': Schema.string(
+                      description: 'Existing category id.',
+                      nullable: true,
+                    ),
+                    'name': Schema.string(
+                      description: 'Category name to match or create.',
+                      nullable: true,
+                    ),
+                    'parentCategoryId': Schema.string(
+                      description: 'Parent id when creating nested categories.',
+                      nullable: true,
+                    ),
+                    'iconName': Schema.string(
+                      description: 'Optional Material icon name.',
+                      nullable: true,
+                    ),
+                    'color': Schema.string(
+                      description: 'Optional hex colour string.',
+                      nullable: true,
+                    ),
+                  },
+                ),
+              ),
+            },
+          ),
+        ),
+        FunctionDeclaration(
+          'update_budget',
+          'Update an existing budget. Supply budgetId or name to target it.',
+          Schema.object(
+            requiredProperties: [],
+            properties: {
+              'budgetId': Schema.string(
+                description: 'Identifier of the budget to update.',
+                nullable: true,
+              ),
+              'name': Schema.string(
+                description: 'Updated budget name.',
+                nullable: true,
+              ),
+              'currencyCode': Schema.string(
+                description: 'Updated currency code.',
+                nullable: true,
+              ),
+              'limit': Schema.number(
+                description: 'Updated limit amount.',
+                nullable: true,
+              ),
+              'notes': Schema.string(
+                description: 'Updated notes for the budget.',
+                nullable: true,
+              ),
+              'period': Schema.enumString(
+                enumValues: _budgetPeriodNames,
+                description: 'Updated budget period.',
+                nullable: true,
+              ),
+              'flowType': Schema.enumString(
+                enumValues: _budgetFlowTypeNames,
+                description: 'Updated flow type.',
+                nullable: true,
+              ),
+              'startDate': Schema.string(
+                description: 'New custom start date.',
+                nullable: true,
+              ),
+              'endDate': Schema.string(
+                description: 'New custom end date.',
+                nullable: true,
+              ),
+              'categoryIds': Schema.array(
+                description: 'Replacement category ids for the budget.',
+                nullable: true,
+                items: Schema.string(description: 'Category id.'),
+              ),
+              'categoryNames': Schema.array(
+                description: 'Category names to match when replacing categories.',
+                nullable: true,
+                items: Schema.string(description: 'Category name.'),
+              ),
+              'categories': Schema.array(
+                description:
+                    'Category descriptors to resolve when updating the budget.',
+                nullable: true,
+                items: Schema.object(
+                  properties: {
+                    'id': Schema.string(
+                      description: 'Existing category id.',
+                      nullable: true,
+                    ),
+                    'name': Schema.string(
+                      description: 'Category name to match or create.',
+                      nullable: true,
+                    ),
+                    'parentCategoryId': Schema.string(
+                      description: 'Parent category id.',
+                      nullable: true,
+                    ),
+                    'iconName': Schema.string(
+                      description: 'Optional Material icon name.',
+                      nullable: true,
+                    ),
+                    'color': Schema.string(
+                      description: 'Optional hex colour string.',
+                      nullable: true,
+                    ),
+                  },
+                ),
+              ),
+            },
+          ),
+        ),
+        FunctionDeclaration(
+          'create_shopping_list',
+          'Create a shopping or grocery list for the user.',
+          Schema.object(
+            requiredProperties: ['name'],
+            properties: {
+              'name': Schema.string(description: 'Shopping list name.'),
+              'type': Schema.enumString(
+                enumValues: _shoppingListTypeNames,
+                description: 'List type such as grocery or shopping.',
+                nullable: true,
+              ),
+              'notes': Schema.string(
+                description: 'Optional notes for the list.',
+                nullable: true,
+              ),
+              'currency': Schema.string(
+                description: 'Currency used for estimating prices.',
+                nullable: true,
+              ),
+            },
+          ),
+        ),
+        FunctionDeclaration(
+          'update_shopping_list',
+          'Update an existing shopping list. Provide listId or name.',
+          Schema.object(
+            requiredProperties: [],
+            properties: {
+              'listId': Schema.string(
+                description: 'Identifier of the shopping list.',
+                nullable: true,
+              ),
+              'name': Schema.string(
+                description: 'Updated list name.',
+                nullable: true,
+              ),
+              'type': Schema.enumString(
+                enumValues: _shoppingListTypeNames,
+                description: 'Updated list type.',
+                nullable: true,
+              ),
+              'notes': Schema.string(
+                description: 'Updated notes.',
+                nullable: true,
+              ),
+              'currency': Schema.string(
+                description: 'Updated currency code.',
+                nullable: true,
+              ),
+            },
+          ),
+        ),
+        FunctionDeclaration(
+          'create_shopping_item',
+          'Create a shopping list item. Provide listId or listName to identify '
+              'the list it belongs to.',
+          Schema.object(
+            requiredProperties: ['title'],
+            properties: {
+              'title': Schema.string(description: 'Display title for the item.'),
+              'listId': Schema.string(
+                description: 'Identifier of the list that should contain the item.',
+                nullable: true,
+              ),
+              'listName': Schema.string(
+                description: 'List name if the id is unknown.',
+                nullable: true,
+              ),
+              'price': Schema.number(
+                description: 'Estimated price of the item.',
+                nullable: true,
+              ),
+              'currency': Schema.string(
+                description: 'Currency for the estimated price.',
+                nullable: true,
+              ),
+              'priority': Schema.enumString(
+                enumValues: _shoppingItemPriorityNames,
+                description: 'Priority level for the item.',
+                nullable: true,
+              ),
+              'bought': Schema.boolean(
+                description: 'Whether the item has already been purchased.',
+                nullable: true,
+              ),
+              'purchaseDate': Schema.string(
+                description: 'ISO 8601 purchase date.',
+                nullable: true,
+              ),
+              'expiryDate': Schema.string(
+                description: 'ISO 8601 expiry date.',
+                nullable: true,
+              ),
+              'iconEmoji': Schema.string(
+                description: 'Emoji shown for the item.',
+                nullable: true,
+              ),
+              'iconUrl': Schema.string(
+                description: 'Custom icon URL for the item.',
+                nullable: true,
+              ),
+            },
+          ),
+        ),
+        FunctionDeclaration(
+          'update_shopping_item',
+          'Update a shopping list item. Provide itemId and optionally listId or '
+              'listName to locate it.',
+          Schema.object(
+            requiredProperties: ['itemId'],
+            properties: {
+              'itemId': Schema.string(
+                description: 'Identifier of the item to update.',
+              ),
+              'listId': Schema.string(
+                description: 'Identifier of the parent list.',
+                nullable: true,
+              ),
+              'listName': Schema.string(
+                description: 'List name if the id is unknown.',
+                nullable: true,
+              ),
+              'title': Schema.string(
+                description: 'Updated title for the item.',
+                nullable: true,
+              ),
+              'price': Schema.number(
+                description: 'Updated price estimate.',
+                nullable: true,
+              ),
+              'currency': Schema.string(
+                description: 'Updated currency code.',
+                nullable: true,
+              ),
+              'priority': Schema.enumString(
+                enumValues: _shoppingItemPriorityNames,
+                description: 'Updated priority level.',
+                nullable: true,
+              ),
+              'bought': Schema.boolean(
+                description: 'Whether the item has been purchased.',
+                nullable: true,
+              ),
+              'purchaseDate': Schema.string(
+                description: 'Updated purchase date.',
+                nullable: true,
+              ),
+              'expiryDate': Schema.string(
+                description: 'Updated expiry date.',
+                nullable: true,
+              ),
+              'iconEmoji': Schema.string(
+                description: 'Updated emoji for the item.',
+                nullable: true,
+              ),
+              'iconUrl': Schema.string(
+                description: 'Updated icon URL.',
+                nullable: true,
+              ),
+            },
+          ),
+        ),
+        FunctionDeclaration(
+          'get_data_snapshot',
+          'Fetch the most recent MoneyBase data snapshot including wallets, '
+              'categories, budgets, transactions, and shopping lists.',
+          Schema.object(
+            description: 'Optional flags to control the snapshot content.',
+            properties: {
+              'includeTransactions': Schema.boolean(
+                description:
+                    'Whether to include the most recent transactions in the snapshot.',
+                nullable: true,
               ),
             },
           ),
@@ -280,12 +822,22 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
   late final TransactionRepository _transactionRepository;
   late final WalletRepository _walletRepository;
   late final CategoryRepository _categoryRepository;
+  late final BudgetRepository _budgetRepository;
+  late final ShoppingListRepository _shoppingListRepository;
   final SpeechToText _speechToText = SpeechToText();
   bool _isListening = false;
   bool _speechInitialized = false;
   String? _voiceError;
   List<Wallet> _knownWallets = <Wallet>[];
   List<Category> _knownCategories = <Category>[];
+  List<Budget> _knownBudgets = <Budget>[];
+  List<ShoppingList> _knownShoppingLists = <ShoppingList>[];
+  final Map<String, List<ShoppingItem>> _knownShoppingItems =
+      <String, List<ShoppingItem>>{};
+  List<MoneyBaseTransaction> _knownTransactions = <MoneyBaseTransaction>[];
+  List<_AssistantChatThread> _chatThreads = <_AssistantChatThread>[];
+  String? _activeChatId;
+  bool _isLoadingMessages = false;
   String? _defaultWalletId;
 
   @override
@@ -296,6 +848,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     _transactionRepository = TransactionRepository(firestore: _firestore);
     _walletRepository = WalletRepository(firestore: _firestore);
     _categoryRepository = CategoryRepository(firestore: _firestore);
+    _budgetRepository = BudgetRepository(firestore: _firestore);
+    _shoppingListRepository =
+        ShoppingListRepository(firestore: _firestore);
     const welcomeText =
         'Hi there! I\'m MoneyBase Assistant, your budgeting copilot. Ask me about tracking spending, wallets, or goals.';
     _welcomeMessage = _AiMessage(
@@ -330,25 +885,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       return;
     }
 
-    List<_AiMessage> history = <_AiMessage>[];
-    try {
-      history = await _loadMessageHistory(user.uid);
-    } on FirebaseException catch (error, stackTrace) {
-      debugPrint('Failed to load MoneyBase Assistant history: $error\n$stackTrace');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Unable to load previous MoneyBase Assistant messages.'),
-          ),
-        );
-      }
-    } catch (error, stackTrace) {
-      debugPrint('Failed to load MoneyBase Assistant history: $error\n$stackTrace');
-    }
-
-    if (!mounted) {
-      return;
-    }
+    List<_AssistantChatThread> threads = <_AssistantChatThread>[];
 
     try {
       _model = GenerativeModel(
@@ -359,11 +896,6 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         safetySettings: _safetySettings,
         tools: _assistantTools,
         toolConfig: _assistantToolConfig,
-      );
-      _chatSession = _model!.startChat(
-        history: history.map((message) => message.toContent()).toList(),
-        safetySettings: _safetySettings,
-        generationConfig: _generationConfig,
       );
     } on GenerativeAIException catch (error, stackTrace) {
       debugPrint('Failed to initialise MoneyBase Assistant: $error\n$stackTrace');
@@ -389,24 +921,348 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       return;
     }
 
+    try {
+      threads = await _loadChatThreads(user.uid);
+      if (threads.isEmpty) {
+        final fallbackThread = await _ensureDefaultChat(user.uid);
+        threads = <_AssistantChatThread>[fallbackThread];
+      }
+    } on FirebaseException catch (error, stackTrace) {
+      debugPrint('Failed to load MoneyBase Assistant chats: $error\n$stackTrace');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unable to load MoneyBase Assistant chats.'),
+          ),
+        );
+      }
+    } catch (error, stackTrace) {
+      debugPrint('Failed to load MoneyBase Assistant chats: $error\n$stackTrace');
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    final initialChatId =
+        threads.isNotEmpty ? threads.first.id : _defaultChatId;
+
     setState(() {
-      _messages
-        ..clear()
-        ..add(_welcomeMessage)
-        ..addAll(history);
+      _chatThreads = threads;
+      _activeChatId = initialChatId;
+    });
+
+    await _loadChat(initialChatId, showLoadingIndicator: false);
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
       _isInitializing = false;
       _errorMessage = null;
     });
-
-    _scrollToBottom();
   }
 
-  Future<List<_AiMessage>> _loadMessageHistory(String userId) async {
+  Future<List<_AssistantChatThread>> _loadChatThreads(String userId) async {
+    final snapshot = await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('chats')
+        .limit(25)
+        .get();
+
+    DateTime parseTimestamp(dynamic value) {
+      if (value is Timestamp) {
+        return value.toDate();
+      }
+      if (value is DateTime) {
+        return value;
+      }
+      if (value is num) {
+        final milliseconds =
+            value > 1e12 ? value.toInt() : (value * 1000).toInt();
+        return DateTime.fromMillisecondsSinceEpoch(milliseconds);
+      }
+      return DateTime.now();
+    }
+
+    final threads = snapshot.docs.map((doc) {
+      final data = doc.data();
+      return _AssistantChatThread(
+        id: doc.id,
+        title: (data['title'] as String?)?.trim(),
+        createdAt: parseTimestamp(data['createdAt']),
+        updatedAt: parseTimestamp(data['updatedAt']),
+        lastMessagePreview: (data['lastMessagePreview'] as String?)?.trim(),
+        autoTitle: data['autoTitle'] as bool? ?? true,
+      );
+    }).toList();
+
+    threads.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return threads;
+  }
+
+  Future<_AssistantChatThread> _ensureDefaultChat(String userId) async {
+    final chatRef = _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('chats')
+        .doc(_defaultChatId);
+
+    final snapshot = await chatRef.get();
+    if (!snapshot.exists) {
+      await chatRef.set({
+        'title': 'MoneyBase chat',
+        'autoTitle': true,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      final now = DateTime.now();
+      return _AssistantChatThread(
+        id: chatRef.id,
+        title: 'MoneyBase chat',
+        createdAt: now,
+        updatedAt: now,
+        autoTitle: true,
+      );
+    }
+
+    final data = snapshot.data() ?? <String, dynamic>{};
+    DateTime parseTimestamp(dynamic value) {
+      if (value is Timestamp) return value.toDate();
+      if (value is DateTime) return value;
+      return DateTime.now();
+    }
+
+    return _AssistantChatThread(
+      id: snapshot.id,
+      title: (data['title'] as String?)?.trim(),
+      createdAt: parseTimestamp(data['createdAt']),
+      updatedAt: parseTimestamp(data['updatedAt']),
+      lastMessagePreview: (data['lastMessagePreview'] as String?)?.trim(),
+      autoTitle: data['autoTitle'] as bool? ?? true,
+    );
+  }
+
+  Future<void> _loadChat(
+    String chatId, {
+    bool showLoadingIndicator = true,
+  }) async {
+    final userId = _userId;
+    final model = _model;
+    if (userId == null || model == null) {
+      return;
+    }
+
+    if (showLoadingIndicator) {
+      if (mounted) {
+        setState(() {
+          _isLoadingMessages = true;
+        });
+      } else {
+        _isLoadingMessages = true;
+      }
+    } else {
+      _isLoadingMessages = true;
+    }
+
+    List<_AiMessage> history = <_AiMessage>[];
+    try {
+      history = await _loadMessageHistory(userId, chatId);
+    } on FirebaseException catch (error, stackTrace) {
+      debugPrint('Failed to load MoneyBase Assistant history: $error\n$stackTrace');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content:
+                Text('Unable to load previous MoneyBase Assistant messages.'),
+          ),
+        );
+      }
+    } catch (error, stackTrace) {
+      debugPrint('Failed to load MoneyBase Assistant history: $error\n$stackTrace');
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    try {
+      final session = model.startChat(
+        history: history.map((message) => message.toContent()).toList(),
+        safetySettings: _safetySettings,
+        generationConfig: _generationConfig,
+      );
+      setState(() {
+        _chatSession = session;
+        _activeChatId = chatId;
+        _messages
+          ..clear()
+          ..add(_welcomeMessage)
+          ..addAll(history);
+        _isLoadingMessages = false;
+        _errorMessage = null;
+      });
+      _scrollToBottom();
+    } catch (error, stackTrace) {
+      debugPrint('Failed to initialise MoneyBase Assistant chat: $error\n$stackTrace');
+      setState(() {
+        _chatSession = null;
+        _messages
+          ..clear()
+          ..add(_welcomeMessage);
+        _isLoadingMessages = false;
+        _errorMessage =
+            'We could not load this conversation. Please try again shortly.';
+      });
+    }
+  }
+
+  _AssistantChatThread? _chatThreadById(String id) {
+    for (final thread in _chatThreads) {
+      if (thread.id == id) {
+        return thread;
+      }
+    }
+    return null;
+  }
+
+  void _upsertChatThread(_AssistantChatThread thread) {
+    final updated = List<_AssistantChatThread>.from(_chatThreads);
+    final index = updated.indexWhere((entry) => entry.id == thread.id);
+    if (index >= 0) {
+      updated[index] = thread;
+    } else {
+      updated.add(thread);
+    }
+    updated.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    if (mounted) {
+      setState(() {
+        _chatThreads = updated;
+      });
+    } else {
+      _chatThreads = updated;
+    }
+  }
+
+  String _truncatePreview(String value, {int maxLength = 80}) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return trimmed;
+    }
+    if (trimmed.length <= maxLength) {
+      return trimmed;
+    }
+    return '${trimmed.substring(0, maxLength).trim()}…';
+  }
+
+  String _deriveChatTitle(String rawText) {
+    final preview = _truncatePreview(rawText, maxLength: 48);
+    if (preview.isEmpty) {
+      return 'Conversation';
+    }
+    return preview;
+  }
+
+  void _touchChatThread({
+    required String chatId,
+    String? title,
+    String? preview,
+    DateTime? updatedAt,
+    bool? autoTitle,
+  }) {
+    final existing = _chatThreadById(chatId);
+    final now = updatedAt ?? DateTime.now();
+    final next = (existing ?? _AssistantChatThread(id: chatId))
+        .copyWith(
+          title: title ?? existing?.title,
+          lastMessagePreview: preview ?? existing?.lastMessagePreview,
+          updatedAt: now,
+          createdAt: existing?.createdAt ?? now,
+          autoTitle: autoTitle ?? existing?.autoTitle ?? true,
+        );
+    _upsertChatThread(next);
+  }
+
+  Future<_AssistantChatThread> _createChatThread(String userId) async {
+    final chatsRef = _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('chats');
+    final doc = chatsRef.doc();
+    final now = DateTime.now();
+    const defaultTitle = 'New chat';
+    await doc.set({
+      'title': defaultTitle,
+      'autoTitle': true,
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+      'lastMessagePreview': '',
+    });
+    return _AssistantChatThread(
+      id: doc.id,
+      title: defaultTitle,
+      createdAt: now,
+      updatedAt: now,
+      autoTitle: true,
+    );
+  }
+
+  Future<void> _handleCreateChat() async {
+    final userId = _userId;
+    if (userId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sign in to create a MoneyBase Assistant chat.'),
+          ),
+        );
+      }
+      return;
+    }
+
+    try {
+      final thread = await _createChatThread(userId);
+      _upsertChatThread(thread);
+      await _loadChat(thread.id);
+    } on FirebaseException catch (error, stackTrace) {
+      debugPrint('Failed to create MoneyBase Assistant chat: $error\n$stackTrace');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unable to create a new chat. Please try again.'),
+          ),
+        );
+      }
+    } catch (error, stackTrace) {
+      debugPrint('Failed to create MoneyBase Assistant chat: $error\n$stackTrace');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unable to create a new chat. Please try again.'),
+          ),
+        );
+      }
+    }
+  }
+
+  void _handleSelectChat(String? chatId) {
+    if (chatId == null || chatId == _activeChatId || _isLoadingMessages) {
+      return;
+    }
+    unawaited(_loadChat(chatId));
+  }
+
+  Future<List<_AiMessage>> _loadMessageHistory(
+    String userId,
+    String chatId,
+  ) async {
     final querySnapshot = await _firestore
         .collection('users')
         .doc(userId)
         .collection('chats')
-        .doc(_defaultChatId)
+        .doc(chatId)
         .collection('messages')
         .orderBy('timestamp', descending: true)
         .limit(_maxHistoryMessages)
@@ -619,7 +1475,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
   Future<void> _sendMessage() async {
     await _stopListening();
     final raw = _messageController.text.trim();
-    if (raw.isEmpty || _isSending || _isInitializing) {
+    if (raw.isEmpty || _isSending || _isInitializing || _isLoadingMessages) {
       return;
     }
 
@@ -634,6 +1490,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
 
     final userId = _userId;
     final chatSession = _chatSession;
+    final chatId = _activeChatId ?? _defaultChatId;
     if (userId == null || chatSession == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -664,14 +1521,31 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         .collection('users')
         .doc(userId)
         .collection('chats')
-        .doc(_defaultChatId);
+        .doc(chatId);
 
     try {
-      await chatRef.set(
-        {
-          'updatedAt': FieldValue.serverTimestamp(),
-        },
-        SetOptions(merge: true),
+      final thread = _chatThreadById(chatId);
+      final userPreview = _truncatePreview(userMessage.rawText);
+      final metadata = <String, Object?>{
+        'updatedAt': FieldValue.serverTimestamp(),
+        'lastMessagePreview': userPreview,
+      };
+      final shouldUpdateTitle =
+          thread == null || thread.autoTitle || (thread.title?.isEmpty ?? true);
+      if (shouldUpdateTitle) {
+        metadata['title'] = _deriveChatTitle(userMessage.rawText);
+        metadata['autoTitle'] = true;
+      }
+
+      await chatRef.set(metadata, SetOptions(merge: true));
+
+      _touchChatThread(
+        chatId: chatId,
+        title: shouldUpdateTitle
+            ? _deriveChatTitle(userMessage.rawText)
+            : thread?.title,
+        preview: userPreview,
+        autoTitle: shouldUpdateTitle ? true : thread?.autoTitle,
       );
 
       await chatRef.collection('messages').add({
@@ -713,11 +1587,26 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       });
       _scrollToBottom();
 
+      final aiPreview = _truncatePreview(aiMessage.displayText);
+
       await chatRef.collection('messages').add({
         'text': aiMessage.rawText,
         'isUser': false,
         'timestamp': FieldValue.serverTimestamp(),
       });
+
+      await chatRef.set(
+        {
+          'updatedAt': FieldValue.serverTimestamp(),
+          'lastMessagePreview': aiPreview,
+        },
+        SetOptions(merge: true),
+      );
+
+      _touchChatThread(
+        chatId: chatId,
+        preview: aiPreview,
+      );
     } on GenerativeAIException catch (error, stackTrace) {
       debugPrint('MoneyBase Assistant rejected the message: $error\n$stackTrace');
       const fallbackText =
@@ -747,6 +1636,17 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
           'isUser': false,
           'timestamp': FieldValue.serverTimestamp(),
         });
+        await chatRef.set(
+          {
+            'updatedAt': FieldValue.serverTimestamp(),
+            'lastMessagePreview': _truncatePreview(fallback.displayText),
+          },
+          SetOptions(merge: true),
+        );
+        _touchChatThread(
+          chatId: chatId,
+          preview: _truncatePreview(fallback.displayText),
+        );
       } catch (writeError, writeStackTrace) {
         debugPrint(
             'Failed to record MoneyBase Assistant error message: $writeError\n$writeStackTrace');
@@ -781,6 +1681,17 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
           'isUser': false,
           'timestamp': FieldValue.serverTimestamp(),
         });
+        await chatRef.set(
+          {
+            'updatedAt': FieldValue.serverTimestamp(),
+            'lastMessagePreview': _truncatePreview(fallback.displayText),
+          },
+          SetOptions(merge: true),
+        );
+        _touchChatThread(
+          chatId: chatId,
+          preview: _truncatePreview(fallback.displayText),
+        );
       } catch (writeError, writeStackTrace) {
         debugPrint(
             'Failed to record fallback MoneyBase Assistant message: $writeError\n$writeStackTrace');
@@ -831,10 +1742,19 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
           .orderBy('date', descending: true)
           .limit(20)
           .get();
+      final budgetsFuture =
+          userRef.collection('budgets').orderBy('updatedAt', descending: true).limit(20).get();
+      final shoppingListsFuture = userRef
+          .collection('shopping_lists')
+          .orderBy('createdAt', descending: false)
+          .limit(10)
+          .get();
 
       final categoriesSnapshot = await categoriesFuture;
       final walletsSnapshot = await walletsFuture;
       final transactionsSnapshot = await transactionsFuture;
+      final budgetsSnapshot = await budgetsFuture;
+      final shoppingListsSnapshot = await shoppingListsFuture;
 
       final categories = categoriesSnapshot.docs
           .map(
@@ -875,9 +1795,68 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
             }),
           )
           .toList();
+      final budgets = budgetsSnapshot.docs
+          .map(
+            (doc) => Budget.fromJson({
+              ...doc.data(),
+              'id': doc.id,
+              'userId': userId,
+            }),
+          )
+          .toList()
+        ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+      final shoppingLists = shoppingListsSnapshot.docs
+          .map(
+            (doc) => ShoppingList.fromJson({
+              ...doc.data(),
+              'id': doc.id,
+              'userId': userId,
+            }),
+          )
+          .toList()
+        ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+      final shoppingItems = <String, List<ShoppingItem>>{};
+      final listsForItems = shoppingLists.length > 5
+          ? shoppingLists.sublist(0, 5)
+          : shoppingLists;
+      await Future.wait(
+        listsForItems.map((list) async {
+          final snapshot = await userRef
+              .collection('shopping_lists')
+              .doc(list.id)
+              .collection('shopping_items')
+              .orderBy('createdAt', descending: false)
+              .limit(25)
+              .get();
+          shoppingItems[list.id] = snapshot.docs
+              .map(
+                (doc) => ShoppingItem.fromJson({
+                  ...doc.data(),
+                  'id': doc.id,
+                  'userId': userId,
+                  'listId': list.id,
+                }),
+              )
+              .toList();
+        }),
+      );
 
       _knownWallets = wallets;
       _knownCategories = categories;
+      _knownBudgets = budgets;
+      _knownShoppingLists = shoppingLists;
+      _knownTransactions = transactions;
+      _knownShoppingItems
+        ..clear()
+        ..addEntries(
+          shoppingItems.entries.map(
+            (entry) => MapEntry(
+              entry.key,
+              List<ShoppingItem>.unmodifiable(entry.value),
+            ),
+          ),
+        );
 
       final userDoc = await userRef.get();
       final rawDefaultWalletId = userDoc.data()?['defaultWalletId'];
@@ -1033,6 +2012,120 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
           'Summary: $incomeCount income (${describeTotals(incomeTotals)}) and '
           '$expenseCount expense (${describeTotals(expenseTotals)}). Values '
           "use each entry's currency and may mix different currencies.",
+        );
+      }
+
+      if (budgets.isEmpty) {
+        buffer.writeln('No budgets configured yet.');
+      } else {
+        buffer.writeln('Budgets (${budgets.length} total):');
+        final budgetsToShow =
+            budgets.length > 8 ? budgets.sublist(0, 8) : budgets;
+        for (final budget in budgetsToShow) {
+          final name = budget.name.trim().isEmpty
+              ? 'Budget'
+              : budget.name.trim();
+          final limit = budget.limit.toStringAsFixed(2);
+          final currency =
+              budget.currencyCode.isEmpty ? 'USD' : budget.currencyCode;
+          final categoriesLabel = budget.categoryIds.isEmpty
+              ? 'all categories'
+              : budget.categoryIds
+                  .map(
+                    (id) =>
+                        categoryNames[id] ?? 'Category ${id.substring(0, 4)}',
+                  )
+                  .join(', ');
+          buffer.writeln(
+            '- $name • limit $limit $currency • period ${budget.period.name} • flow ${budget.flowType.name} • categories: $categoriesLabel',
+          );
+        }
+        if (budgets.length > budgetsToShow.length) {
+          buffer.writeln(
+            '- ...${budgets.length - budgetsToShow.length} more budgets not listed.',
+          );
+        }
+        final budgetCatalog = budgets
+            .map(
+              (budget) => {
+                'id': budget.id,
+                'name': budget.name,
+                'currencyCode': budget.currencyCode,
+                'limit': budget.limit,
+                'period': budget.period.name,
+                'flowType': budget.flowType.name,
+                'categoryIds': budget.categoryIds,
+                'notes': budget.notes,
+                'startDate': budget.startDate?.toIso8601String(),
+                'endDate': budget.endDate?.toIso8601String(),
+              },
+            )
+            .toList(growable: false);
+        buffer.writeln('Budget catalog JSON: ${jsonEncode(budgetCatalog)}');
+      }
+
+      if (shoppingLists.isEmpty) {
+        buffer.writeln('No shopping lists recorded yet.');
+      } else {
+        buffer.writeln('Shopping lists (${shoppingLists.length} total):');
+        final listsToShow =
+            shoppingLists.length > 6 ? shoppingLists.sublist(0, 6) : shoppingLists;
+        for (final list in listsToShow) {
+          final title = list.name.trim().isEmpty
+              ? 'Shopping list'
+              : list.name.trim();
+          final items = shoppingItems[list.id] ?? const <ShoppingItem>[];
+          final boughtCount = items.where((item) => item.bought).length;
+          buffer.writeln(
+            '- $title • type ${list.type.name} • currency ${list.currency} • ${items.length} items ($boughtCount bought)',
+          );
+          if (items.isNotEmpty) {
+            final previewItems =
+                items.length > 3 ? items.sublist(0, 3) : items;
+            for (final item in previewItems) {
+              buffer.writeln(
+                '  • ${item.title} • priority ${item.priority.name} • bought ${item.bought ? 'yes' : 'no'}',
+              );
+            }
+            if (items.length > previewItems.length) {
+              buffer.writeln(
+                '  • ...${items.length - previewItems.length} more items',
+              );
+            }
+          }
+        }
+        if (shoppingLists.length > listsToShow.length) {
+          buffer.writeln(
+            '- ...${shoppingLists.length - listsToShow.length} more shopping lists not listed.',
+          );
+        }
+        final shoppingCatalog = shoppingLists
+            .map(
+              (list) => {
+                'id': list.id,
+                'name': list.name,
+                'type': list.type.name,
+                'currency': list.currency,
+                'notes': list.notes,
+                'items': (shoppingItems[list.id] ?? const <ShoppingItem>[])
+                    .map(
+                      (item) => {
+                        'id': item.id,
+                        'title': item.title,
+                        'priority': item.priority.name,
+                        'bought': item.bought,
+                        'price': item.price,
+                        'currency': item.currency,
+                        'purchaseDate': item.purchaseDate?.toIso8601String(),
+                        'expiryDate': item.expiryDate?.toIso8601String(),
+                      },
+                    )
+                    .toList(growable: false),
+              },
+            )
+            .toList(growable: false);
+        buffer.writeln(
+          'Shopping catalog JSON: ${jsonEncode(shoppingCatalog)}',
         );
       }
 
@@ -1198,12 +2291,32 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     switch (call.name) {
       case 'add_transaction':
         return _handleAddTransactionCall(args);
+      case 'update_transaction':
+        return _handleUpdateTransactionCall(args);
       case 'create_wallet':
         return _handleCreateWalletCall(args);
+      case 'update_wallet':
+        return _handleUpdateWalletCall(args);
       case 'create_category':
         return _handleCreateCategoryCall(args);
+      case 'update_category':
+        return _handleUpdateCategoryCall(args);
       case 'set_default_wallet':
         return _handleSetDefaultWalletCall(args);
+      case 'create_budget':
+        return _handleCreateBudgetCall(args);
+      case 'update_budget':
+        return _handleUpdateBudgetCall(args);
+      case 'create_shopping_list':
+        return _handleCreateShoppingListCall(args);
+      case 'update_shopping_list':
+        return _handleUpdateShoppingListCall(args);
+      case 'create_shopping_item':
+        return _handleCreateShoppingItemCall(args);
+      case 'update_shopping_item':
+        return _handleUpdateShoppingItemCall(args);
+      case 'get_data_snapshot':
+        return _handleGetDataSnapshotCall(args);
       default:
         throw StateError('Unknown MoneyBase Assistant action: ${call.name}');
     }
@@ -1212,9 +2325,14 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
   Future<Map<String, Object?>> _handleAddTransactionCall(
       Map<String, Object?> args) async {
     final userId = _requireUserId();
-    final transactionsArg = args['transactions'];
-    if (transactionsArg is! List) {
-      throw FormatException('transactions must be an array');
+    final rawTransactions = args['transactions'] ?? args['transaction'];
+    final List transactionsArg;
+    if (rawTransactions is List) {
+      transactionsArg = rawTransactions;
+    } else if (rawTransactions is Map<String, Object?>) {
+      transactionsArg = [rawTransactions];
+    } else {
+      throw FormatException('transactions must be provided as an array.');
     }
 
     final created = <Map<String, Object?>>[];
@@ -1230,13 +2348,19 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       }
       final isIncome = _determineIsIncome(entry, rawAmount);
       final amount = rawAmount.abs();
-      final currencyCode =
-          _normalizeCurrency(_parseString(entry['currencyCode']));
+      final currencyCode = _normalizeCurrency(
+        _parseString(
+          entry['currencyCode'] ?? entry['currency'] ?? entry['currency_code'],
+        ),
+      );
       final date =
           _parseDate(entry['date'] ?? entry['datetime'] ?? entry['timestamp']);
-      final description =
-          _parseString(entry['description']) ?? 'MoneyBase transaction';
-      final note = _parseString(entry['note']);
+      final description = _parseString(
+            entry['description'] ?? entry['title'] ?? entry['name'],
+          ) ??
+          'MoneyBase transaction';
+      final note =
+          _parseString(entry['note'] ?? entry['notes'] ?? entry['memo']);
       final combinedDescription =
           note == null || note.isEmpty ? description : '$description — $note';
 
@@ -1259,6 +2383,10 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
           await _transactionRepository.addTransaction(userId, transaction);
       created.add(_transactionSummary(saved));
       noticeEntries.add(_toRecordedTransaction(saved));
+      _knownTransactions = <MoneyBaseTransaction>[
+        ..._knownTransactions.where((existing) => existing.id != saved.id),
+        saved,
+      ];
     }
 
     _cachedContextText = null;
@@ -1273,10 +2401,99 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     };
   }
 
+  Future<Map<String, Object?>> _handleUpdateTransactionCall(
+      Map<String, Object?> args) async {
+    final userId = _requireUserId();
+    final transactionId = _parseString(args['transactionId']);
+    if (transactionId == null) {
+      throw FormatException('transactionId is required.');
+    }
+
+    var transaction = await _getTransactionById(transactionId);
+    if (transaction == null) {
+      throw StateError('Transaction $transactionId was not found.');
+    }
+
+    final amountOverride = _parseNumber(args['amount']);
+    if (amountOverride != null && amountOverride == 0) {
+      throw FormatException('Transaction amount must be non-zero.');
+    }
+
+    final currency = _normalizeCurrency(
+      _parseString(args['currencyCode']),
+      fallback: transaction.currencyCode,
+    );
+
+    final note = _parseString(args['note']);
+    var description =
+        _parseString(args['description']) ?? transaction.description;
+    if (note != null && note.isNotEmpty) {
+      description = '$description — $note';
+    }
+
+    final rawAmount = amountOverride ?? transaction.amount;
+    final resolvedAmount = rawAmount.abs();
+
+    var resolvedIsIncome = transaction.isIncome;
+    if (args.containsKey('isIncome') || args.containsKey('flow')) {
+      final signedAmount = amountOverride ??
+          (transaction.isIncome ? transaction.amount : -transaction.amount);
+      resolvedIsIncome =
+          _determineIsIncome(args, signedAmount == 0 ? rawAmount : signedAmount);
+    }
+
+    DateTime resolvedDate = transaction.date;
+    final dateInput = args['date'];
+    if (dateInput != null) {
+      resolvedDate = _parseDate(dateInput);
+    }
+
+    String resolvedWalletId = transaction.walletId;
+    if (args.containsKey('walletId') ||
+        args.containsKey('walletName') ||
+        args['wallet'] is Map<String, Object?>) {
+      resolvedWalletId =
+          await _resolveWalletId(args, currencyCode: currency);
+    }
+
+    String resolvedCategoryId = transaction.categoryId;
+    if (args.containsKey('categoryId') ||
+        args.containsKey('categoryName') ||
+        args['category'] is Map<String, Object?>) {
+      resolvedCategoryId = await _resolveCategoryId(args);
+    }
+
+    transaction = transaction.copyWith(
+      amount: resolvedAmount,
+      currencyCode: currency,
+      description: description,
+      isIncome: resolvedIsIncome,
+      date: resolvedDate,
+      walletId: resolvedWalletId,
+      categoryId: resolvedCategoryId,
+    );
+
+    await _transactionRepository.updateTransaction(userId, transaction);
+
+    _knownTransactions = <MoneyBaseTransaction>[
+      ..._knownTransactions.where((existing) => existing.id != transaction.id),
+      transaction,
+    ];
+
+    _cachedContextText = null;
+
+    return {
+      'success': true,
+      'transaction': _transactionSummary(transaction),
+    };
+  }
+
   Future<Map<String, Object?>> _handleCreateWalletCall(
       Map<String, Object?> args) async {
-    final name = _parseString(args['name']);
-    final currency = _normalizeCurrency(_parseString(args['currencyCode']));
+    final name = _parseString(args['name'] ?? args['walletName']);
+    final currency = _normalizeCurrency(
+      _parseString(args['currencyCode'] ?? args['currency'] ?? args['currency_code']),
+    );
     if (name == null) {
       throw FormatException('Wallet name is required.');
     }
@@ -1285,8 +2502,10 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       name: name,
       currencyCode: currency,
       typeName: _parseString(args['type']),
-      initialBalance: _parseNumber(args['initialBalance']),
-      setAsDefault: args['setAsDefault'] as bool? ?? false,
+      initialBalance:
+          _parseNumber(args['initialBalance'] ?? args['balance'] ?? args['startingBalance']),
+      setAsDefault:
+          args['setAsDefault'] as bool? ?? args['makeDefault'] as bool? ?? false,
     );
 
     return {
@@ -1295,9 +2514,54 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     };
   }
 
+  Future<Map<String, Object?>> _handleUpdateWalletCall(
+      Map<String, Object?> args) async {
+    final userId = _requireUserId();
+    Wallet? wallet;
+    final walletId = _parseString(args['walletId']);
+    if (walletId != null) {
+      wallet = await _getWalletById(walletId);
+    }
+
+    final walletName = _parseString(args['walletName'] ?? args['name']);
+    if (wallet == null && walletName != null) {
+      wallet = _findWalletByName(walletName);
+    }
+
+    if (wallet == null) {
+      throw StateError('Wallet to update was not found.');
+    }
+
+    final updated = wallet.copyWith(
+      name: _parseString(args['name']) ?? wallet.name,
+      currencyCode:
+          _normalizeCurrency(_parseString(args['currencyCode']), fallback: wallet.currencyCode),
+      balance: _parseNumber(args['balance']) ?? wallet.balance,
+      color: _parseString(args['color']) ?? wallet.color,
+      iconName: _parseString(args['iconName']) ?? wallet.iconName,
+      type: args.containsKey('type')
+          ? _parseWalletType(_parseString(args['type']), fallback: wallet.type)
+          : wallet.type,
+    );
+
+    await _walletRepository.updateWallet(userId, updated);
+
+    _knownWallets = <Wallet>[
+      ..._knownWallets.where((existing) => existing.id != updated.id),
+      updated,
+    ];
+
+    _cachedContextText = null;
+
+    return {
+      'success': true,
+      'wallet': _walletSummary(updated),
+    };
+  }
+
   Future<Map<String, Object?>> _handleCreateCategoryCall(
       Map<String, Object?> args) async {
-    final name = _parseString(args['name']);
+    final name = _parseString(args['name'] ?? args['categoryName']);
     if (name == null) {
       throw FormatException('Category name is required.');
     }
@@ -1313,6 +2577,46 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     return {
       'success': true,
       'category': _categorySummary(category),
+    };
+  }
+
+  Future<Map<String, Object?>> _handleUpdateCategoryCall(
+      Map<String, Object?> args) async {
+    final categoryId = _parseString(args['categoryId']);
+    final categoryName = _parseString(args['name']);
+    Category? category;
+    if (categoryId != null) {
+      category = _findCategoryById(categoryId);
+    }
+    if (category == null && categoryName != null) {
+      category = _findCategoryByName(categoryName);
+    }
+
+    if (category == null) {
+      throw StateError('Category to update was not found.');
+    }
+
+    final updated = category.copyWith(
+      name: categoryName ?? category.name,
+      parentCategoryId:
+          _parseString(args['parentCategoryId'] ?? args['parentId']) ??
+              category.parentCategoryId,
+      iconName: _parseString(args['iconName']) ?? category.iconName,
+      color: _parseString(args['color']) ?? category.color,
+    );
+
+    await _categoryRepository.updateCategory(_requireUserId(), updated);
+
+    _knownCategories = <Category>[
+      ..._knownCategories.where((existing) => existing.id != updated.id),
+      updated,
+    ];
+
+    _cachedContextText = null;
+
+    return {
+      'success': true,
+      'category': _categorySummary(updated),
     };
   }
 
@@ -1334,6 +2638,114 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     return {
       'success': true,
       'wallet': _walletSummary(wallet),
+    };
+  }
+
+  Future<Map<String, Object?>> _handleCreateBudgetCall(
+      Map<String, Object?> args) async {
+    final name = _parseString(args['name']);
+    if (name == null) {
+      throw FormatException('Budget name is required.');
+    }
+
+    final limit = _parseNumber(args['limit']);
+    if (limit == null || limit <= 0) {
+      throw FormatException('Budget limit must be a positive number.');
+    }
+
+    final budget = Budget(
+      name: name,
+      limit: limit,
+      currencyCode:
+          _normalizeCurrency(_parseString(args['currencyCode'])),
+      notes: _parseString(args['notes']),
+      period: _parseBudgetPeriod(_parseString(args['period'])),
+      flowType: _parseBudgetFlowType(_parseString(args['flowType'])),
+      startDate: _parseOptionalDate(args['startDate']),
+      endDate: _parseOptionalDate(args['endDate']),
+      categoryIds: await _resolveBudgetCategoryIds(args),
+    );
+
+    final created = await _budgetRepository.addBudget(_requireUserId(), budget);
+    _knownBudgets = <Budget>[
+      ..._knownBudgets.where((existing) => existing.id != created.id),
+      created,
+    ];
+    _cachedContextText = null;
+
+    return {
+      'success': true,
+      'budget': _budgetSummary(created),
+    };
+  }
+
+  Future<Map<String, Object?>> _handleUpdateBudgetCall(
+      Map<String, Object?> args) async {
+    final userId = _requireUserId();
+    Budget? budget;
+    final budgetId = _parseString(args['budgetId']);
+    if (budgetId != null) {
+      budget = await _getBudgetById(budgetId);
+    }
+
+    final budgetName = _parseString(args['name']);
+    if (budget == null && budgetName != null) {
+      budget = _findBudgetByName(budgetName);
+    }
+
+    if (budget == null) {
+      throw StateError('Budget to update was not found.');
+    }
+
+    List<String>? categoryIds;
+    final hasCategoryArgs = args.containsKey('categoryIds') ||
+        args.containsKey('categoryNames') ||
+        args.containsKey('categories');
+    if (hasCategoryArgs) {
+      categoryIds = await _resolveBudgetCategoryIds(args);
+    }
+
+    final updated = budget.copyWith(
+      name: budgetName ?? budget.name,
+      currencyCode: _normalizeCurrency(
+        _parseString(args['currencyCode']),
+        fallback: budget.currencyCode,
+      ),
+      limit: _parseNumber(args['limit']) ?? budget.limit,
+      notes: _parseString(args['notes']) ?? budget.notes,
+      period: args.containsKey('period')
+          ? _parseBudgetPeriod(
+              _parseString(args['period']),
+              fallback: budget.period,
+            )
+          : budget.period,
+      flowType: args.containsKey('flowType')
+          ? _parseBudgetFlowType(
+              _parseString(args['flowType']),
+              fallback: budget.flowType,
+            )
+          : budget.flowType,
+      startDate: args.containsKey('startDate')
+          ? _parseOptionalDate(args['startDate'])
+          : budget.startDate,
+      endDate: args.containsKey('endDate')
+          ? _parseOptionalDate(args['endDate'])
+          : budget.endDate,
+      categoryIds: categoryIds ?? budget.categoryIds,
+    );
+
+    await _budgetRepository.updateBudget(userId, updated);
+
+    _knownBudgets = <Budget>[
+      ..._knownBudgets.where((existing) => existing.id != updated.id),
+      updated,
+    ];
+
+    _cachedContextText = null;
+
+    return {
+      'success': true,
+      'budget': _budgetSummary(updated),
     };
   }
 
@@ -1401,6 +2813,261 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     _defaultWalletId = walletId;
   }
 
+  Future<Map<String, Object?>> _handleCreateShoppingListCall(
+      Map<String, Object?> args) async {
+    final name = _parseString(args['name']);
+    if (name == null) {
+      throw FormatException('Shopping list name is required.');
+    }
+
+    final list = ShoppingList(
+      name: name,
+      type: _parseShoppingListType(_parseString(args['type'])),
+      notes: _parseString(args['notes']),
+      currency: _normalizeCurrency(
+        _parseString(args['currency']),
+        fallback: 'USD',
+      ),
+    );
+
+    final created =
+        await _shoppingListRepository.addShoppingList(_requireUserId(), list);
+
+    _knownShoppingLists = <ShoppingList>[
+      ..._knownShoppingLists.where((existing) => existing.id != created.id),
+      created,
+    ];
+    _knownShoppingItems.putIfAbsent(created.id, () => const <ShoppingItem>[]);
+    _cachedContextText = null;
+
+    return {
+      'success': true,
+      'shoppingList': _shoppingListSummary(created),
+    };
+  }
+
+  Future<Map<String, Object?>> _handleUpdateShoppingListCall(
+      Map<String, Object?> args) async {
+    final userId = _requireUserId();
+    ShoppingList? list;
+    final listId = _parseString(args['listId']);
+    if (listId != null) {
+      list = await _getShoppingListById(listId);
+    }
+
+    final listName = _parseString(args['name']);
+    if (list == null && listName != null) {
+      list = _findShoppingListByName(listName);
+    }
+
+    if (list == null) {
+      throw StateError('Shopping list to update was not found.');
+    }
+
+    final updated = list.copyWith(
+      name: listName ?? list.name,
+      type: args.containsKey('type')
+          ? _parseShoppingListType(
+              _parseString(args['type']),
+              fallback: list.type,
+            )
+          : list.type,
+      notes: _parseString(args['notes']) ?? list.notes,
+      currency: _normalizeCurrency(
+        _parseString(args['currency']),
+        fallback: list.currency,
+      ),
+    );
+
+    await _shoppingListRepository.updateShoppingList(userId, updated);
+
+    _knownShoppingLists = <ShoppingList>[
+      ..._knownShoppingLists.where((existing) => existing.id != updated.id),
+      updated,
+    ];
+
+    _cachedContextText = null;
+
+    return {
+      'success': true,
+      'shoppingList': _shoppingListSummary(
+        updated,
+        items: _knownShoppingItems[updated.id] ?? const <ShoppingItem>[],
+      ),
+    };
+  }
+
+  Future<Map<String, Object?>> _handleCreateShoppingItemCall(
+      Map<String, Object?> args) async {
+    final title = _parseString(args['title']);
+    if (title == null) {
+      throw FormatException('Shopping item title is required.');
+    }
+
+    final listId = await _resolveShoppingListId(args);
+    final list = await _getShoppingListById(listId);
+    if (list == null) {
+      throw StateError('Shopping list $listId was not found.');
+    }
+
+    final item = ShoppingItem(
+      title: title,
+      price: _parseNumber(args['price']) ?? 0,
+      currency: _normalizeCurrency(
+        _parseString(args['currency']),
+        fallback: list.currency,
+      ),
+      priority: _parseShoppingItemPriority(_parseString(args['priority'])),
+      bought: args['bought'] as bool? ?? false,
+      purchaseDate: _parseOptionalDate(args['purchaseDate']),
+      expiryDate: _parseOptionalDate(args['expiryDate']),
+      iconEmoji: _parseString(args['iconEmoji']),
+      iconUrl: _parseString(args['iconUrl']),
+    );
+
+    final created =
+        await _shoppingListRepository.addItem(_requireUserId(), listId, item);
+
+    final updatedItems = List<ShoppingItem>.from(
+        _knownShoppingItems[listId] ?? const <ShoppingItem>[])
+      ..removeWhere((existing) => existing.id == created.id)
+      ..add(created);
+    updatedItems.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    _knownShoppingItems[listId] = List<ShoppingItem>.unmodifiable(updatedItems);
+
+    _cachedContextText = null;
+
+    return {
+      'success': true,
+      'shoppingItem': _shoppingItemSummary(created),
+      'shoppingList': _shoppingListSummary(
+        list,
+        items: _knownShoppingItems[listId] ?? const <ShoppingItem>[],
+      ),
+    };
+  }
+
+  Future<Map<String, Object?>> _handleUpdateShoppingItemCall(
+      Map<String, Object?> args) async {
+    final userId = _requireUserId();
+    final itemId = _parseString(args['itemId']);
+    if (itemId == null) {
+      throw FormatException('itemId is required.');
+    }
+
+    String? listId = _parseString(args['listId']);
+    if (listId == null) {
+      final listName = _parseString(args['listName']);
+      if (listName != null) {
+        listId = _findShoppingListByName(listName)?.id;
+      }
+    }
+
+    if (listId == null) {
+      for (final entry in _knownShoppingItems.entries) {
+        if (entry.value.any((item) => item.id == itemId)) {
+          listId = entry.key;
+          break;
+        }
+      }
+    }
+
+    if (listId == null) {
+      throw StateError('Shopping item to update was not found.');
+    }
+
+    final list = await _getShoppingListById(listId);
+    if (list == null) {
+      throw StateError('Shopping list $listId was not found.');
+    }
+
+    final existingItem = await _getShoppingItemById(listId, itemId);
+    if (existingItem == null) {
+      throw StateError('Shopping item $itemId was not found.');
+    }
+
+    final updatedItem = existingItem.copyWith(
+      title: _parseString(args['title']) ?? existingItem.title,
+      price: _parseNumber(args['price']) ?? existingItem.price,
+      currency: _normalizeCurrency(
+        _parseString(args['currency']),
+        fallback: existingItem.currency,
+      ),
+      priority: args.containsKey('priority')
+          ? _parseShoppingItemPriority(
+              _parseString(args['priority']),
+              fallback: existingItem.priority,
+            )
+          : existingItem.priority,
+      bought: args['bought'] as bool? ?? existingItem.bought,
+      purchaseDate: args.containsKey('purchaseDate')
+          ? _parseOptionalDate(args['purchaseDate'])
+          : existingItem.purchaseDate,
+      expiryDate: args.containsKey('expiryDate')
+          ? _parseOptionalDate(args['expiryDate'])
+          : existingItem.expiryDate,
+      iconEmoji: _parseString(args['iconEmoji']) ?? existingItem.iconEmoji,
+      iconUrl: _parseString(args['iconUrl']) ?? existingItem.iconUrl,
+    );
+
+    await _shoppingListRepository.updateItem(userId, listId, updatedItem);
+
+    final updatedItems = List<ShoppingItem>.from(
+        _knownShoppingItems[listId] ?? const <ShoppingItem>[])
+      ..removeWhere((existing) => existing.id == updatedItem.id)
+      ..add(updatedItem);
+    updatedItems.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    _knownShoppingItems[listId] = List<ShoppingItem>.unmodifiable(updatedItems);
+
+    _cachedContextText = null;
+
+    return {
+      'success': true,
+      'shoppingItem': _shoppingItemSummary(updatedItem),
+      'shoppingList': _shoppingListSummary(
+        list,
+        items: _knownShoppingItems[listId] ?? const <ShoppingItem>[],
+      ),
+    };
+  }
+
+  Future<Map<String, Object?>> _handleGetDataSnapshotCall(
+      Map<String, Object?> args) async {
+    final userId = _requireUserId();
+    try {
+      await _loadUserContext(userId);
+    } catch (error, stackTrace) {
+      debugPrint('Failed to refresh MoneyBase Assistant snapshot: $error\n$stackTrace');
+    }
+
+    final includeTransactions = args['includeTransactions'] as bool? ?? true;
+
+    final snapshot = <String, Object?>{
+      'defaultWalletId': _defaultWalletId,
+      'wallets': _knownWallets.map(_walletSummary).toList(growable: false),
+      'categories': _knownCategories.map(_categorySummary).toList(growable: false),
+      'budgets': _knownBudgets.map(_budgetSummary).toList(growable: false),
+      'shoppingLists': _knownShoppingLists
+          .map(
+            (list) => _shoppingListSummary(
+              list,
+              items: _knownShoppingItems[list.id] ?? const <ShoppingItem>[],
+            ),
+          )
+          .toList(growable: false),
+    };
+
+    if (includeTransactions) {
+      snapshot['transactions'] =
+          _knownTransactions.map(_transactionSummary).toList(growable: false);
+    }
+
+    return {
+      'success': true,
+      'snapshot': snapshot,
+    };
+  }
+
   String _requireUserId() {
     final id = _userId;
     if (id == null || id.isEmpty) {
@@ -1447,6 +3114,224 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     return null;
   }
 
+  MoneyBaseTransaction? _findTransactionById(String id) {
+    for (final transaction in _knownTransactions) {
+      if (transaction.id == id) {
+        return transaction;
+      }
+    }
+    return null;
+  }
+
+  Budget? _findBudgetById(String id) {
+    for (final budget in _knownBudgets) {
+      if (budget.id == id) {
+        return budget;
+      }
+    }
+    return null;
+  }
+
+  Budget? _findBudgetByName(String name) {
+    final lower = name.trim().toLowerCase();
+    for (final budget in _knownBudgets) {
+      if (budget.name.trim().toLowerCase() == lower) {
+        return budget;
+      }
+    }
+    return null;
+  }
+
+  ShoppingList? _findShoppingListById(String id) {
+    for (final list in _knownShoppingLists) {
+      if (list.id == id) {
+        return list;
+      }
+    }
+    return null;
+  }
+
+  ShoppingList? _findShoppingListByName(String name) {
+    final lower = name.trim().toLowerCase();
+    for (final list in _knownShoppingLists) {
+      if (list.name.trim().toLowerCase() == lower) {
+        return list;
+      }
+    }
+    return null;
+  }
+
+  ShoppingItem? _findShoppingItem(String listId, String itemId) {
+    final items = _knownShoppingItems[listId];
+    if (items == null) {
+      return null;
+    }
+    for (final item in items) {
+      if (item.id == itemId) {
+        return item;
+      }
+    }
+    return null;
+  }
+
+  Future<MoneyBaseTransaction?> _getTransactionById(String id) async {
+    final cached = _findTransactionById(id);
+    if (cached != null) {
+      return cached;
+    }
+
+    final userId = _requireUserId();
+    final snapshot = await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('transactions')
+        .doc(id)
+        .get();
+    final data = snapshot.data();
+    if (!snapshot.exists || data == null) {
+      return null;
+    }
+
+    final transaction = MoneyBaseTransaction.fromJson({
+      ...data,
+      'id': snapshot.id,
+      'userId': userId,
+    });
+    _knownTransactions = <MoneyBaseTransaction>[
+      ..._knownTransactions.where((existing) => existing.id != transaction.id),
+      transaction,
+    ];
+    return transaction;
+  }
+
+  Future<Budget?> _getBudgetById(String id) async {
+    final cached = _findBudgetById(id);
+    if (cached != null) {
+      return cached;
+    }
+
+    final userId = _requireUserId();
+    final snapshot = await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('budgets')
+        .doc(id)
+        .get();
+    final data = snapshot.data();
+    if (!snapshot.exists || data == null) {
+      return null;
+    }
+
+    final budget = Budget.fromJson({
+      ...data,
+      'id': snapshot.id,
+      'userId': userId,
+    });
+    _knownBudgets = <Budget>[
+      ..._knownBudgets.where((existing) => existing.id != budget.id),
+      budget,
+    ];
+    return budget;
+  }
+
+  Future<Wallet?> _getWalletById(String id) async {
+    final cached = _findWalletById(id);
+    if (cached != null) {
+      return cached;
+    }
+
+    final userId = _requireUserId();
+    final snapshot = await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('wallets')
+        .doc(id)
+        .get();
+    final data = snapshot.data();
+    if (!snapshot.exists || data == null) {
+      return null;
+    }
+
+    final wallet = Wallet.fromJson({
+      ...data,
+      'id': snapshot.id,
+      'userId': userId,
+    });
+    _knownWallets = <Wallet>[
+      ..._knownWallets.where((existing) => existing.id != wallet.id),
+      wallet,
+    ];
+    return wallet;
+  }
+
+  Future<ShoppingList?> _getShoppingListById(String id) async {
+    final cached = _findShoppingListById(id);
+    if (cached != null) {
+      return cached;
+    }
+
+    final userId = _requireUserId();
+    final snapshot = await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('shopping_lists')
+        .doc(id)
+        .get();
+    final data = snapshot.data();
+    if (!snapshot.exists || data == null) {
+      return null;
+    }
+
+    final list = ShoppingList.fromJson({
+      ...data,
+      'id': snapshot.id,
+      'userId': userId,
+    });
+    _knownShoppingLists = <ShoppingList>[
+      ..._knownShoppingLists.where((existing) => existing.id != list.id),
+      list,
+    ];
+    return list;
+  }
+
+  Future<ShoppingItem?> _getShoppingItemById(
+    String listId,
+    String itemId,
+  ) async {
+    final cached = _findShoppingItem(listId, itemId);
+    if (cached != null) {
+      return cached;
+    }
+
+    final userId = _requireUserId();
+    final snapshot = await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('shopping_lists')
+        .doc(listId)
+        .collection('shopping_items')
+        .doc(itemId)
+        .get();
+    final data = snapshot.data();
+    if (!snapshot.exists || data == null) {
+      return null;
+    }
+
+    final item = ShoppingItem.fromJson({
+      ...data,
+      'id': snapshot.id,
+      'userId': userId,
+      'listId': listId,
+    });
+    final updatedItems = List<ShoppingItem>.from(
+        _knownShoppingItems[listId] ?? const <ShoppingItem>[])
+      ..removeWhere((existing) => existing.id == item.id)
+      ..add(item);
+    updatedItems.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    _knownShoppingItems[listId] = List<ShoppingItem>.unmodifiable(updatedItems);
+    return item;
+  }
+
   String? _parseString(Object? value) {
     if (value is String) {
       final trimmed = value.trim();
@@ -1480,6 +3365,96 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       return DateTime.fromMillisecondsSinceEpoch(milliseconds, isUtc: false);
     }
     return DateTime.now();
+  }
+
+  DateTime? _parseOptionalDate(Object? value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is Timestamp) {
+      return value.toDate();
+    }
+    if (value is DateTime) {
+      return value;
+    }
+    if (value is String) {
+      return DateTime.tryParse(value);
+    }
+    if (value is num) {
+      final milliseconds = value > 1e12 ? value.toInt() : (value * 1000).toInt();
+      return DateTime.fromMillisecondsSinceEpoch(milliseconds, isUtc: false);
+    }
+    return null;
+  }
+
+  List<String> _parseStringList(Object? value) {
+    if (value is List) {
+      return value
+          .map(_parseString)
+          .whereType<String>()
+          .toList(growable: false);
+    }
+    return const <String>[];
+  }
+
+  BudgetPeriod _parseBudgetPeriod(String? value,
+      {BudgetPeriod fallback = BudgetPeriod.month}) {
+    if (value == null) {
+      return fallback;
+    }
+    final lower = value.toLowerCase();
+    return BudgetPeriod.values.firstWhere(
+      (period) => period.name.toLowerCase() == lower,
+      orElse: () => fallback,
+    );
+  }
+
+  BudgetFlowType _parseBudgetFlowType(String? value,
+      {BudgetFlowType fallback = BudgetFlowType.expenses}) {
+    if (value == null) {
+      return fallback;
+    }
+    final lower = value.toLowerCase();
+    return BudgetFlowType.values.firstWhere(
+      (type) => type.name.toLowerCase() == lower,
+      orElse: () => fallback,
+    );
+  }
+
+  ShoppingListType _parseShoppingListType(String? value,
+      {ShoppingListType fallback = ShoppingListType.grocery}) {
+    if (value == null) {
+      return fallback;
+    }
+    final lower = value.toLowerCase();
+    return ShoppingListType.values.firstWhere(
+      (type) => type.name.toLowerCase() == lower,
+      orElse: () => fallback,
+    );
+  }
+
+  ShoppingItemPriority _parseShoppingItemPriority(String? value,
+      {ShoppingItemPriority fallback = ShoppingItemPriority.medium}) {
+    if (value == null) {
+      return fallback;
+    }
+    final lower = value.toLowerCase();
+    return ShoppingItemPriority.values.firstWhere(
+      (priority) => priority.name.toLowerCase() == lower,
+      orElse: () => fallback,
+    );
+  }
+
+  WalletType _parseWalletType(String? value,
+      {WalletType fallback = WalletType.physical}) {
+    if (value == null) {
+      return fallback;
+    }
+    final lower = value.toLowerCase();
+    return WalletType.values.firstWhere(
+      (type) => type.name.toLowerCase() == lower,
+      orElse: () => fallback,
+    );
   }
 
   String _normalizeCurrency(String? value, {String fallback = 'USD'}) {
@@ -1530,8 +3505,12 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       }
     }
 
-    final directName =
+    String? directName =
         _parseString(data['walletName'] ?? data['wallet_name']);
+    final walletField = data['wallet'];
+    if (directName == null && walletField is String) {
+      directName = _parseString(walletField);
+    }
     if (directName != null) {
       final wallet = _findWalletByName(directName);
       if (wallet != null) {
@@ -1542,8 +3521,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       }
     }
 
-    final walletData = data['wallet'];
-    if (walletData is Map<String, Object?>) {
+    if (walletField is Map<String, Object?>) {
+      final walletData = walletField;
       final nestedId = _parseString(walletData['id']);
       if (nestedId != null) {
         final existing = _findWalletById(nestedId);
@@ -1555,7 +3534,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         }
       }
 
-      final nestedName = _parseString(walletData['name']);
+      final nestedName = _parseString(
+        walletData['name'] ?? walletData['walletName'] ?? walletData['title'],
+      );
       if (nestedName != null) {
         final existing = _findWalletByName(nestedName);
         if (existing != null) {
@@ -1568,12 +3549,22 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         final created = await _createWalletInternal(
           name: nestedName,
           currencyCode: _normalizeCurrency(
-            _parseString(walletData['currencyCode']),
+            _parseString(
+              walletData['currencyCode'] ??
+                  walletData['currency'] ??
+                  walletData['currency_code'],
+            ),
             fallback: currencyCode,
           ),
           typeName: _parseString(walletData['type']),
-          initialBalance: _parseNumber(walletData['initialBalance']),
-          setAsDefault: walletData['setAsDefault'] as bool? ?? false,
+          initialBalance: _parseNumber(
+            walletData['initialBalance'] ??
+                walletData['balance'] ??
+                walletData['startingBalance'],
+          ),
+          setAsDefault: walletData['setAsDefault'] as bool? ??
+              walletData['makeDefault'] as bool? ??
+              false,
         );
         return created.id;
       }
@@ -1583,17 +3574,39 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       final created = await _createWalletInternal(
         name: directName,
         currencyCode: currencyCode,
-        setAsDefault: data['setAsDefault'] as bool? ?? false,
+        initialBalance: _parseNumber(
+          data['initialBalance'] ?? data['balance'] ?? data['startingBalance'],
+        ),
+        setAsDefault:
+            data['setAsDefault'] as bool? ?? data['makeDefault'] as bool? ?? false,
       );
       return created.id;
     }
 
     final defaultId = _defaultWalletId;
     if (defaultId != null) {
+      final defaultWallet = _findWalletById(defaultId);
+      if (defaultWallet != null) {
+        return defaultWallet.id;
+      }
       return defaultId;
     }
 
-    throw StateError('Wallet information is missing for the transaction.');
+    if (_knownWallets.isNotEmpty) {
+      final normalized = currencyCode.toUpperCase();
+      final currencyMatch = _knownWallets.firstWhere(
+        (wallet) => wallet.currencyCode.toUpperCase() == normalized,
+        orElse: () => _knownWallets.first,
+      );
+      return currencyMatch.id;
+    }
+
+    final createdFallback = await _createWalletInternal(
+      name: 'Primary Wallet',
+      currencyCode: currencyCode,
+      setAsDefault: true,
+    );
+    return createdFallback.id;
   }
 
   Future<String> _resolveCategoryId(Map<String, Object?> data) async {
@@ -1606,8 +3619,12 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       }
     }
 
-    final directName =
+    String? directName =
         _parseString(data['categoryName'] ?? data['category_name']);
+    final rawCategory = data['category'];
+    if (directName == null && rawCategory is String) {
+      directName = _parseString(rawCategory);
+    }
     if (directName != null) {
       final category = _findCategoryByName(directName);
       if (category != null) {
@@ -1615,8 +3632,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       }
     }
 
-    final categoryData = data['category'];
-    if (categoryData is Map<String, Object?>) {
+    if (rawCategory is Map<String, Object?>) {
+      final categoryData = rawCategory;
       final nestedId = _parseString(categoryData['id']);
       if (nestedId != null) {
         final category = _findCategoryById(nestedId);
@@ -1625,8 +3642,13 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         }
       }
 
-      final nestedName =
-          _parseString(categoryData['name']) ?? directName;
+      final nestedName = _parseString(
+            categoryData['name'] ??
+                categoryData['categoryName'] ??
+                categoryData['title'] ??
+                categoryData['label'],
+          ) ??
+          directName;
       if (nestedName != null) {
         final existing = _findCategoryByName(nestedName);
         if (existing != null) {
@@ -1636,9 +3658,13 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         final created = await _createCategoryInternal(
           name: nestedName,
           parentCategoryId:
-              _parseString(categoryData['parentId'] ?? categoryData['parentCategoryId']),
-          iconName: _parseString(categoryData['iconName']),
-          color: _parseString(categoryData['color']),
+              _parseString(categoryData['parentId'] ??
+                  categoryData['parentCategoryId'] ??
+                  categoryData['parent']),
+          iconName: _parseString(
+            categoryData['iconName'] ?? categoryData['icon'] ?? categoryData['emoji'],
+          ),
+          color: _parseString(categoryData['color'] ?? categoryData['hexColor']),
         );
         return created.id;
       }
@@ -1649,7 +3675,125 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       return created.id;
     }
 
-    throw StateError('Category information is missing for the transaction.');
+    final preferredDefault =
+        _findCategoryByName('General') ?? _findCategoryByName('Uncategorised');
+    if (preferredDefault != null) {
+      return preferredDefault.id;
+    }
+
+    if (_knownCategories.isNotEmpty) {
+      return _knownCategories.first.id;
+    }
+
+    final createdDefault = await _createCategoryInternal(name: 'General');
+    return createdDefault.id;
+  }
+
+  Future<List<String>> _resolveBudgetCategoryIds(
+      Map<String, Object?> data) async {
+    final ids = <String>{};
+
+    void addId(String? id) {
+      if (id != null && id.isNotEmpty) {
+        ids.add(id);
+      }
+    }
+
+    for (final id in _parseStringList(data['categoryIds'])) {
+      final existing = _findCategoryById(id);
+      if (existing != null) {
+        addId(existing.id);
+      }
+    }
+
+    for (final name in _parseStringList(data['categoryNames'])) {
+      final existing = _findCategoryByName(name);
+      if (existing != null) {
+        addId(existing.id);
+      }
+    }
+
+    final categoryDetails = data['categories'];
+    if (categoryDetails is List) {
+      for (final entry in categoryDetails) {
+        if (entry is! Map<String, Object?>) {
+          continue;
+        }
+        final directId = _parseString(entry['id']);
+        if (directId != null) {
+          final existing = _findCategoryById(directId);
+          if (existing != null) {
+            addId(existing.id);
+            continue;
+          }
+        }
+
+        final name = _parseString(entry['name']);
+        if (name != null) {
+          final existing = _findCategoryByName(name);
+          if (existing != null) {
+            addId(existing.id);
+            continue;
+          }
+
+          final created = await _createCategoryInternal(
+            name: name,
+            parentCategoryId:
+                _parseString(entry['parentCategoryId'] ?? entry['parentId']),
+            iconName: _parseString(entry['iconName']),
+            color: _parseString(entry['color']),
+          );
+          addId(created.id);
+        }
+      }
+    }
+
+    return ids.toList(growable: false);
+  }
+
+  Future<String> _resolveShoppingListId(Map<String, Object?> data) async {
+    final directId = _parseString(data['listId'] ?? data['shoppingListId']);
+    if (directId != null) {
+      final list = await _getShoppingListById(directId);
+      if (list != null) {
+        return list.id;
+      }
+    }
+
+    final directName =
+        _parseString(data['listName'] ?? data['shoppingListName'] ?? data['name']);
+    if (directName != null) {
+      final existing = _findShoppingListByName(directName);
+      if (existing != null) {
+        return existing.id;
+      }
+    }
+
+    final nested = data['list'];
+    if (nested is Map<String, Object?>) {
+      final nestedId = _parseString(nested['id']);
+      if (nestedId != null) {
+        final existing = await _getShoppingListById(nestedId);
+        if (existing != null) {
+          return existing.id;
+        }
+      }
+
+      final nestedName =
+          _parseString(nested['name'] ?? nested['listName']) ?? directName;
+      if (nestedName != null) {
+        final existing = _findShoppingListByName(nestedName);
+        if (existing != null) {
+          return existing.id;
+        }
+      }
+    }
+
+    if (directName != null) {
+      throw StateError('Shopping list "$directName" was not found.');
+    }
+
+    throw StateError('Shopping list information is missing for the item.');
   }
 
   Map<String, Object?> _walletSummary(Wallet wallet) => {
@@ -1677,6 +3821,45 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         'walletId': transaction.walletId,
         'categoryId': transaction.categoryId,
         'date': transaction.date.toIso8601String(),
+      };
+
+  Map<String, Object?> _budgetSummary(Budget budget) => {
+        'id': budget.id,
+        'name': budget.name,
+        'currencyCode': budget.currencyCode,
+        'limit': budget.limit,
+        'period': budget.period.name,
+        'flowType': budget.flowType.name,
+        'categoryIds': budget.categoryIds,
+        'notes': budget.notes,
+        'startDate': budget.startDate?.toIso8601String(),
+        'endDate': budget.endDate?.toIso8601String(),
+      };
+
+  Map<String, Object?> _shoppingListSummary(
+    ShoppingList list, {
+    List<ShoppingItem> items = const <ShoppingItem>[],
+  }) => {
+        'id': list.id,
+        'name': list.name,
+        'type': list.type.name,
+        'currency': list.currency,
+        'notes': list.notes,
+        'createdAt': list.createdAt.toIso8601String(),
+        'items': items.map(_shoppingItemSummary).toList(growable: false),
+      };
+
+  Map<String, Object?> _shoppingItemSummary(ShoppingItem item) => {
+        'id': item.id,
+        'title': item.title,
+        'bought': item.bought,
+        'priority': item.priority.name,
+        'price': item.price,
+        'currency': item.currency,
+        'iconEmoji': item.iconEmoji,
+        'iconUrl': item.iconUrl,
+        'purchaseDate': item.purchaseDate?.toIso8601String(),
+        'expiryDate': item.expiryDate?.toIso8601String(),
       };
 
   void _emitSuccessNotice(List<_RecordedTransaction> transactions) {
@@ -1875,6 +4058,114 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
                           style: textTheme.bodyMedium?.copyWith(
                             color: colorScheme.error,
                             height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: InputDecorator(
+                        decoration: InputDecoration(
+                          labelText: 'Conversation',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(
+                              color: onSurface.withOpacity(0.12),
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            value: _chatThreads.any(
+                              (thread) => thread.id == _activeChatId,
+                            )
+                                ? _activeChatId
+                                : null,
+                            hint: const Text('Select a conversation'),
+                            onChanged: (_isInitializing ||
+                                    _isLoadingMessages ||
+                                    _chatThreads.isEmpty)
+                                ? null
+                                : _handleSelectChat,
+                            items: _chatThreads
+                                .map(
+                                  (thread) => DropdownMenuItem<String>(
+                                    value: thread.id,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          thread.displayTitle,
+                                          style:
+                                              textTheme.bodyMedium?.copyWith(
+                                            color: onSurface,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        if (thread.lastMessagePreview
+                                                ?.isNotEmpty ??
+                                            false)
+                                          Text(
+                                            thread.lastMessagePreview!,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: textTheme.bodySmall?.copyWith(
+                                              color:
+                                                  mutedOnSurface.withOpacity(0.8),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    FilledButton.icon(
+                      onPressed: (_isInitializing || _isLoadingMessages)
+                          ? null
+                          : _handleCreateChat,
+                      icon: const Icon(Icons.add_comment_outlined),
+                      label: const Text('New chat'),
+                    ),
+                  ],
+                ),
+              ),
+              if (_isLoadingMessages)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            mutedOnSurface,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Loading conversation…',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: mutedOnSurface,
                           ),
                         ),
                       ),
@@ -2120,6 +4411,46 @@ class _MessageBubble extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: content,
       ),
+    );
+  }
+}
+
+class _AssistantChatThread {
+  const _AssistantChatThread({
+    required this.id,
+    String? title,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    this.lastMessagePreview,
+    this.autoTitle = true,
+  })  : title = title,
+        createdAt = createdAt ?? DateTime.now(),
+        updatedAt = updatedAt ?? DateTime.now();
+
+  final String id;
+  final String? title;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final String? lastMessagePreview;
+  final bool autoTitle;
+
+  String get displayTitle =>
+      (title?.trim().isNotEmpty ?? false) ? title!.trim() : 'Conversation';
+
+  _AssistantChatThread copyWith({
+    String? title,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    String? lastMessagePreview,
+    bool? autoTitle,
+  }) {
+    return _AssistantChatThread(
+      id: id,
+      title: title ?? this.title,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      lastMessagePreview: lastMessagePreview ?? this.lastMessagePreview,
+      autoTitle: autoTitle ?? this.autoTitle,
     );
   }
 }
