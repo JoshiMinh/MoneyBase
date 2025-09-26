@@ -277,7 +277,7 @@ fun EditTransaction(
                                         isSaving = true
                                         val amountValue = amount.toDoubleOrNull() ?: 0.0
                                         val updatedTransaction = transaction.copy(
-                                            amount = (if (isIncome) 1 else -1) * amountValue,
+                                            amount = amountValue,
                                             description = description,
                                             categoryId = selectedCategoryId!!,
                                             walletId = selectedWalletId!!,

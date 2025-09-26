@@ -1,6 +1,8 @@
 
 import 'package:flutter/material.dart';
 
+import '../../app/theme/app_colors.dart';
+
 class MoneyBaseColorPicker extends StatelessWidget {
   const MoneyBaseColorPicker({
     required this.onColorSelected,
@@ -14,18 +16,14 @@ class MoneyBaseColorPicker extends StatelessWidget {
   final VoidCallback? onClear;
 
   static const List<Color> _palette = [
-    Color(0xFF7B5BFF),
-    Color(0xFFFF6D8D),
-    Color(0xFFFFA658),
-    Color(0xFF50D2C2),
-    Color(0xFF5D9BFF),
-    Color(0xFF9C6DFF),
-    Color(0xFF2ECC71),
-    Color(0xFFFFB6C1),
-    Color(0xFFF9D423),
-    Color(0xFF3AA6FF),
-    Color(0xFFFA7A35),
-    Color(0xFF5F6BFF),
+    MoneyBaseColors.red,
+    MoneyBaseColors.green,
+    MoneyBaseColors.blue,
+    MoneyBaseColors.pink,
+    MoneyBaseColors.purple,
+    MoneyBaseColors.grey,
+    MoneyBaseColors.yellow,
+    MoneyBaseColors.orange,
   ];
 
   @override

@@ -12,6 +12,7 @@ import '../../../core/repositories/category_repository.dart';
 import '../../../core/repositories/transaction_repository.dart';
 import '../../../core/repositories/wallet_repository.dart';
 import '../../../core/utils/color_utils.dart';
+import '../../../app/theme/app_colors.dart';
 import '../../common/presentation/moneybase_shell.dart';
 import '../../common/presentation/color_picker.dart';
 import '../../common/presentation/currency_dropdown_field.dart';
@@ -71,8 +72,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.dark(
-              primary: Color(0xFF7B5BFF),
-              surface: Color(0xFF1B1232),
+              primary: MoneyBaseColors.purple,
+              surface: MoneyBaseColors.grey,
               onSurface: Colors.white,
               onPrimary: Colors.white,
             ),
@@ -586,7 +587,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           foregroundColor: Colors.white.withOpacity(0.72),
                           selectedForegroundColor: Colors.white,
                           selectedBackgroundColor:
-                              const Color(0xFF7B5BFF).withOpacity(0.65),
+                              MoneyBaseColors.purple.withOpacity(0.65),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 14,
@@ -864,7 +865,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                               style: FilledButton.styleFrom(
                                 padding:
                                     const EdgeInsets.symmetric(vertical: 18),
-                                backgroundColor: const Color(0xFF7B5BFF),
+                                backgroundColor: MoneyBaseColors.purple,
                                 foregroundColor: Colors.white,
                                 textStyle: textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
@@ -1052,7 +1053,7 @@ class _WalletCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final accent = parseHexColor(wallet.color) ?? const Color(0xFF7B5BFF);
+    final accent = parseHexColor(wallet.color) ?? MoneyBaseColors.purple;
     final brightness = ThemeData.estimateBrightnessForColor(accent);
     final contrastColor =
         brightness == Brightness.dark ? Colors.white : Colors.black.withOpacity(0.85);
@@ -1326,7 +1327,7 @@ class _AddWalletCard extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(28),
-          color: const Color(0xFF242731),
+          color: MoneyBaseColors.grey,
           border: Border.all(color: Colors.white.withOpacity(0.1)),
         ),
         child: Column(
@@ -1375,10 +1376,12 @@ class _InlineNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final background =
-        isError ? const Color(0x44E54C4C) : Colors.white.withOpacity(0.06);
-    final borderColor =
-        isError ? const Color(0x66E54C4C) : Colors.white.withOpacity(0.12);
+    final background = isError
+        ? MoneyBaseColors.red.withOpacity(0.27)
+        : Colors.white.withOpacity(0.06);
+    final borderColor = isError
+        ? MoneyBaseColors.red.withOpacity(0.4)
+        : Colors.white.withOpacity(0.12);
     final textColor =
         isError ? Colors.white : Colors.white.withOpacity(0.78);
 
@@ -1644,7 +1647,7 @@ class _WalletDialogState extends State<_WalletDialog> {
                     FilledButton(
                       onPressed: () => Navigator.of(context).pop(true),
                       style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFFE54C4C),
+                        backgroundColor: MoneyBaseColors.red,
                         foregroundColor: Colors.white,
                       ),
                       child: const Text('Delete'),
@@ -1659,7 +1662,7 @@ class _WalletDialogState extends State<_WalletDialog> {
               }
             },
             style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFFE54C4C),
+              foregroundColor: MoneyBaseColors.red,
             ),
             child: const Text('Delete'),
           ),
@@ -1881,7 +1884,7 @@ class _CategoryDialogState extends State<_CategoryDialog> {
                     FilledButton(
                       onPressed: () => Navigator.of(context).pop(true),
                       style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFFE54C4C),
+                        backgroundColor: MoneyBaseColors.red,
                         foregroundColor: Colors.white,
                       ),
                       child: const Text('Delete'),
@@ -1896,7 +1899,7 @@ class _CategoryDialogState extends State<_CategoryDialog> {
               }
             },
             style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFFE54C4C),
+              foregroundColor: MoneyBaseColors.red,
             ),
             child: const Text('Delete'),
           ),

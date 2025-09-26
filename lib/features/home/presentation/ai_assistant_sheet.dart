@@ -4083,6 +4083,231 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     final mutedOnSurface = onSurface.withOpacity(0.72);
     final composerEnabled = !_isInitializing && _errorMessage == null;
 
+    Widget buildStatusRow(String message, {Widget? leading}) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            leading ??
+                SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(mutedOnSurface),
+                  ),
+                ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: textTheme.bodySmall?.copyWith(
+                  color: leading == null ? mutedOnSurface : colorScheme.error,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    Widget buildChatArea(Color panelColor) {
+      return Container(
+        decoration: BoxDecoration(
+          color: panelColor,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: colorScheme.outline.withOpacity(0.18)),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_isLoadingMessages)
+              buildStatusRow('Loading conversation…'),
+            Expanded(
+              child: _messages.isEmpty && !_isLoadingMessages
+                  ? Center(
+                      child: Text(
+                        'Ask a question or describe a task to get started.',
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: mutedOnSurface,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    )
+                  : ListView.builder(
+                      controller: _scrollController,
+                      padding: EdgeInsets.zero,
+                      itemCount: _messages.length,
+                      itemBuilder: (context, index) {
+                        final message = _messages[index];
+                        final alignment = message.isUser
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft;
+                        return Align(
+                          alignment: alignment,
+                          child: _MessageBubble(message: message),
+                        );
+                      },
+                    ),
+            ),
+            const SizedBox(height: 16),
+            _Composer(
+              controller: _messageController,
+              onSend: _handleSend,
+              onMicPressed: composerEnabled ? _handleVoiceInput : null,
+              isSending: _isSending,
+              isEnabled: composerEnabled,
+              isListening: _isListening,
+              voiceError: _voiceError,
+            ),
+          ],
+        ),
+      );
+    }
+
+    Widget buildSidebar() {
+      final disabled = _isInitializing || _isLoadingMessages;
+      final sidebarBackground = colorScheme.surfaceVariant.withOpacity(
+        theme.brightness == Brightness.dark ? 0.26 : 0.55,
+      );
+
+      return Container(
+        width: 260,
+        decoration: BoxDecoration(
+          color: sidebarBackground,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Conversations',
+                    style: textTheme.titleSmall?.copyWith(
+                      color: onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'New chat',
+                  onPressed: disabled ? null : _handleCreateChat,
+                  icon: const Icon(Icons.add_comment_outlined),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: _chatThreads.isEmpty
+                  ? Center(
+                      child: Text(
+                        'No chats yet.',
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: mutedOnSurface,
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      itemBuilder: (context, index) {
+                        final thread = _chatThreads[index];
+                        final isActive = thread.id == _activeChatId;
+                        return ListTile(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          selected: isActive,
+                          selectedTileColor:
+                              colorScheme.primary.withOpacity(0.12),
+                          title: Text(
+                            thread.displayTitle,
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: isActive ? colorScheme.primary : onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          subtitle: thread.lastMessagePreview?.isNotEmpty == true
+                              ? Text(
+                                  thread.lastMessagePreview!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color: mutedOnSurface,
+                                  ),
+                                )
+                              : null,
+                          onTap: disabled
+                              ? null
+                              : () => _handleSelectChat(thread.id),
+                        );
+                      },
+                      separatorBuilder: (context, _) => const SizedBox(height: 8),
+                      itemCount: _chatThreads.length,
+                    ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    Widget buildThreadChips() {
+      final disabled = _isInitializing || _isLoadingMessages;
+      if (_chatThreads.isEmpty) {
+        return Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Start a new chat to keep track of your assistant conversations.',
+                style: textTheme.bodySmall?.copyWith(
+                  color: mutedOnSurface,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            FilledButton.icon(
+              onPressed: disabled ? null : _handleCreateChat,
+              icon: const Icon(Icons.add_comment_outlined),
+              label: const Text('New chat'),
+            ),
+          ],
+        );
+      }
+
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.only(bottom: 4),
+        child: Row(
+          children: [
+            for (final thread in _chatThreads) ...[
+              ChoiceChip(
+                label: Text(thread.displayTitle),
+                selected: thread.id == _activeChatId,
+                onSelected: disabled
+                    ? null
+                    : (_) => _handleSelectChat(thread.id),
+              ),
+              const SizedBox(width: 8),
+            ],
+            FilledButton.icon(
+              onPressed: disabled ? null : _handleCreateChat,
+              icon: const Icon(Icons.add_comment_outlined),
+              label: const Text('New chat'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final panelBackground = colorScheme.surface.withOpacity(
+      theme.brightness == Brightness.dark ? 0.35 : 0.6,
+    );
+
     return FractionallySizedBox(
       heightFactor: 0.85,
       child: Padding(
@@ -4126,188 +4351,37 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
               ),
               const SizedBox(height: 16),
               if (_isInitializing)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            mutedOnSurface,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Connecting to MoneyBase Assistant…',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: mutedOnSurface,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                buildStatusRow('Connecting to MoneyBase Assistant…'),
               if (_errorMessage != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.info_outline, color: colorScheme.error),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _errorMessage!,
-                          style: textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.error,
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: InputDecorator(
-                        decoration: InputDecoration(
-                          labelText: 'Conversation',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(16),
-                            borderSide: BorderSide(
-                              color: onSurface.withOpacity(0.12),
-                            ),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            isExpanded: true,
-                            value:
-                                _chatThreads.any(
-                                  (thread) => thread.id == _activeChatId,
-                                )
-                                ? _activeChatId
-                                : null,
-                            hint: const Text('Select a conversation'),
-                            onChanged:
-                                (_isInitializing ||
-                                    _isLoadingMessages ||
-                                    _chatThreads.isEmpty)
-                                ? null
-                                : _handleSelectChat,
-                            items: _chatThreads
-                                .map(
-                                  (thread) => DropdownMenuItem<String>(
-                                    value: thread.id,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          thread.displayTitle,
-                                          style: textTheme.bodyMedium?.copyWith(
-                                            color: onSurface,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        if (thread
-                                                .lastMessagePreview
-                                                ?.isNotEmpty ??
-                                            false)
-                                          Text(
-                                            thread.lastMessagePreview!,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: textTheme.bodySmall
-                                                ?.copyWith(
-                                                  color: mutedOnSurface
-                                                      .withOpacity(0.8),
-                                                ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    FilledButton.icon(
-                      onPressed: (_isInitializing || _isLoadingMessages)
-                          ? null
-                          : _handleCreateChat,
-                      icon: const Icon(Icons.add_comment_outlined),
-                      label: const Text('New chat'),
-                    ),
-                  ],
-                ),
-              ),
-              if (_isLoadingMessages)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            mutedOnSurface,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Loading conversation…',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: mutedOnSurface,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                buildStatusRow(
+                  _errorMessage!,
+                  leading: Icon(Icons.info_outline, color: colorScheme.error),
                 ),
               Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  itemCount: _messages.length,
-                  itemBuilder: (context, index) {
-                    final message = _messages[index];
-                    final alignment = message.isUser
-                        ? Alignment.centerRight
-                        : Alignment.centerLeft;
-                    return Align(
-                      alignment: alignment,
-                      child: _MessageBubble(message: message),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final showSidebar = constraints.maxWidth >= 720;
+                    if (showSidebar) {
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          buildSidebar(),
+                          const SizedBox(width: 20),
+                          Expanded(child: buildChatArea(panelBackground)),
+                        ],
+                      );
+                    }
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        buildThreadChips(),
+                        const SizedBox(height: 16),
+                        Expanded(child: buildChatArea(panelBackground)),
+                      ],
                     );
                   },
                 ),
-              ),
-              const SizedBox(height: 16),
-              _Composer(
-                controller: _messageController,
-                onSend: _handleSend,
-                onMicPressed: composerEnabled ? _handleVoiceInput : null,
-                isSending: _isSending,
-                isEnabled: composerEnabled,
-                isListening: _isListening,
-                voiceError: _voiceError,
               ),
             ],
           ),

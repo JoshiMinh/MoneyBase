@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../../app/theme/app_colors.dart';
 import '../../../core/constants/icon_library.dart';
 import '../../../core/models/category.dart';
 import '../../../core/models/transaction.dart';
@@ -9,7 +10,18 @@ import '../../../core/repositories/category_repository.dart';
 import '../../../core/repositories/transaction_repository.dart';
 import '../../../core/repositories/wallet_repository.dart';
 import '../../../core/utils/color_utils.dart';
-import '../../add_transaction/presentation/add_transaction_screen.dart';
+
+class TransactionEditorArguments {
+  TransactionEditorArguments({
+    required this.transaction,
+    required this.wallets,
+    required this.categories,
+  });
+
+  final MoneyBaseTransaction transaction;
+  final List<Wallet> wallets;
+  final List<Category> categories;
+}
 
 class TransactionsScreen extends StatefulWidget {
   const TransactionsScreen({super.key});
@@ -80,7 +92,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFE54C4C),
+              backgroundColor: MoneyBaseColors.red,
               foregroundColor: Colors.white,
             ),
             child: const Text('Delete'),
@@ -114,10 +126,10 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     List<Wallet> wallets,
     List<Category> categories,
   ) async {
-    final result = await showDialog<MoneyBaseTransaction>(
-      context: context,
-      builder: (context) => _TransactionDialog(
-        initial: transaction,
+    final result = await Navigator.of(context).pushNamed<MoneyBaseTransaction>(
+      '/edit',
+      arguments: TransactionEditorArguments(
+        transaction: transaction,
         wallets: wallets,
         categories: categories,
       ),
@@ -142,9 +154,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   }
 
   void _openAddTransaction() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const AddTransactionScreen()),
-    );
+    Navigator.of(context).pushNamed('/add');
   }
 
   @override
@@ -161,11 +171,15 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Transactions')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openAddTransaction,
-        icon: const Icon(Icons.add),
-        label: const Text('Add transaction'),
+      appBar: AppBar(
+        title: const Text('Transactions'),
+        actions: [
+          IconButton(
+            tooltip: 'Add transaction',
+            onPressed: _openAddTransaction,
+            icon: const Icon(Icons.add),
+          ),
+        ],
       ),
       body: StreamBuilder<List<Wallet>>(
         stream: _walletRepository.watchWallets(user.uid),
@@ -463,8 +477,8 @@ class _CenteredMessage extends StatelessWidget {
   }
 }
 
-class _TransactionDialog extends StatefulWidget {
-  const _TransactionDialog({
+class TransactionEditorDialog extends StatefulWidget {
+  const TransactionEditorDialog({
     required this.initial,
     required this.wallets,
     required this.categories,
@@ -475,10 +489,10 @@ class _TransactionDialog extends StatefulWidget {
   final List<Category> categories;
 
   @override
-  State<_TransactionDialog> createState() => _TransactionDialogState();
+  State<TransactionEditorDialog> createState() => _TransactionDialogState();
 }
 
-class _TransactionDialogState extends State<_TransactionDialog> {
+class _TransactionDialogState extends State<TransactionEditorDialog> {
   late final TextEditingController _descriptionController;
   late final TextEditingController _amountController;
   late DateTime _date;

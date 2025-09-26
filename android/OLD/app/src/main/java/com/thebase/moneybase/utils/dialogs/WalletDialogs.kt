@@ -208,9 +208,7 @@ fun AddWallet(
     var currency by rememberSaveable { mutableStateOf("USD") }
     // Initialize directly inside rememberSaveable
     var colorKey by rememberSaveable {
-        mutableStateOf(ColorPalette.reverseColorMap.entries
-            .firstOrNull { it.value == Wallet().color }?.key
-            ?: "purple")
+        mutableStateOf(ColorPalette.resolveColorKey(Wallet().color) ?: "purple")
     }
     var iconKey by rememberSaveable { mutableStateOf("account_balance_wallet") }
 
@@ -286,7 +284,7 @@ fun EditWallet(
     var currency by rememberSaveable { mutableStateOf(wallet.currencyCode) }
     // NO nested remember{}, just initialize via mutableStateOf
     var colorKey by rememberSaveable {
-        mutableStateOf(ColorPalette.reverseColorMap[wallet.color] ?: "purple")
+        mutableStateOf(ColorPalette.resolveColorKey(wallet.color) ?: "purple")
     }
     var iconKey by rememberSaveable { mutableStateOf(wallet.iconName) }
 

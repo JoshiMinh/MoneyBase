@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../app/theme/theme.dart';
+import '../../../app/theme/app_colors.dart';
 import '../../../core/services/google_sign_in_service.dart';
 import '../../../core/repositories/transaction_repository.dart';
 import '../../../core/utils/csv_utils.dart';
+import '../../../core/utils/csv_exporter.dart';
 import '../../common/presentation/moneybase_shell.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -76,7 +78,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
 
       final csv = encodeTransactionsCsv(transactions);
-      await Clipboard.setData(ClipboardData(text: csv));
+      final timestamp = DateTime.now().toUtc().toIso8601String();
+      final fileName = 'moneybase-transactions-$timestamp';
+      final exportLocation = await saveCsvExport(
+        fileName: fileName,
+        csv: csv,
+      );
 
       if (!mounted) {
         return;
@@ -85,14 +92,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Copied ${transactions.length} transactions to your clipboard as CSV.',
+            'Exported ${transactions.length} transactions to '
+            '${exportLocation ?? '$fileName.csv'}.',
           ),
         ),
       );
 
       await showDialog<void>(
         context: context,
-        builder: (context) => _CsvPreviewDialog(csv: csv),
+        builder: (context) => _CsvPreviewDialog(
+          csv: csv,
+          locationDescription: exportLocation ?? '$fileName.csv',
+        ),
       );
     } catch (error) {
       if (mounted) {
@@ -169,6 +180,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final controller = ThemeControllerProvider.of(context);
     final textTheme = Theme.of(context).textTheme;
+    final colors = context.moneyBaseColors;
     final reminderLabel = _reminderTime.format(context);
     final user = FirebaseAuth.instance.currentUser;
 
@@ -221,7 +233,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text(
               'Settings',
               style: textTheme.headlineMedium?.copyWith(
-                color: Colors.white,
+                color: colors.primaryText,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -229,7 +241,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text(
               'Personalise reminders to mirror the Android build across web.',
               style: textTheme.bodyLarge?.copyWith(
-                color: Colors.white.withOpacity(0.7),
+                color: colors.mutedText,
               ),
             ),
             const SizedBox(height: 32),
@@ -255,7 +267,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         Text(
                           'Reminder Time',
                           style: textTheme.titleSmall?.copyWith(
-                            color: Colors.white.withOpacity(0.84),
+                            color: colors.primaryText,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -271,16 +283,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               horizontal: 20,
                               vertical: 12,
                             ),
-                            foregroundColor: Colors.white,
-                            disabledForegroundColor: Colors.white.withOpacity(
-                              0.4,
-                            ),
+                            foregroundColor: colors.primaryText,
+                            disabledForegroundColor: colors.mutedText,
                             backgroundColor: _remindersEnabled
-                                ? Colors.white.withOpacity(0.12)
-                                : Colors.white.withOpacity(0.06),
-                            disabledBackgroundColor: Colors.white.withOpacity(
-                              0.04,
-                            ),
+                                ? colors.secondaryAccent.withOpacity(0.16)
+                                : colors.surfaceBorder.withOpacity(0.4),
+                            disabledBackgroundColor:
+                                colors.surfaceBorder.withOpacity(0.2),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
                             ),
@@ -309,7 +318,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               horizontal: 24,
                               vertical: 16,
                             ),
-                            backgroundColor: const Color(0xFFE54C4C),
+                            backgroundColor: MoneyBaseColors.red,
                             foregroundColor: Colors.white,
                           ),
                           onPressed: () async {
@@ -336,7 +345,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Text(
                       'Data tools',
                       style: textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
+                        color: colors.primaryText,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -344,7 +353,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Text(
                       'Export a backup or paste in CSV rows to migrate data between MoneyBase installs.',
                       style: textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withOpacity(0.68),
+                        color: colors.mutedText,
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -352,8 +361,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       icon: Icons.download_outlined,
                       title: 'Export transactions to CSV',
                       subtitle:
-                          'Copies your latest transactions to the clipboard as a CSV snapshot.',
-                      buttonLabel: 'Copy CSV',
+                          'Exports your latest transactions so you can download a CSV snapshot.',
+                      buttonLabel: 'Export CSV',
                       onPressed: _isExportingCsv
                           ? null
                           : () => _exportTransactionsCsv(context, user.uid),
@@ -399,6 +408,7 @@ class _ProfileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.moneyBaseColors;
     final resolvedName = (displayName != null && displayName!.trim().isNotEmpty)
         ? displayName!
         : 'MoneyBase user';
@@ -414,7 +424,7 @@ class _ProfileHeader extends StatelessWidget {
           height: 24,
           child: CircularProgressIndicator(
             strokeWidth: 2.2,
-            color: Colors.white,
+            color: colors.primaryAccent,
           ),
         ),
       );
@@ -436,12 +446,12 @@ class _ProfileHeader extends StatelessWidget {
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: const LinearGradient(
-              colors: [Color(0xFF5D9BFF), Color(0xFF7B5BFF)],
+            gradient: LinearGradient(
+              colors: const [MoneyBaseColors.blue, MoneyBaseColors.purple],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            border: Border.all(color: Colors.white.withOpacity(0.18), width: 2),
+            border: Border.all(color: colors.primaryAccent.withOpacity(0.24), width: 2),
           ),
           child: ClipOval(
             child: SizedBox(width: 68, height: 68, child: avatar),
@@ -455,7 +465,7 @@ class _ProfileHeader extends StatelessWidget {
               Text(
                 resolvedName,
                 style: textTheme.titleLarge?.copyWith(
-                  color: Colors.white,
+                  color: colors.primaryText,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -465,7 +475,7 @@ class _ProfileHeader extends StatelessWidget {
                     ? 'Syncing profile details…'
                     : resolvedEmail,
                 style: textTheme.bodyMedium?.copyWith(
-                  color: Colors.white.withOpacity(0.72),
+                  color: colors.mutedText,
                 ),
               ),
             ],
@@ -497,18 +507,20 @@ class _DataActionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final isDisabled = onPressed == null;
+    final colors = context.moneyBaseColors;
+    final accent = colors.primaryAccent;
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
+        color: accent.withOpacity(0.12),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.12)),
+        border: Border.all(color: accent.withOpacity(0.24)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: Colors.white, size: 28),
+          Icon(icon, color: accent, size: 28),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -517,7 +529,7 @@ class _DataActionTile extends StatelessWidget {
                 Text(
                   title,
                   style: textTheme.titleMedium?.copyWith(
-                    color: Colors.white,
+                    color: colors.primaryText,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -525,7 +537,7 @@ class _DataActionTile extends StatelessWidget {
                 Text(
                   subtitle,
                   style: textTheme.bodySmall?.copyWith(
-                    color: Colors.white.withOpacity(0.7),
+                    color: colors.mutedText,
                   ),
                 ),
               ],
@@ -538,10 +550,10 @@ class _DataActionTile extends StatelessWidget {
               padding:
                   const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
               backgroundColor: (loading || !isDisabled)
-                  ? const Color(0xFF7B5BFF)
-                  : Colors.white.withOpacity(0.12),
+                  ? accent
+                  : colors.surfaceBorder.withOpacity(0.6),
               foregroundColor:
-                  (loading || !isDisabled) ? Colors.white : Colors.white70,
+                  (loading || !isDisabled) ? Colors.white : colors.mutedText,
             ),
             child: loading
                 ? const SizedBox(
@@ -561,16 +573,21 @@ class _DataActionTile extends StatelessWidget {
 }
 
 class _CsvPreviewDialog extends StatelessWidget {
-  const _CsvPreviewDialog({required this.csv});
+  const _CsvPreviewDialog({
+    required this.csv,
+    required this.locationDescription,
+  });
 
   final String csv;
+  final String locationDescription;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final colors = context.moneyBaseColors;
 
     return AlertDialog(
-      title: const Text('CSV ready to share'),
+      title: const Text('CSV export ready'),
       content: SizedBox(
         width: 520,
         child: Column(
@@ -578,15 +595,15 @@ class _CsvPreviewDialog extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'The export has been copied to your clipboard. Paste it into your spreadsheet or save it to a file.',
-              style: textTheme.bodyMedium,
+              'Your CSV export has been saved to $locationDescription. Copy the contents below or close this dialog to continue.',
+              style: textTheme.bodyMedium?.copyWith(color: colors.primaryText),
             ),
             const SizedBox(height: 16),
             Container(
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.06),
+                color: colors.surfaceBackground,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.1)),
+                border: Border.all(color: colors.surfaceBorder),
               ),
               constraints: const BoxConstraints(maxHeight: 240),
               padding: const EdgeInsets.all(12),
@@ -595,7 +612,7 @@ class _CsvPreviewDialog extends StatelessWidget {
                   csv,
                   style: textTheme.bodySmall?.copyWith(
                     fontFamily: 'monospace',
-                    color: Colors.white.withOpacity(0.85),
+                    color: colors.primaryText,
                   ),
                 ),
               ),
@@ -606,7 +623,7 @@ class _CsvPreviewDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Clipboard.setData(ClipboardData(text: csv)),
-          child: const Text('Copy again'),
+          child: const Text('Copy to clipboard'),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(),
@@ -711,12 +728,14 @@ class _SettingsToggleTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final colors = context.moneyBaseColors;
+    final accent = colors.secondaryAccent;
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
+        color: accent.withOpacity(0.1),
         borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: Colors.white.withOpacity(0.12)),
+        border: Border.all(color: accent.withOpacity(0.2)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       child: Column(
@@ -732,7 +751,7 @@ class _SettingsToggleTile extends StatelessWidget {
                     Text(
                       title,
                       style: textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
+                        color: colors.primaryText,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -740,7 +759,7 @@ class _SettingsToggleTile extends StatelessWidget {
                     Text(
                       subtitle,
                       style: textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withOpacity(0.68),
+                        color: colors.mutedText,
                       ),
                     ),
                   ],
@@ -750,7 +769,7 @@ class _SettingsToggleTile extends StatelessWidget {
               Switch.adaptive(
                 value: value,
                 onChanged: onChanged,
-                activeColor: const Color(0xFF7B5BFF),
+                activeColor: accent,
               ),
             ],
           ),

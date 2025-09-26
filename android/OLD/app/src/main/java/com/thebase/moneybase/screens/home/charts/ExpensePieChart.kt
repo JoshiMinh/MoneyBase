@@ -20,8 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.toColorInt
 import com.thebase.moneybase.database.Transaction
+import com.thebase.moneybase.ui.toResolvedColor
 import io.github.dautovicharis.charts.PieChart
 import io.github.dautovicharis.charts.model.toChartDataSet
 import io.github.dautovicharis.charts.style.PieChartDefaults
@@ -41,7 +41,9 @@ fun ExpensePieChart(
 
     val names = sortedCategories.map { it.first }
     val amounts = sortedCategories.map { it.second }
-    val colors = sortedCategories.map { Color(it.third.toColorInt()) }
+    val colors = sortedCategories.map {
+        it.third.toResolvedColor() ?: MaterialTheme.colorScheme.primary
+    }
     val total = amounts.sum().takeIf { it > 0f } ?: 1f
 
     val dataSet = amounts.toChartDataSet(
