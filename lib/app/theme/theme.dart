@@ -178,14 +178,18 @@ class MoneyBaseTheme {
     final baseColors = MoneyBaseThemeColors.fallback(darkMode: darkMode);
     final backgroundColor = baseColors.backgroundGradient.first;
     final themeColors = baseColors.copyWith(
-      surfaceBackground:
-          darkMode ? MoneyBaseColors.grey.withOpacity(0.96) : Colors.white,
-      surfaceElevated:
-          darkMode ? MoneyBaseColors.grey.withOpacity(0.88) : Colors.white,
-      surfaceBorder:
-          darkMode ? MoneyBaseColors.grey.withOpacity(0.32) : baseColors.surfaceBorder,
-      surfaceShadow:
-          darkMode ? MoneyBaseColors.grey.withOpacity(0.6) : baseColors.surfaceShadow,
+      surfaceBackground: darkMode
+          ? MoneyBaseColors.grey.withOpacity(0.96)
+          : Colors.white,
+      surfaceElevated: darkMode
+          ? MoneyBaseColors.grey.withOpacity(0.88)
+          : Colors.white,
+      surfaceBorder: darkMode
+          ? MoneyBaseColors.grey.withOpacity(0.32)
+          : baseColors.surfaceBorder,
+      surfaceShadow: darkMode
+          ? MoneyBaseColors.grey.withOpacity(0.6)
+          : baseColors.surfaceShadow,
     );
 
     final colorScheme =
@@ -335,7 +339,7 @@ class MoneyBaseTheme {
         filled: true,
         fillColor: darkMode
             ? Color.lerp(themeColors.surfaceBackground, Colors.black, 0.35) ??
-                themeColors.surfaceBackground
+                  themeColors.surfaceBackground
             : Colors.white,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 20,

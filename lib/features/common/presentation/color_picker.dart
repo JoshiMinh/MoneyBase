@@ -1,7 +1,5 @@
-
 import 'package:flutter/material.dart';
-
-import '../../app/theme/app_colors.dart';
+import 'package:moneybase/app/theme/app_colors.dart';
 
 class MoneyBaseColorPicker extends StatelessWidget {
   const MoneyBaseColorPicker({
@@ -35,8 +33,8 @@ class MoneyBaseColorPicker extends StatelessWidget {
         for (final color in _palette)
           _ColorChip(
             color: color,
-            selected: selectedColor != null &&
-                color.value == selectedColor!.value,
+            selected:
+                selectedColor != null && color.value == selectedColor!.value,
             onTap: () => onColorSelected(color),
           ),
         if (onClear != null)
@@ -76,10 +74,7 @@ class _ColorChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: color,
           shape: BoxShape.circle,
-          border: Border.all(
-            color: borderColor,
-            width: selected ? 3 : 2,
-          ),
+          border: Border.all(color: borderColor, width: selected ? 3 : 2),
           boxShadow: [
             if (selected)
               BoxShadow(

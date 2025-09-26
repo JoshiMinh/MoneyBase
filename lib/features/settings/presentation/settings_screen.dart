@@ -65,8 +65,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     setState(() => _isExportingCsv = true);
     try {
-      final transactions =
-          await _transactionRepository.fetchAllTransactions(userId);
+      final transactions = await _transactionRepository.fetchAllTransactions(
+        userId,
+      );
       if (transactions.isEmpty) {
         if (!mounted) {
           return;
@@ -80,10 +81,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final csv = encodeTransactionsCsv(transactions);
       final timestamp = DateTime.now().toUtc().toIso8601String();
       final fileName = 'moneybase-transactions-$timestamp';
-      final exportLocation = await saveCsvExport(
-        fileName: fileName,
-        csv: csv,
-      );
+      final exportLocation = await saveCsvExport(fileName: fileName, csv: csv);
 
       if (!mounted) {
         return;
@@ -107,9 +105,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to export CSV: $error')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to export CSV: $error')));
       }
     } finally {
       if (mounted) {
@@ -145,8 +143,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content:
-                Text('No valid transactions were found in the provided CSV.'),
+            content: Text(
+              'No valid transactions were found in the provided CSV.',
+            ),
           ),
         );
         return;
@@ -165,9 +164,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to import CSV: $error')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to import CSV: $error')));
       }
     } finally {
       if (mounted) {
@@ -240,9 +239,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 8),
             Text(
               'Personalise reminders to mirror the Android build across web.',
-              style: textTheme.bodyLarge?.copyWith(
-                color: colors.mutedText,
-              ),
+              style: textTheme.bodyLarge?.copyWith(color: colors.mutedText),
             ),
             const SizedBox(height: 32),
             MoneyBaseFrostedPanel(
@@ -288,8 +285,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             backgroundColor: _remindersEnabled
                                 ? colors.secondaryAccent.withOpacity(0.16)
                                 : colors.surfaceBorder.withOpacity(0.4),
-                            disabledBackgroundColor:
-                                colors.surfaceBorder.withOpacity(0.2),
+                            disabledBackgroundColor: colors.surfaceBorder
+                                .withOpacity(0.2),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
                             ),
@@ -337,8 +334,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             if (user != null) ...[
               const SizedBox(height: 24),
               MoneyBaseFrostedPanel(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 28,
+                  vertical: 32,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -418,7 +417,7 @@ class _ProfileHeader extends StatelessWidget {
 
     Widget avatar;
     if (loading) {
-      avatar = const Center(
+      avatar = Center(
         child: SizedBox(
           width: 24,
           height: 24,
@@ -451,7 +450,10 @@ class _ProfileHeader extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            border: Border.all(color: colors.primaryAccent.withOpacity(0.24), width: 2),
+            border: Border.all(
+              color: colors.primaryAccent.withOpacity(0.24),
+              width: 2,
+            ),
           ),
           child: ClipOval(
             child: SizedBox(width: 68, height: 68, child: avatar),
@@ -474,9 +476,7 @@ class _ProfileHeader extends StatelessWidget {
                 loading && (email == null || email!.isEmpty)
                     ? 'Syncing profile details…'
                     : resolvedEmail,
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colors.mutedText,
-                ),
+                style: textTheme.bodyMedium?.copyWith(color: colors.mutedText),
               ),
             ],
           ),
@@ -536,9 +536,7 @@ class _DataActionTile extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   subtitle,
-                  style: textTheme.bodySmall?.copyWith(
-                    color: colors.mutedText,
-                  ),
+                  style: textTheme.bodySmall?.copyWith(color: colors.mutedText),
                 ),
               ],
             ),
@@ -547,13 +545,13 @@ class _DataActionTile extends StatelessWidget {
           FilledButton(
             onPressed: onPressed,
             style: FilledButton.styleFrom(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
               backgroundColor: (loading || !isDisabled)
                   ? accent
                   : colors.surfaceBorder.withOpacity(0.6),
-              foregroundColor:
-                  (loading || !isDisabled) ? Colors.white : colors.mutedText,
+              foregroundColor: (loading || !isDisabled)
+                  ? Colors.white
+                  : colors.mutedText,
             ),
             child: loading
                 ? const SizedBox(
@@ -701,10 +699,7 @@ class _CsvPasteDialogState extends State<_CsvPasteDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
         ),
-        FilledButton(
-          onPressed: _submit,
-          child: const Text('Import'),
-        ),
+        FilledButton(onPressed: _submit, child: const Text('Import')),
       ],
     );
   }
