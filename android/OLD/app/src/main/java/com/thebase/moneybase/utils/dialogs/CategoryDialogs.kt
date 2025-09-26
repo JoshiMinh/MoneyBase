@@ -72,7 +72,7 @@ fun EditCategoryDialog(
     var name by rememberSaveable { mutableStateOf(category.name) }
     var selectedIcon by rememberSaveable { mutableStateOf(category.iconName) }
     var selectedColor by rememberSaveable {
-        mutableStateOf(ColorPalette.reverseColorMap[category.color] ?: "blue")
+        mutableStateOf(ColorPalette.resolveColorKey(category.color) ?: "blue")
     }
     val scope = rememberCoroutineScope()
 

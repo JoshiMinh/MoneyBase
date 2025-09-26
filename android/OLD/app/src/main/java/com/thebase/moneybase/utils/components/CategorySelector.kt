@@ -63,9 +63,9 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEach
-import androidx.core.graphics.toColorInt
 import com.thebase.moneybase.database.Category
 import com.thebase.moneybase.ui.Icon as AppIcon
+import com.thebase.moneybase.ui.toResolvedColor
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -305,8 +305,8 @@ private fun CategoryRow(
                 MIcon(
                     imageVector = AppIcon.getIcon(category.iconName),
                     contentDescription = category.name,
-                    tint = runCatching { Color(category.color.toColorInt()) }
-                        .getOrDefault(MaterialTheme.colorScheme.primary)
+                    tint = category.color.toResolvedColor()
+                        ?: MaterialTheme.colorScheme.primary
                 )
                 Spacer(Modifier.width(12.dp))
                 Text(

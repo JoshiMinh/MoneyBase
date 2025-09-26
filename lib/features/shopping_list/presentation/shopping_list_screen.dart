@@ -16,6 +16,30 @@ class ShoppingListScreen extends StatefulWidget {
   State<ShoppingListScreen> createState() => _ShoppingListScreenState();
 }
 
+class ShoppingListDetailRouteArgs {
+  ShoppingListDetailRouteArgs({
+    required this.userId,
+    required this.repository,
+    required this.initialList,
+    required this.onAddItem,
+    required this.onEditItem,
+    required this.onDeleteItem,
+    required this.onToggleItem,
+    required this.onEditList,
+    required this.onDeleteList,
+  });
+
+  final String userId;
+  final ShoppingListRepository repository;
+  final ShoppingList initialList;
+  final ValueChanged<ShoppingList> onAddItem;
+  final void Function(ShoppingList, ShoppingItem) onEditItem;
+  final void Function(ShoppingList, ShoppingItem) onDeleteItem;
+  final void Function(ShoppingList, ShoppingItem, bool) onToggleItem;
+  final ValueChanged<ShoppingList> onEditList;
+  final ValueChanged<ShoppingList> onDeleteList;
+}
+
 class _ShoppingListScreenState extends State<ShoppingListScreen> {
   late final ShoppingListRepository _repository;
   String? _selectedListId;
@@ -136,23 +160,22 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
 
     setState(() => _selectedListId = list.id);
 
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => ShoppingListDetailScreen(
-          userId: userId,
-          repository: _repository,
-          initialList: list,
-          onAddItem: (current) => _openItemDialog(context, userId, current),
-          onEditItem: (current, item) =>
-              _openItemDialog(context, userId, current, initial: item),
-          onDeleteItem: (current, item) =>
-              _deleteItem(context, userId, current, item),
-          onToggleItem: (current, item, bought) =>
-              _toggleItem(context, userId, current, item, bought),
-          onEditList: (current) =>
-              _openListDialog(context, userId, initial: current),
-          onDeleteList: (current) => _deleteList(context, userId, current),
-        ),
+    await Navigator.of(context).pushNamed<void>(
+      '/shopping/list',
+      arguments: ShoppingListDetailRouteArgs(
+        userId: userId,
+        repository: _repository,
+        initialList: list,
+        onAddItem: (current) => _openItemDialog(context, userId, current),
+        onEditItem: (current, item) =>
+            _openItemDialog(context, userId, current, initial: item),
+        onDeleteItem: (current, item) =>
+            _deleteItem(context, userId, current, item),
+        onToggleItem: (current, item, bought) =>
+            _toggleItem(context, userId, current, item, bought),
+        onEditList: (current) =>
+            _openListDialog(context, userId, initial: current),
+        onDeleteList: (current) => _deleteList(context, userId, current),
       ),
     );
   }
@@ -565,6 +588,54 @@ class ShoppingListDetailScreen extends StatelessWidget {
   final ValueChanged<ShoppingList> onEditList;
   final ValueChanged<ShoppingList> onDeleteList;
 
+  Future<void> _importItemsFromJson(
+    BuildContext context,
+    ShoppingList list,
+  ) async {
+    final rawJson = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const _ShoppingItemsImportDialog(),
+    );
+
+    if (rawJson == null) {
+      return;
+    }
+
+    try {
+      final summary = await repository.importItemsFromJson(
+        userId: userId,
+        list: list,
+        rawJson: rawJson,
+      );
+
+      if (!context.mounted) return;
+
+      final messenger = ScaffoldMessenger.of(context);
+      final imported = summary.importedItems;
+      final skipped = summary.totalItems - imported;
+      final buffer = StringBuffer('Imported $imported item');
+      if (imported != 1) {
+        buffer.write('s');
+      }
+      if (skipped > 0) {
+        buffer.write(' ($skipped skipped)');
+      }
+
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(buffer.toString()),
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to import items: $error')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<ShoppingList?>(
@@ -731,6 +802,16 @@ class ShoppingListDetailScreen extends StatelessWidget {
                   ? null
                   : [
                       IconButton(
+                        tooltip: 'Import JSON',
+                        onPressed: () => _importItemsFromJson(context, list),
+                        icon: const Icon(Icons.upload_file),
+                      ),
+                      IconButton(
+                        tooltip: 'Add item',
+                        onPressed: () => onAddItem(list),
+                        icon: const Icon(Icons.add),
+                      ),
+                      IconButton(
                         tooltip: 'Edit list',
                         onPressed: () => onEditList(list),
                         icon: const Icon(Icons.edit_outlined),
@@ -742,14 +823,6 @@ class ShoppingListDetailScreen extends StatelessWidget {
                       ),
                     ],
             ),
-            floatingActionButton: list == null
-                ? null
-                : FloatingActionButton.extended(
-                    onPressed: () => onAddItem(list),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add item'),
-                  ),
-            floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
             body: body,
           ),
         );
@@ -1417,6 +1490,89 @@ class _ShoppingListDialogState extends State<_ShoppingListDialog> {
         FilledButton(
           onPressed: _submit,
           child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+}
+
+class _ShoppingItemsImportDialog extends StatefulWidget {
+  const _ShoppingItemsImportDialog();
+
+  @override
+  State<_ShoppingItemsImportDialog> createState() => _ShoppingItemsImportDialogState();
+}
+
+class _ShoppingItemsImportDialogState extends State<_ShoppingItemsImportDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colors = context.moneyBaseColors;
+
+    return AlertDialog(
+      title: const Text('Import shopping items'),
+      content: SizedBox(
+        width: 520,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Paste the JSON export that follows the provided Notion sample format.',
+                style: textTheme.bodyMedium?.copyWith(color: colors.mutedText),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _controller,
+                minLines: 6,
+                maxLines: 16,
+                keyboardType: TextInputType.multiline,
+                decoration: const InputDecoration(
+                  labelText: 'Shopping items JSON',
+                  alignLabelWithHint: true,
+                  hintText: '{ "object": "list", "results": [ ... ] }',
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Provide the JSON payload to import.';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () {
+            if (_formKey.currentState?.validate() != true) {
+              return;
+            }
+            Navigator.of(context).pop(_controller.text);
+          },
+          child: const Text('Import'),
         ),
       ],
     );

@@ -14,11 +14,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.toColorInt
 import com.thebase.moneybase.database.Category
 import com.thebase.moneybase.database.Transaction
 import com.thebase.moneybase.database.Wallet
 import com.thebase.moneybase.ui.Icon.getIcon
+import com.thebase.moneybase.ui.toResolvedColor
 import com.thebase.moneybase.utils.dialogs.EditTransaction
 import java.text.SimpleDateFormat
 import java.util.*
@@ -60,9 +60,7 @@ fun TransactionItem(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val bgColor = category?.color
-                ?.toColorInt()
-                ?.let { Color(it) }
+            val bgColor = category?.color.toResolvedColor()
                 ?: MaterialTheme.colorScheme.primary
 
             Box(
@@ -103,13 +101,14 @@ fun TransactionItem(
                 )
             }
 
-            val amount = kotlin.math.abs(transaction.amount)
-            val sign = if (transaction.amount < 0) "-" else "+"
-            val formatted = String.format(Locale.getDefault(), "%.2f", amount)
-            val amountColor = if (transaction.amount < 0)
-                Color(0xFFFF6666)
-            else
+            val amountValue = kotlin.math.abs(transaction.amount)
+            val isIncome = transaction.isIncome || transaction.amount > 0
+            val sign = if (isIncome) "+" else "-"
+            val formatted = String.format(Locale.getDefault(), "%.2f", amountValue)
+            val amountColor = if (isIncome)
                 Color(0xFF66FF66)
+            else
+                Color(0xFFFF6666)
 
             Text(
                 text = "$sign${transaction.currencyCode} $formatted",

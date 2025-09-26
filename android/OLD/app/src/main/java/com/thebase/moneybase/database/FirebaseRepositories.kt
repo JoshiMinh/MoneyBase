@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import java.util.Date
 import java.util.Locale
+import kotlin.math.abs
 
 @Suppress("unused")
 class FirebaseRepositories {
@@ -250,14 +251,20 @@ class FirebaseRepositories {
     suspend fun addTransaction(userId: String, transaction: Transaction): Boolean {
         return try {
             db.runTransaction { tx ->
+                val normalized = transaction.normalized()
                 val wallets = db.collection("users").document(userId).collection("wallets")
-                val walletRef = wallets.document(transaction.walletId)
+                val walletRef = wallets.document(normalized.walletId)
                 val wallet = tx.get(walletRef).toWalletOrNull()
                     ?: throw IllegalStateException("Wallet not found")
-                tx.update(walletRef, "balance", wallet.balance + transaction.amount)
+                val delta = normalized.flowDelta()
+                tx.update(walletRef, "balance", wallet.balance + delta)
                 val txRef = db.collection("users").document(userId)
                     .collection("transactions").document()
-                tx.set(txRef, transaction.copy(id = txRef.id))
+                val payload = normalized.copy(
+                    id = txRef.id,
+                    userId = normalized.userId.ifBlank { userId }
+                )
+                tx.set(txRef, payload)
             }.await()
             true
         } catch (e: Exception) {
@@ -269,8 +276,9 @@ class FirebaseRepositories {
     suspend fun updateTransaction(userId: String, transaction: Transaction): Boolean {
         return try {
             db.runTransaction { tx ->
+                val normalized = transaction.normalized()
                 val userRef = db.collection("users").document(userId)
-                val txRef = userRef.collection("transactions").document(transaction.id)
+                val txRef = userRef.collection("transactions").document(normalized.id)
                 val originalSnap = tx.get(txRef)
                 if (!originalSnap.exists()) throw IllegalStateException("Transaction not found")
                 val original = originalSnap.toTransactionSafe()
@@ -278,14 +286,17 @@ class FirebaseRepositories {
                 val oldWalletRef = userRef.collection("wallets").document(original.walletId)
                 val oldWallet = tx.get(oldWalletRef).toWalletOrNull()
                     ?: throw IllegalStateException("Wallet not found")
-                tx.update(oldWalletRef, "balance", oldWallet.balance - original.amount)
+                val originalDelta = original.flowDelta()
+                tx.update(oldWalletRef, "balance", oldWallet.balance - originalDelta)
 
-                val newWalletRef = userRef.collection("wallets").document(transaction.walletId)
+                val newWalletRef = userRef.collection("wallets").document(normalized.walletId)
                 val newWallet = tx.get(newWalletRef).toWalletOrNull()
                     ?: throw IllegalStateException("Wallet not found")
-                tx.update(newWalletRef, "balance", newWallet.balance + transaction.amount)
+                val newDelta = normalized.flowDelta()
+                tx.update(newWalletRef, "balance", newWallet.balance + newDelta)
 
-                tx.set(txRef, transaction)
+                val payload = normalized.copy(userId = normalized.userId.ifBlank { userId })
+                tx.set(txRef, payload)
             }.await()
             true
         } catch (e: Exception) {
@@ -305,7 +316,8 @@ class FirebaseRepositories {
                 val walletRef = userRef.collection("wallets").document(original.walletId)
                 val wallet = tx.get(walletRef).toWalletOrNull()
                     ?: throw IllegalStateException("Wallet not found")
-                tx.update(walletRef, "balance", wallet.balance - original.amount)
+                val originalDelta = original.flowDelta()
+                tx.update(walletRef, "balance", wallet.balance - originalDelta)
 
                 tx.delete(txRef)
             }.await()
@@ -545,17 +557,28 @@ class FirebaseRepositories {
             is String -> amountAny.toDoubleOrNull() ?: 0.0
             else -> 0.0
         }
+        val isIncome = getBoolean("isIncome") ?: false
         return Transaction(
             id = id,
             userId = getString("userId").orEmpty(),
             description = getString("description").orEmpty(),
-            amount = amount,
+            amount = abs(amount),
             currencyCode = getString("currencyCode") ?: "USD",
-            isIncome = getBoolean("isIncome") ?: false,
+            isIncome = isIncome,
             categoryId = getString("categoryId") ?: "",
             walletId = getString("walletId") ?: "",
             date = getTimestampField("date"),
             createdAt = getTimestampField("createdAt")
         )
     }
+}
+
+private fun Transaction.normalized(): Transaction {
+    val normalizedAmount = abs(amount)
+    return if (amount == normalizedAmount) this else copy(amount = normalizedAmount)
+}
+
+private fun Transaction.flowDelta(): Double {
+    val value = abs(amount)
+    return if (isIncome) value else -value
 }

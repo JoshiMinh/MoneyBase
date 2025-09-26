@@ -38,7 +38,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.core.graphics.toColorInt
 import androidx.navigation.NavController
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.pager.HorizontalPager
@@ -49,6 +48,7 @@ import com.thebase.moneybase.database.FirebaseRepositories
 import com.thebase.moneybase.database.Transaction
 import com.thebase.moneybase.database.Wallet
 import com.thebase.moneybase.screens.home.TransactionItem
+import com.thebase.moneybase.ui.toResolvedColor
 import io.github.dautovicharis.charts.PieChart
 import io.github.dautovicharis.charts.model.toChartDataSet
 import io.github.dautovicharis.charts.style.PieChartDefaults
@@ -56,6 +56,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import kotlin.math.abs
 import kotlin.math.max
 
 @Composable
@@ -142,7 +143,7 @@ fun GraphsCard(
         val amountByCat = mutableMapOf<String, Triple<String, Float, String>>()
         monthlyExpenses.forEach { expense ->
             categoryMap[expense.categoryId]?.let { cat ->
-                val amt = if (expense.amount < 0) -expense.amount.toFloat() else expense.amount.toFloat()
+                val amt = abs(expense.amount).toFloat()
                 val prev = amountByCat[cat.id]?.second ?: 0f
                 amountByCat[cat.id] = Triple(cat.name, prev + amt, cat.color)
             }
@@ -209,7 +210,9 @@ fun ExpensePieChart(
         Row(modifier = Modifier.fillMaxSize()) {
             val names = sortedCategories.map { it.first }
             val amounts = sortedCategories.map { it.second }
-            val colors = sortedCategories.map { Color(it.third.toColorInt()) }
+            val colors = sortedCategories.map {
+                it.third.toResolvedColor() ?: MaterialTheme.colorScheme.primary
+            }
             val total = amounts.sum()
 
             val dataSet = amounts.toChartDataSet(

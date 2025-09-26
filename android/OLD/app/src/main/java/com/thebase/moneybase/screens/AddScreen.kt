@@ -30,7 +30,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.graphics.toColorInt
 import com.thebase.moneybase.database.*
 import com.thebase.moneybase.utils.dialogs.AddCategoryDialog
 import com.thebase.moneybase.utils.dialogs.AddWallet
@@ -38,6 +37,7 @@ import com.thebase.moneybase.utils.components.CategorySelector
 import com.thebase.moneybase.utils.dialogs.EditCategoryDialog
 import com.thebase.moneybase.utils.dialogs.WalletAgent
 import com.thebase.moneybase.ui.Icon.getIcon
+import com.thebase.moneybase.ui.toResolvedColor
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -141,7 +141,7 @@ fun AddScreen(
                             userId = userId,
                             description = note,
                             date = Timestamp(calendar.time),
-                            amount = if (isIncome) amt else -amt,
+                            amount = amt,
                             currencyCode = wallets.first { it.id == selectedWalletId }.currencyCode,
                             isIncome = isIncome,
                             categoryId = selectedCategoryId!!
@@ -356,9 +356,8 @@ private fun AmountField(
 @Composable
 private fun CategoryField(selected: Category?, onClick: () -> Unit) {
     Text("Category", style = MaterialTheme.typography.labelLarge)
-    val borderColor =
-        selected?.color?.toColorInt()?.let { Color(it) }
-            ?: MaterialTheme.colorScheme.outline
+    val borderColor = selected?.color.toResolvedColor()
+        ?: MaterialTheme.colorScheme.outline
 
     OutlinedButton(
         onClick = onClick,
@@ -372,11 +371,7 @@ private fun CategoryField(selected: Category?, onClick: () -> Unit) {
             Icon(
                 getIcon(it.iconName),
                 contentDescription = null,
-                tint = try {
-                    Color(it.color.toColorInt())
-                } catch (_: Exception) {
-                    MaterialTheme.colorScheme.primary
-                }
+                tint = it.color.toResolvedColor() ?: MaterialTheme.colorScheme.primary
             )
             Spacer(Modifier.width(8.dp))
             Text(it.name, color = MaterialTheme.colorScheme.onBackground)
@@ -398,11 +393,7 @@ private fun WalletCarousel(
     Spacer(Modifier.height(8.dp))
     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         items(wallets, key = { it.id }) { w ->
-            val color = try {
-                Color(w.color.toColorInt())
-            } catch (_: Exception) {
-                MaterialTheme.colorScheme.error
-            }
+            val color = w.color.toResolvedColor() ?: MaterialTheme.colorScheme.error
             Card(
                 modifier = Modifier
                     .size(140.dp, 110.dp)

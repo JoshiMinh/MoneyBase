@@ -4,6 +4,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'app_colors.dart';
+
 @immutable
 class MoneyBaseThemeColors extends ThemeExtension<MoneyBaseThemeColors> {
   const MoneyBaseThemeColors({
@@ -40,39 +42,39 @@ class MoneyBaseThemeColors extends ThemeExtension<MoneyBaseThemeColors> {
 
   factory MoneyBaseThemeColors.fallback({required bool darkMode}) {
     if (darkMode) {
-      return const MoneyBaseThemeColors(
-        backgroundGradient: [Color(0xFF000000), Color(0xFF000000)],
-        surfaceBackground: Color(0xFF050505),
-        surfaceElevated: Color(0xFF101010),
-        surfaceBorder: Color(0x26FFFFFF),
-        surfaceShadow: Color(0x80000000),
-        primaryText: Color(0xFFE8EAED),
-        mutedText: Color(0x99E8EAED),
-        primaryAccent: Color(0xFF818CF8),
-        secondaryAccent: Color(0xFF38BDF8),
-        tertiaryAccent: Color(0xFFFBBF24),
-        positive: Color(0xFF34D399),
-        negative: Color(0xFFF87171),
-        warning: Color(0xFFFACC15),
-        info: Color(0xFF60A5FA),
+      return MoneyBaseThemeColors(
+        backgroundGradient: const [MoneyBaseColors.grey, MoneyBaseColors.grey],
+        surfaceBackground: MoneyBaseColors.grey.withOpacity(0.96),
+        surfaceElevated: MoneyBaseColors.grey.withOpacity(0.84),
+        surfaceBorder: MoneyBaseColors.grey.withOpacity(0.32),
+        surfaceShadow: MoneyBaseColors.grey.withOpacity(0.6),
+        primaryText: Colors.white,
+        mutedText: Colors.white.withOpacity(0.68),
+        primaryAccent: MoneyBaseColors.purple,
+        secondaryAccent: MoneyBaseColors.blue,
+        tertiaryAccent: MoneyBaseColors.orange,
+        positive: MoneyBaseColors.green,
+        negative: MoneyBaseColors.red,
+        warning: MoneyBaseColors.yellow,
+        info: MoneyBaseColors.pink,
       );
     }
 
-    return const MoneyBaseThemeColors(
-      backgroundGradient: [Color(0xFFFFFFFF), Color(0xFFFFFFFF)],
-      surfaceBackground: Color(0xFFFFFFFF),
-      surfaceElevated: Color(0xFFF5F5F5),
-      surfaceBorder: Color(0x1A1F2937),
-      surfaceShadow: Color(0x14000000),
-      primaryText: Color(0xFF0F172A),
-      mutedText: Color(0x990F172A),
-      primaryAccent: Color(0xFF4C51BF),
-      secondaryAccent: Color(0xFF0EA5E9),
-      tertiaryAccent: Color(0xFFF97316),
-      positive: Color(0xFF16A34A),
-      negative: Color(0xFFDC2626),
-      warning: Color(0xFFF59E0B),
-      info: Color(0xFF2563EB),
+    return MoneyBaseThemeColors(
+      backgroundGradient: const [Colors.white, Colors.white],
+      surfaceBackground: Colors.white,
+      surfaceElevated: Colors.white.withOpacity(0.92),
+      surfaceBorder: MoneyBaseColors.grey.withOpacity(0.18),
+      surfaceShadow: MoneyBaseColors.grey.withOpacity(0.12),
+      primaryText: MoneyBaseColors.grey,
+      mutedText: MoneyBaseColors.grey.withOpacity(0.68),
+      primaryAccent: MoneyBaseColors.purple,
+      secondaryAccent: MoneyBaseColors.blue,
+      tertiaryAccent: MoneyBaseColors.orange,
+      positive: MoneyBaseColors.green,
+      negative: MoneyBaseColors.red,
+      warning: MoneyBaseColors.yellow,
+      info: MoneyBaseColors.pink,
     );
   }
 
@@ -177,13 +179,13 @@ class MoneyBaseTheme {
     final backgroundColor = baseColors.backgroundGradient.first;
     final themeColors = baseColors.copyWith(
       surfaceBackground:
-          darkMode ? const Color(0xFF050505) : const Color(0xFFFFFFFF),
+          darkMode ? MoneyBaseColors.grey.withOpacity(0.96) : Colors.white,
       surfaceElevated:
-          darkMode ? const Color(0xFF111111) : const Color(0xFFF5F5F5),
+          darkMode ? MoneyBaseColors.grey.withOpacity(0.88) : Colors.white,
       surfaceBorder:
-          darkMode ? const Color(0x26FFFFFF) : const Color(0x1A1F2937),
+          darkMode ? MoneyBaseColors.grey.withOpacity(0.32) : baseColors.surfaceBorder,
       surfaceShadow:
-          darkMode ? const Color(0x66000000) : const Color(0x14000000),
+          darkMode ? MoneyBaseColors.grey.withOpacity(0.6) : baseColors.surfaceShadow,
     );
 
     final colorScheme =
@@ -192,8 +194,8 @@ class MoneyBaseTheme {
               primary: themeColors.primaryAccent,
               onPrimary: Colors.white,
               primaryContainer: darkMode
-                  ? const Color(0xFF2C3268)
-                  : const Color(0xFFE0E7FF),
+                  ? MoneyBaseColors.purple.withOpacity(0.38)
+                  : MoneyBaseColors.purple.withOpacity(0.18),
               onPrimaryContainer: darkMode
                   ? Colors.white
                   : themeColors.primaryText,
@@ -221,9 +223,9 @@ class MoneyBaseTheme {
               surfaceContainerHighest: themeColors.surfaceElevated,
               shadow: themeColors.surfaceShadow,
               scrim: Colors.black.withOpacity(darkMode ? 0.6 : 0.3),
-              inversePrimary: darkMode
-                  ? const Color(0xFF4F46E5)
-                  : const Color(0xFFA5B4FF),
+              inversePrimary: themeColors.primaryAccent.withOpacity(
+                darkMode ? 0.6 : 0.32,
+              ),
             );
 
     return ThemeData(
@@ -300,7 +302,7 @@ class MoneyBaseTheme {
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: themeColors.secondaryAccent,
-        foregroundColor: darkMode ? const Color(0xFF020617) : Colors.white,
+        foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       filledButtonTheme: FilledButtonThemeData(

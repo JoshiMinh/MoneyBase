@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../../app/theme/app_colors.dart';
 import '../../../core/models/category.dart';
 import '../../../core/models/wallet.dart';
 import '../../../core/models/transaction.dart';
@@ -23,12 +24,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
   static const _uncategorizedKey = '__uncategorized__';
   static const _unassignedWalletKey = '__unassigned_wallet__';
   static const List<Color> _fallbackSegmentColors = [
-    Color(0xFFFF6D8D),
-    Color(0xFF7B61FF),
-    Color(0xFFFFC857),
-    Color(0xFF4DD4FF),
-    Color(0xFF5CE1E6),
-    Color(0xFFF991CC),
+    MoneyBaseColors.pink,
+    MoneyBaseColors.purple,
+    MoneyBaseColors.yellow,
+    MoneyBaseColors.blue,
+    MoneyBaseColors.green,
+    MoneyBaseColors.orange,
   ];
   static const _monthNames = [
     'January',
@@ -180,7 +181,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           label: 'Income',
           amount: _formatSegmentAmount(incomeTotal, ratio, currency),
           ratio: ratio,
-          color: const Color(0xFF4FF3B2),
+          color: MoneyBaseColors.green,
         ),
       );
     }
@@ -722,14 +723,14 @@ class _ReportsContent extends StatelessWidget {
                         period.label,
                         style: textTheme.labelLarge?.copyWith(
                           color: selectedPeriod == period
-                              ? const Color(0xFF1B1232)
+                              ? MoneyBaseColors.grey
                               : Colors.white,
                         ),
                       ),
                       labelPadding:
                           const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       backgroundColor: Colors.white.withOpacity(0.08),
-                      selectedColor: const Color(0xFFFFC300),
+                      selectedColor: MoneyBaseColors.yellow,
                       onSelected: (_) => onPeriodChanged(period),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(18),
