@@ -10,7 +10,11 @@ import '../../../common/presentation/moneybase_shell.dart';
 import '../../../../core/services/google_sign_in_service.dart';
 
 class AuthCard extends StatefulWidget {
-  const AuthCard({super.key, required this.onLoginSuccess, required this.isWide});
+  const AuthCard({
+    super.key,
+    required this.onLoginSuccess,
+    required this.isWide,
+  });
 
   final VoidCallback? onLoginSuccess;
   final bool isWide;
@@ -72,11 +76,11 @@ class _AuthCardState extends State<AuthCard> {
               children: [
                 CircleAvatar(
                   radius: 28,
-                  backgroundColor:
-                      theme.colorScheme.primaryContainer.withOpacity(0.6),
+                  backgroundColor: theme.colorScheme.primaryContainer
+                      .withOpacity(0.6),
                   child: ClipOval(
                     child: Image.asset(
-                      'web/favicon.png',
+                      'app_icon.ico',
                       width: 42,
                       height: 42,
                       fit: BoxFit.cover,
@@ -216,9 +220,7 @@ class _AuthCardState extends State<AuthCard> {
             const SizedBox(height: 24),
             Text(
               'By continuing you agree to the MoneyBase Terms of Service and acknowledge our Privacy Policy.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: mutedTextColor,
-              ),
+              style: theme.textTheme.bodySmall?.copyWith(color: mutedTextColor),
             ),
           ],
         ),
@@ -282,8 +284,7 @@ class _AuthCardState extends State<AuthCard> {
             message: 'Google sign-in did not return a valid ID token.',
           );
         }
-        final authorization =
-            await account.authorizationClient.authorizeScopes(
+        final authorization = await account.authorizationClient.authorizeScopes(
           GoogleSignInService.defaultScopes,
         );
         final authCredential = GoogleAuthProvider.credential(
@@ -531,8 +532,8 @@ class _DividerWithText extends StatelessWidget {
           child: Text(
             text,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
         Expanded(child: Divider(color: colorScheme.outlineVariant)),
@@ -566,9 +567,7 @@ class _GoogleLogoIcon extends StatelessWidget {
     return SizedBox(
       width: size,
       height: size,
-      child: CustomPaint(
-        painter: _GoogleLogoPainter(),
-      ),
+      child: CustomPaint(painter: _GoogleLogoPainter()),
     );
   }
 }

@@ -90,9 +90,7 @@ class SidebarNavigation extends StatelessWidget {
               Positioned(
                 right: -20,
                 bottom: 110,
-                child: _SidebarChatButton(
-                  onPressed: onOpenAssistant!,
-                ),
+                child: _SidebarChatButton(onPressed: onOpenAssistant!),
               ),
           ],
         ),
@@ -116,7 +114,8 @@ class _SidebarHeading extends StatelessWidget {
         children: [
           Text(
             'MoneyBase',
-            style: theme.textTheme.titleMedium?.copyWith(
+            style:
+                theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                   fontSize: 18,
                   color: colors.primaryText,
@@ -242,7 +241,8 @@ class _SidebarItem extends StatelessWidget {
                 AnimatedDefaultTextStyle(
                   duration: _kSidebarAnimationDuration,
                   curve: Curves.easeOutCubic,
-                  style: theme.textTheme.labelMedium?.copyWith(
+                  style:
+                      theme.textTheme.labelMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: textColor,
                       ) ??
@@ -368,7 +368,7 @@ class _SidebarItemIcon extends StatelessWidget {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(10),
           child: Image.asset(
-            'web/favicon.png',
+            'app_icon.ico',
             width: 32,
             height: 32,
             fit: BoxFit.cover,
@@ -391,9 +391,7 @@ class _SidebarItemIcon extends StatelessWidget {
 }
 
 class _SidebarChatButton extends StatelessWidget {
-  const _SidebarChatButton({
-    required this.onPressed,
-  });
+  const _SidebarChatButton({required this.onPressed});
 
   final VoidCallback onPressed;
 
@@ -410,10 +408,7 @@ class _SidebarChatButton extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [
-                colors.secondaryAccent,
-                colors.primaryAccent,
-              ],
+              colors: [colors.secondaryAccent, colors.primaryAccent],
             ),
             borderRadius: BorderRadius.circular(999),
             boxShadow: [
