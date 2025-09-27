@@ -198,6 +198,37 @@ String _formatMonthDay(DateTime date) {
   return '$month $day, $year';
 }
 
+String _friendlyGreeting(DateTime now, {String? displayName}) {
+  final hour = now.hour;
+  String base;
+  if (hour >= 5 && hour < 12) {
+    base = 'Good morning';
+  } else if (hour >= 12 && hour < 17) {
+    base = 'Good afternoon';
+  } else if (hour >= 17 && hour < 21) {
+    base = 'Good evening';
+  } else {
+    base = 'Welcome back';
+  }
+
+  if (displayName != null && displayName.trim().isNotEmpty) {
+    return '$base, ${displayName.trim()}';
+  }
+
+  return base;
+}
+
+String _formatFriendlyDate(DateTime date) {
+  final today = DateTime.now();
+  final isToday = date.year == today.year &&
+      date.month == today.month &&
+      date.day == today.day;
+  if (isToday) {
+    return 'Today • ${_formatMonthDay(date)}';
+  }
+  return _formatMonthDay(date);
+}
+
 String _formatMonthYear(DateTime date) {
   final month = _monthName(date.month);
   return '$month ${date.year}';
@@ -1038,6 +1069,179 @@ class _HomeContent extends StatefulWidget {
   State<_HomeContent> createState() => _HomeContentState();
 }
 
+class _HomeGreetingBanner extends StatelessWidget {
+  const _HomeGreetingBanner({
+    required this.greeting,
+    required this.subtitle,
+    required this.onViewReports,
+    required this.onViewTransactions,
+  });
+
+  final String greeting;
+  final String subtitle;
+  final VoidCallback onViewReports;
+  final VoidCallback onViewTransactions;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.moneyBaseColors;
+    final textTheme = Theme.of(context).textTheme;
+    final theme = Theme.of(context);
+    final foreground = colors.primaryText;
+
+    final gradientColors = [
+      colors.primaryAccent.withOpacity(theme.brightness == Brightness.dark ? 0.18 : 0.24),
+      colors.secondaryAccent.withOpacity(theme.brightness == Brightness.dark ? 0.12 : 0.18),
+    ];
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradientColors,
+        ),
+        borderRadius: BorderRadius.circular(36),
+        border: Border.all(
+          color: colors.surfaceBorder.withOpacity(theme.brightness == Brightness.dark ? 0.8 : 0.6),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: colors.surfaceShadow.withOpacity(0.45),
+            blurRadius: 42,
+            offset: const Offset(0, 24),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 34),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        greeting,
+                        style: textTheme.headlineSmall?.copyWith(
+                          color: foreground,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        subtitle,
+                        style: textTheme.bodyLarge?.copyWith(
+                          color: colors.mutedText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 24),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    FilledButton.icon(
+                      onPressed: onViewReports,
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+                        textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      icon: const Icon(Icons.auto_graph),
+                      label: const Text('View reports'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: onViewTransactions,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: foreground,
+                        side: BorderSide(color: colors.surfaceBorder.withOpacity(0.7)),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      icon: const Icon(Icons.receipt_long),
+                      label: const Text('Transactions'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 28),
+            Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              children: const [
+                _HomeHighlightChip(
+                  icon: Icons.auto_awesome,
+                  label: 'Personalised dashboards',
+                ),
+                _HomeHighlightChip(
+                  icon: Icons.account_balance_wallet,
+                  label: 'Wallet health monitor',
+                ),
+                _HomeHighlightChip(
+                  icon: Icons.verified_user,
+                  label: 'Secure cloud sync',
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeHighlightChip extends StatelessWidget {
+  const _HomeHighlightChip({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.moneyBaseColors;
+    final textTheme = Theme.of(context).textTheme;
+    final theme = Theme.of(context);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOutCubic,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      decoration: BoxDecoration(
+        color: theme.brightness == Brightness.dark
+            ? colors.surfaceBackground.withOpacity(0.45)
+            : Colors.white.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: colors.surfaceBorder.withOpacity(0.7)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18, color: colors.primaryAccent),
+          const SizedBox(width: 10),
+          Text(
+            label,
+            style: textTheme.labelLarge?.copyWith(
+              color: colors.primaryText,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _HomeContentState extends State<_HomeContent> {
   @override
   Widget build(BuildContext context) {
@@ -1047,26 +1251,40 @@ class _HomeContentState extends State<_HomeContent> {
     final onBackground = colors.primaryText;
     final mutedOnBackground = colors.mutedText;
 
-    final reportCards = _ReportCardsSection(
-      onViewReports: widget.onViewReports,
-    );
-
     if (widget.showBudgetsOnly) {
+      final now = DateTime.now();
+      final user = FirebaseAuth.instance.currentUser;
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Budgets',
-            style: textTheme.headlineMedium?.copyWith(
-              color: onBackground,
-              fontWeight: FontWeight.w600,
-            ),
+          _HomeGreetingBanner(
+            greeting: _friendlyGreeting(now, displayName: user?.displayName),
+            subtitle: 'Budget planning • ${_formatFriendlyDate(now)}',
+            onViewReports: widget.onViewReports,
+            onViewTransactions: widget.onViewTransactions,
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Manage spending plans and keep each category on track.',
-            style: textTheme.bodyLarge?.copyWith(
-              color: mutedOnBackground,
+          const SizedBox(height: 24),
+          MoneyBaseSurface(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Budgets',
+                  style: textTheme.headlineSmall?.copyWith(
+                    color: onBackground,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Manage spending plans and keep each category on track.',
+                  style: textTheme.bodyLarge?.copyWith(
+                    color: mutedOnBackground,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 24),
@@ -1081,10 +1299,29 @@ class _HomeContentState extends State<_HomeContent> {
       );
     }
 
+    final overviewCards = _HomeOverviewCards(
+      userId: widget.userId,
+      onViewReports: widget.onViewReports,
+      categoryRepository: widget.categoryRepository,
+      transactionRepository: widget.transactionRepository,
+    );
+
+    final now = DateTime.now();
+    final user = FirebaseAuth.instance.currentUser;
+    final greeting = _friendlyGreeting(now, displayName: user?.displayName);
+    final subtitle = 'Overview for ${_formatFriendlyDate(now)}';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        reportCards,
+        _HomeGreetingBanner(
+          greeting: greeting,
+          subtitle: subtitle,
+          onViewReports: widget.onViewReports,
+          onViewTransactions: widget.onViewTransactions,
+        ),
+        const SizedBox(height: 24),
+        overviewCards,
         const SizedBox(height: 24),
         LayoutBuilder(
           builder: (context, constraints) {
@@ -1139,6 +1376,106 @@ class _HomeContentState extends State<_HomeContent> {
           },
         ),
       ],
+    );
+  }
+}
+
+class _HomeOverviewCards extends StatelessWidget {
+  const _HomeOverviewCards({
+    required this.userId,
+    required this.onViewReports,
+    required this.categoryRepository,
+    required this.transactionRepository,
+  });
+
+  final String? userId;
+  final VoidCallback onViewReports;
+  final CategoryRepository categoryRepository;
+  final TransactionRepository transactionRepository;
+
+  @override
+  Widget build(BuildContext context) {
+    final baseCards = <Widget>[
+      _ReportsTab(onViewReports: onViewReports),
+      const _ThisWeekReportCard(),
+    ];
+
+    final resolvedUser = userId;
+    if (resolvedUser == null) {
+      return _ReportCardsSection(cards: baseCards);
+    }
+
+    return StreamBuilder<List<Category>>(
+      stream: categoryRepository.watchCategories(resolvedUser),
+      builder: (context, categorySnapshot) {
+        final categories = categorySnapshot.data ?? const <Category>[];
+
+        return StreamBuilder<List<MoneyBaseTransaction>>(
+          stream: transactionRepository.watchTransactions(resolvedUser),
+          builder: (context, transactionSnapshot) {
+            final transactions =
+                transactionSnapshot.data ?? const <MoneyBaseTransaction>[];
+
+            final now = DateTime.now();
+            final monthTransactions = transactions.where((transaction) {
+              final date = transaction.date;
+              return date.year == now.year && date.month == now.month;
+            }).toList();
+
+            final slices = _buildSpendingSlices(
+              categories: categories,
+              monthTransactions: monthTransactions,
+            );
+            final weeklyGroups = _buildWeeklyCashFlow(monthTransactions);
+            final currencyCodes = monthTransactions
+                .map(
+                  (transaction) =>
+                      transaction.currencyCode.toUpperCase().trim(),
+                )
+                .where((code) => code.isNotEmpty)
+                .toSet();
+
+            final error = categorySnapshot.error ?? transactionSnapshot.error;
+
+            final cards = <Widget>[...baseCards];
+
+            if (error != null) {
+              final colors = context.moneyBaseColors;
+              final textTheme = Theme.of(context).textTheme;
+
+              cards.add(
+                MoneyBaseSurface(
+                  padding: const EdgeInsets.all(28),
+                  backgroundColor: colors.surfaceBackground,
+                  borderColor: colors.surfaceBorder,
+                  child: Text(
+                    'Unable to load insights: $error',
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colors.primaryText,
+                    ),
+                  ),
+                ),
+              );
+            } else {
+              cards
+                ..add(
+                  _SpendingBreakdownCard(
+                    slices: slices,
+                    currencyCodes: currencyCodes,
+                  ),
+                )
+                ..add(
+                  _CashFlowSummaryCard(
+                    groups: weeklyGroups,
+                    currencyCodes: currencyCodes,
+                  ),
+                );
+            }
+
+            return _ReportCardsSection(cards: cards);
+          },
+        );
+      },
     );
   }
 }
@@ -1308,23 +1645,6 @@ class _GraphsTabState extends State<_GraphsTab> {
                   transactions: transactions,
                 );
 
-                final now = DateTime.now();
-                final monthTransactions = transactions.where((transaction) {
-                  final date = transaction.date;
-                  return date.year == now.year && date.month == now.month;
-                }).toList();
-
-                final spendingSlices = _buildSpendingSlices(
-                  categories: categories,
-                  monthTransactions: monthTransactions,
-                );
-                final weeklyGroups = _buildWeeklyCashFlow(monthTransactions);
-                final currencyCodes = monthTransactions
-                    .map((transaction) =>
-                        transaction.currencyCode.toUpperCase().trim())
-                    .where((code) => code.isNotEmpty)
-                    .toSet();
-
                 if (budgetSnapshot.connectionState == ConnectionState.waiting &&
                     budgets.isEmpty) {
                   return Column(
@@ -1338,18 +1658,6 @@ class _GraphsTabState extends State<_GraphsTab> {
                 }
 
                 final sections = <Widget>[
-                  if (!widget.showBudgetsOnly) ...[
-                    _SpendingBreakdownCard(
-                      slices: spendingSlices,
-                      currencyCodes: currencyCodes,
-                    ),
-                    const SizedBox(height: 24),
-                    _CashFlowSummaryCard(
-                      groups: weeklyGroups,
-                      currencyCodes: currencyCodes,
-                    ),
-                    const SizedBox(height: 24),
-                  ],
                   _BudgetsListCard(
                     views: views,
                     onAddBudget: () => _createBudget(userId, categories),
@@ -1376,9 +1684,9 @@ class _GraphsTabState extends State<_GraphsTab> {
 const double _reportCardViewportHeight = 420;
 
 class _ReportCardsSection extends StatefulWidget {
-  const _ReportCardsSection({required this.onViewReports});
+  const _ReportCardsSection({required this.cards});
 
-  final VoidCallback onViewReports;
+  final List<Widget> cards;
 
   @override
   State<_ReportCardsSection> createState() => _ReportCardsSectionState();
@@ -1391,7 +1699,7 @@ class _ReportCardsSectionState extends State<_ReportCardsSection> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(viewportFraction: 0.9);
+    _pageController = PageController(viewportFraction: 0.86);
   }
 
   @override
@@ -1410,78 +1718,114 @@ class _ReportCardsSectionState extends State<_ReportCardsSection> {
 
   @override
   Widget build(BuildContext context) {
-    final cards = <Widget>[
-      _ReportsTab(onViewReports: widget.onViewReports),
-      const _ThisWeekReportCard(),
-    ];
+    final cards = widget.cards;
+
+    if (cards.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     final indicatorColor = context.moneyBaseColors.primaryAccent;
     final inactiveColor = context.moneyBaseColors.surfaceBorder;
+
+    final colors = context.moneyBaseColors;
+    final theme = Theme.of(context);
+    final backgroundGradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        colors.surfaceBackground.withOpacity(theme.brightness == Brightness.dark ? 0.72 : 0.86),
+        colors.surfaceBackground.withOpacity(theme.brightness == Brightness.dark ? 0.55 : 0.72),
+      ],
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SizedBox(
           height: _reportCardViewportHeight,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              PageView.builder(
-                controller: _pageController,
-                padEnds: false,
-                onPageChanged: (index) {
-                  setState(() => _currentIndex = index);
-                },
-                itemCount: cards.length,
-                itemBuilder: (context, index) {
-                  final isActive = index == _currentIndex;
-                  return AnimatedPadding(
-                    duration: const Duration(milliseconds: 240),
-                    curve: Curves.easeOutCubic,
-                    padding: EdgeInsets.fromLTRB(
-                      24,
-                      isActive ? 0 : 24,
-                      24,
-                      isActive ? 0 : 24,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(40),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: backgroundGradient,
+                border: Border.all(
+                  color: colors.surfaceBorder.withOpacity(theme.brightness == Brightness.dark ? 0.8 : 0.65),
+                ),
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    child: PageView.builder(
+                      controller: _pageController,
+                      padEnds: false,
+                      onPageChanged: (index) {
+                        setState(() => _currentIndex = index);
+                      },
+                      itemCount: cards.length,
+                      itemBuilder: (context, index) {
+                        final isActive = index == _currentIndex;
+                        return AnimatedPadding(
+                          duration: const Duration(milliseconds: 260),
+                          curve: Curves.easeOutCubic,
+                          padding: EdgeInsets.fromLTRB(
+                            isActive ? 16 : 32,
+                            isActive ? 8 : 24,
+                            isActive ? 16 : 32,
+                            isActive ? 8 : 24,
+                          ),
+                          child: AnimatedScale(
+                            duration: const Duration(milliseconds: 260),
+                            curve: Curves.easeOutCubic,
+                            scale: isActive ? 1 : 0.94,
+                            child: AnimatedOpacity(
+                              duration: const Duration(milliseconds: 260),
+                              curve: Curves.easeOutCubic,
+                              opacity: isActive ? 1 : 0.65,
+                              child: cards[index],
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                    child: cards[index],
-                  );
-                },
+                  ),
+                  Positioned(
+                    left: 12,
+                    child: _CarouselArrowButton(
+                      icon: Icons.arrow_back_ios_new,
+                      onPressed:
+                          _currentIndex > 0 ? () => _goToPage(_currentIndex - 1) : null,
+                    ),
+                  ),
+                  Positioned(
+                    right: 12,
+                    child: _CarouselArrowButton(
+                      icon: Icons.arrow_forward_ios,
+                      onPressed:
+                          _currentIndex < cards.length - 1 ? () => _goToPage(_currentIndex + 1) : null,
+                    ),
+                  ),
+                ],
               ),
-              Positioned(
-                left: 0,
-                child: _CarouselArrowButton(
-                  icon: Icons.arrow_back_ios_new,
-                  onPressed: _currentIndex > 0
-                      ? () => _goToPage(_currentIndex - 1)
-                      : null,
-                ),
-              ),
-              Positioned(
-                right: 0,
-                child: _CarouselArrowButton(
-                  icon: Icons.arrow_forward_ios,
-                  onPressed: _currentIndex < cards.length - 1
-                      ? () => _goToPage(_currentIndex + 1)
-                      : null,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             for (int i = 0; i < cards.length; i++)
               AnimatedContainer(
-                duration: const Duration(milliseconds: 240),
+                duration: const Duration(milliseconds: 260),
                 curve: Curves.easeOutCubic,
                 margin: const EdgeInsets.symmetric(horizontal: 4),
-                height: 8,
-                width: _currentIndex == i ? 32 : 8,
+                height: 10,
+                width: _currentIndex == i ? 34 : 10,
                 decoration: BoxDecoration(
-                  color: _currentIndex == i ? indicatorColor : inactiveColor,
+                  color: _currentIndex == i
+                      ? indicatorColor
+                      : inactiveColor.withOpacity(theme.brightness == Brightness.dark ? 0.6 : 0.5),
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -1504,58 +1848,77 @@ class _ReportsTab extends StatelessWidget {
     final colors = context.moneyBaseColors;
     final onSurface = colors.primaryText;
     final mutedOnSurface = colors.mutedText;
+    final monthLabel = _formatMonthYear(DateTime.now());
 
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 360),
       child: MoneyBaseSurface(
-        padding: const EdgeInsets.all(28),
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 36),
         backgroundColor: colors.surfaceBackground,
-        borderColor: colors.surfaceBorder,
+        borderColor: colors.surfaceBorder
+            .withOpacity(theme.brightness == Brightness.dark ? 0.75 : 0.6),
+        borderRadius: 36,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Monthly insights',
-              style: textTheme.titleMedium?.copyWith(
+              style: textTheme.headlineSmall?.copyWith(
                 color: onSurface,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.2,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                _SummaryPill(
+                  label: 'Period',
+                  value: monthLabel,
+                  color: colors.secondaryAccent,
+                ),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: onViewReports,
+                  style: TextButton.styleFrom(
+                    foregroundColor: colors.primaryAccent,
+                    textStyle:
+                        textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  icon: const Icon(Icons.chevron_right),
+                  label: const Text('Open reports'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
             _ReportInsightTile(
               icon: Icons.trending_up,
-              title: 'Net income is up 12%',
-              subtitle: 'You spent \$250 less compared to last month.',
+              title: 'Track progress',
+              subtitle:
+                  'Follow how your savings and spending evolve month over month.',
               iconTint: colors.primaryAccent,
               textColor: onSurface,
               subtitleColor: mutedOnSurface,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
             _ReportInsightTile(
-              icon: Icons.shopping_bag_outlined,
-              title: 'Top category: Shopping',
-              subtitle: 'Shopping accounts for 34% of this month’s expenses.',
+              icon: Icons.pie_chart_rounded,
+              title: 'Spending categories',
+              subtitle:
+                  'Identify which categories are growing fastest or staying on budget.',
               iconTint: colors.secondaryAccent,
               textColor: onSurface,
               subtitleColor: mutedOnSurface,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
             _ReportInsightTile(
-              icon: Icons.savings_outlined,
-              title: 'Savings streak ongoing',
-              subtitle: 'You have contributed to savings for 5 weeks straight.',
+              icon: Icons.wallet,
+              title: 'Wallet coverage',
+              subtitle:
+                  'See how balances and cash flow trends impact your runway.',
               iconTint: colors.tertiaryAccent,
               textColor: onSurface,
               subtitleColor: mutedOnSurface,
-            ),
-            const SizedBox(height: 24),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: FilledButton.icon(
-                onPressed: onViewReports,
-                icon: const Icon(Icons.analytics_outlined),
-                label: const Text('Open full reports'),
-              ),
             ),
           ],
         ),
@@ -1584,41 +1947,70 @@ class _ReportInsightTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final colors = context.moneyBaseColors;
+    final brightness = Theme.of(context).brightness;
+    final baseBackground = brightness == Brightness.dark
+        ? colors.surfaceBackground.withOpacity(0.55)
+        : Colors.white.withOpacity(0.7);
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: iconTint.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(14),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      decoration: BoxDecoration(
+        color: baseBackground,
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: iconTint.withOpacity(0.32)),
+        boxShadow: [
+          BoxShadow(
+            color: colors.surfaceShadow.withOpacity(0.18),
+            blurRadius: 24,
+            offset: const Offset(0, 16),
           ),
-          padding: const EdgeInsets.all(12),
-          child: Icon(icon, color: iconTint),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: textTheme.titleSmall?.copyWith(
-                  color: textColor,
-                  fontWeight: FontWeight.w600,
-                ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  iconTint.withOpacity(0.18),
+                  iconTint.withOpacity(0.32),
+                ],
               ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: textTheme.bodyMedium?.copyWith(
-                  color: subtitleColor,
-                ),
-              ),
-            ],
+            ),
+            child: Icon(icon, color: iconTint, size: 20),
           ),
-        ),
-      ],
+          const SizedBox(width: 18),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: textTheme.titleMedium?.copyWith(
+                    color: textColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  subtitle,
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: subtitleColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1776,17 +2168,30 @@ class _CarouselArrowButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.moneyBaseColors;
-    return IconButton(
-      onPressed: onPressed,
-      icon: Icon(icon),
-      style: IconButton.styleFrom(
-        backgroundColor: colors.surfaceBackground,
-        foregroundColor: colors.primaryAccent,
-        disabledForegroundColor: colors.mutedText.withOpacity(0.4),
-        disabledBackgroundColor: colors.surfaceBorder.withOpacity(0.6),
-        padding: const EdgeInsets.all(12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
+    final theme = Theme.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surfaceBackground.withOpacity(theme.brightness == Brightness.dark ? 0.85 : 0.92),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colors.surfaceBorder.withOpacity(0.75)),
+        boxShadow: [
+          BoxShadow(
+            color: colors.surfaceShadow.withOpacity(0.32),
+            blurRadius: 18,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: IconButton(
+        onPressed: onPressed,
+        icon: Icon(icon),
+        style: IconButton.styleFrom(
+          foregroundColor: colors.primaryAccent,
+          disabledForegroundColor: colors.mutedText.withOpacity(0.35),
+          padding: const EdgeInsets.all(14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
         ),
       ),
     );
@@ -1821,9 +2226,11 @@ class _SpendingBreakdownCard extends StatelessWidget {
     }
 
     return MoneyBaseSurface(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 34),
       backgroundColor: colors.surfaceBackground,
-      borderColor: colors.surfaceBorder,
+      borderColor: colors.surfaceBorder
+          .withOpacity(theme.brightness == Brightness.dark ? 0.75 : 0.6),
+      borderRadius: 36,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1836,9 +2243,10 @@ class _SpendingBreakdownCard extends StatelessWidget {
                   children: [
                     Text(
                       'Spending breakdown',
-                      style: textTheme.titleMedium?.copyWith(
+                      style: textTheme.headlineSmall?.copyWith(
                         color: colors.primaryText,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.2,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -1955,9 +2363,11 @@ class _CashFlowSummaryCard extends StatelessWidget {
         groups.any((group) => group.income > 0 || group.expense > 0);
 
     return MoneyBaseSurface(
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 34),
       backgroundColor: colors.surfaceBackground,
-      borderColor: colors.surfaceBorder,
+      borderColor: colors.surfaceBorder
+          .withOpacity(theme.brightness == Brightness.dark ? 0.75 : 0.6),
+      borderRadius: 36,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1970,9 +2380,10 @@ class _CashFlowSummaryCard extends StatelessWidget {
                   children: [
                     Text(
                       'Cash flow this month',
-                      style: textTheme.titleMedium?.copyWith(
+                      style: textTheme.headlineSmall?.copyWith(
                         color: colors.primaryText,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.2,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -2081,19 +2492,42 @@ class _SummaryPill extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final colors = context.moneyBaseColors;
     final brightness = Theme.of(context).brightness;
-    final backgroundOpacity = brightness == Brightness.dark ? 0.22 : 0.12;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
+    final backgroundOpacity = brightness == Brightness.dark ? 0.24 : 0.16;
+    final decoration = BoxDecoration(
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(
         color: foreground != null
-            ? color.withOpacity(0.16)
-            : color.withOpacity(backgroundOpacity),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: foreground != null ? color.withOpacity(0.2) : color.withOpacity(0.32),
-        ),
+            ? colors.surfaceBorder.withOpacity(0.7)
+            : color.withOpacity(0.4),
       ),
+      gradient: foreground == null
+          ? LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                color.withOpacity(backgroundOpacity + 0.08),
+                color.withOpacity(backgroundOpacity),
+              ],
+            )
+          : null,
+      color: foreground != null
+          ? colors.surfaceBackground
+              .withOpacity(brightness == Brightness.dark ? 0.65 : 0.42)
+          : null,
+      boxShadow: [
+        BoxShadow(
+          color: colors.surfaceShadow.withOpacity(0.12),
+          blurRadius: 14,
+          offset: const Offset(0, 8),
+        ),
+      ],
+    );
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: decoration,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2443,9 +2877,11 @@ class _RecentTransactionsCard extends StatelessWidget {
     final mutedOnSurface = colors.mutedText;
 
     return MoneyBaseSurface(
-      padding: const EdgeInsets.fromLTRB(28, 28, 28, 16),
+      padding: const EdgeInsets.fromLTRB(32, 32, 32, 20),
       backgroundColor: colors.surfaceBackground,
-      borderColor: colors.surfaceBorder,
+      borderColor:
+          colors.surfaceBorder.withOpacity(theme.brightness == Brightness.dark ? 0.75 : 0.6),
+      borderRadius: 36,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2457,9 +2893,10 @@ class _RecentTransactionsCard extends StatelessWidget {
                   children: [
                     Text(
                       'Recent Transactions',
-                      style: textTheme.titleLarge?.copyWith(
+                      style: textTheme.headlineSmall?.copyWith(
                         color: onSurface,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.2,
                       ),
                     ),
                     const SizedBox(height: 6),
