@@ -7,16 +7,22 @@ import com.google.firebase.Timestamp
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.thebase.moneybase.database.extensions.sortedForDisplay
+import com.thebase.moneybase.database.extensions.toCategoryOrNull
+import com.thebase.moneybase.database.extensions.toFirestoreMap
+import com.thebase.moneybase.database.extensions.toWalletOrNull
+import com.thebase.moneybase.database.extensions.userCategories
+import com.thebase.moneybase.database.extensions.userDocument
+import com.thebase.moneybase.database.extensions.userTransactions
+import com.thebase.moneybase.database.extensions.userWallets
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import java.util.Date
-import java.util.Locale
 import kotlin.math.abs
 
 @Suppress("unused")
@@ -24,37 +30,6 @@ class FirebaseRepositories {
 
     private val db = Firebase.firestore
     private val auth = Firebase.auth
-
-    private fun List<Wallet>.sortedForDisplay(): List<Wallet> {
-        return this.sortedWith(
-            compareBy<Wallet> { it.position }
-                .thenBy { it.name.lowercase(Locale.getDefault()) }
-        )
-    }
-
-    private fun DocumentSnapshot.toWalletOrNull(): Wallet? {
-        val payload = data ?: return null
-        val userId = (payload["userId"] as? String)
-            ?.takeIf { it.isNotBlank() }
-            ?: reference?.parent?.parent?.id.orEmpty()
-        val typeRaw = payload["type"] as? String
-        val type = typeRaw?.let { raw ->
-            Wallet.WalletType.values().firstOrNull { it.name.equals(raw, ignoreCase = true) }
-        } ?: Wallet.WalletType.PHYSICAL
-        val balance = (payload["balance"] as? Number)?.toDouble() ?: 0.0
-        val position = (payload["position"] as? Number)?.toLong() ?: 0L
-        return Wallet(
-            id = id,
-            userId = userId,
-            name = (payload["name"] as? String).orEmpty(),
-            balance = balance,
-            iconName = (payload["iconName"] as? String) ?: "account_balance_wallet",
-            color = (payload["color"] as? String).orEmpty(),
-            type = type,
-            currencyCode = (payload["currencyCode"] as? String) ?: "USD",
-            position = position
-        )
-    }
 
     // ----------------------------
     // Authentication Functions
@@ -73,7 +48,7 @@ class FirebaseRepositories {
                 createdAt = timestamp,
                 lastLoginAt = timestamp
             )
-            db.collection("users").document(userId).set(newUser).await()
+            db.userDocument(userId).set(newUser).await()
 
             user.updateProfile(
                 UserProfileChangeRequest.Builder()
@@ -97,12 +72,13 @@ class FirebaseRepositories {
             Category(name = "Transport", userId = userId, iconName = "directions_car", color = "#2196F3"),
             Category(name = "Entertainment", userId = userId, iconName = "local_activity", color = "#9C27B0")
         )
-        defaults.forEach { cat ->
-            val doc = db
-                .collection("users").document(userId)
-                .collection("categories").document()
-            doc.set(cat.copy(id = doc.id)).await()
-        }
+
+        db.runBatch { batch ->
+            defaults.forEach { cat ->
+                val doc = db.userCategories(userId).document()
+                batch.set(doc, cat.toFirestoreMap(userIdOverride = userId))
+            }
+        }.await()
     }
 
     private suspend fun addDefaultWallets(userId: String) {
@@ -110,13 +86,20 @@ class FirebaseRepositories {
             Wallet(name = "Cash", userId = userId, balance = 0.0, iconName = "account_balance_wallet", color = "#4CAF50"),
             Wallet(name = "Bank Account", userId = userId, balance = 0.0, iconName = "account_balance", color = "#1976D2")
         )
-        defaults.forEachIndexed { index, wallet ->
-            val doc = db
-                .collection("users").document(userId)
-                .collection("wallets").document()
-            val position = if (wallet.position != 0L) wallet.position else (index + 1).toLong()
-            doc.set(wallet.copy(id = doc.id, position = position)).await()
-        }
+
+        db.runBatch { batch ->
+            defaults.forEachIndexed { index, wallet ->
+                val doc = db.userWallets(userId).document()
+                val position = if (wallet.position != 0L) wallet.position else (index + 1).toLong()
+                batch.set(
+                    doc,
+                    wallet.toFirestoreMap(
+                        userIdOverride = userId,
+                        positionOverride = position
+                    )
+                )
+            }
+        }.await()
     }
 
     suspend fun loginUser(email: String, password: String): Boolean = try {
@@ -148,7 +131,7 @@ class FirebaseRepositories {
     // ----------------------------
 
     suspend fun getUser(userId: String): User? = try {
-        val snap = db.collection("users").document(userId).get().await()
+        val snap = db.userDocument(userId).get().await()
         if (snap.exists()) snap.toUserSafe() else null
     } catch (_: Exception) {
         null
@@ -156,7 +139,7 @@ class FirebaseRepositories {
 
     suspend fun updateUserProfile(userId: String, displayName: String, email: String): Boolean {
         return try {
-            val userRef = db.collection("users").document(userId)
+            val userRef = db.userDocument(userId)
             userRef.update(mapOf(
                 "displayName" to displayName,
                 "email" to email
@@ -179,7 +162,7 @@ class FirebaseRepositories {
 
     suspend fun updateProfilePicture(userId: String, profilePictureUrl: String): Boolean {
         return try {
-            db.collection("users").document(userId)
+            db.userDocument(userId)
                 .update("profilePictureUrl", profilePictureUrl).await()
             auth.currentUser?.takeIf { it.uid == userId }?.updateProfile(
                 UserProfileChangeRequest.Builder()
@@ -195,7 +178,7 @@ class FirebaseRepositories {
 
     suspend fun ensureGoogleUserInDatabase(user: com.google.firebase.auth.FirebaseUser): Boolean {
         return try {
-            val docRef = db.collection("users").document(user.uid)
+            val docRef = db.userDocument(user.uid)
             val snapshot = docRef.get().await()
             val timestamp = Timestamp.now()
             if (!snapshot.exists()) {
@@ -229,8 +212,7 @@ class FirebaseRepositories {
         }
 
         val listener = try {
-            db.collection("users").document(userId)
-                .collection("transactions")
+            db.userTransactions(userId)
                 .orderBy("date")
                 .addSnapshotListener { snap, err ->
                     if (err != null) { close(err); return@addSnapshotListener }
@@ -252,17 +234,15 @@ class FirebaseRepositories {
         return try {
             db.runTransaction { tx ->
                 val normalized = transaction.normalized()
-                val wallets = db.collection("users").document(userId).collection("wallets")
+                val wallets = db.userWallets(userId)
                 val walletRef = wallets.document(normalized.walletId)
                 val wallet = tx.get(walletRef).toWalletOrNull()
                     ?: throw IllegalStateException("Wallet not found")
                 val delta = normalized.flowDelta()
                 tx.update(walletRef, "balance", wallet.balance + delta)
-                val txRef = db.collection("users").document(userId)
-                    .collection("transactions").document()
-                val payload = normalized.copy(
-                    id = txRef.id,
-                    userId = normalized.userId.ifBlank { userId }
+                val txRef = db.userTransactions(userId).document()
+                val payload = normalized.toFirestoreMap(
+                    userIdOverride = normalized.userId.ifBlank { userId }
                 )
                 tx.set(txRef, payload)
             }.await()
@@ -277,25 +257,26 @@ class FirebaseRepositories {
         return try {
             db.runTransaction { tx ->
                 val normalized = transaction.normalized()
-                val userRef = db.collection("users").document(userId)
-                val txRef = userRef.collection("transactions").document(normalized.id)
+                val txRef = db.userTransactions(userId).document(normalized.id)
                 val originalSnap = tx.get(txRef)
                 if (!originalSnap.exists()) throw IllegalStateException("Transaction not found")
                 val original = originalSnap.toTransactionSafe()
 
-                val oldWalletRef = userRef.collection("wallets").document(original.walletId)
+                val oldWalletRef = db.userWallets(userId).document(original.walletId)
                 val oldWallet = tx.get(oldWalletRef).toWalletOrNull()
                     ?: throw IllegalStateException("Wallet not found")
                 val originalDelta = original.flowDelta()
                 tx.update(oldWalletRef, "balance", oldWallet.balance - originalDelta)
 
-                val newWalletRef = userRef.collection("wallets").document(normalized.walletId)
+                val newWalletRef = db.userWallets(userId).document(normalized.walletId)
                 val newWallet = tx.get(newWalletRef).toWalletOrNull()
                     ?: throw IllegalStateException("Wallet not found")
                 val newDelta = normalized.flowDelta()
                 tx.update(newWalletRef, "balance", newWallet.balance + newDelta)
 
-                val payload = normalized.copy(userId = normalized.userId.ifBlank { userId })
+                val payload = normalized.toFirestoreMap(
+                    userIdOverride = normalized.userId.ifBlank { userId }
+                )
                 tx.set(txRef, payload)
             }.await()
             true
@@ -307,13 +288,12 @@ class FirebaseRepositories {
     suspend fun deleteTransaction(userId: String, transactionId: String): Boolean {
         return try {
             db.runTransaction { tx ->
-                val userRef = db.collection("users").document(userId)
-                val txRef = userRef.collection("transactions").document(transactionId)
+                val txRef = db.userTransactions(userId).document(transactionId)
                 val originalSnap = tx.get(txRef)
                 if (!originalSnap.exists()) throw IllegalStateException("Transaction not found")
                 val original = originalSnap.toTransactionSafe()
 
-                val walletRef = userRef.collection("wallets").document(original.walletId)
+                val walletRef = db.userWallets(userId).document(original.walletId)
                 val wallet = tx.get(walletRef).toWalletOrNull()
                     ?: throw IllegalStateException("Wallet not found")
                 val originalDelta = original.flowDelta()
@@ -328,8 +308,8 @@ class FirebaseRepositories {
     }
 
     suspend fun getAllTransactions(userId: String): List<Transaction> = try {
-        db.collection("users").document(userId)
-            .collection("transactions").get().await().documents
+        db.userTransactions(userId)
+            .get().await().documents
             .map { it.toTransactionSafe() }
     } catch (e: Exception) {
         Log.e("MoneyBase", "Failed to get all transactions", e)
@@ -347,7 +327,7 @@ class FirebaseRepositories {
         }
         
         val listener = try {
-            db.collection("users").document(userId).collection("wallets")
+            db.userWallets(userId)
                 .addSnapshotListener { snap, err ->
                     if (err != null) { close(err); return@addSnapshotListener }
                     val wallets = snap?.documents
@@ -369,9 +349,8 @@ class FirebaseRepositories {
     suspend fun transferBalance(userId: String, sourceWalletId: String, amount: Double, targetWalletId: String): Boolean {
         return try {
             db.runTransaction { tx ->
-                val base = db.collection("users").document(userId)
-                val srcRef = base.collection("wallets").document(sourceWalletId)
-                val tgtRef = base.collection("wallets").document(targetWalletId)
+                val srcRef = db.userWallets(userId).document(sourceWalletId)
+                val tgtRef = db.userWallets(userId).document(targetWalletId)
                 val src = tx.get(srcRef).toWalletOrNull()
                     ?: throw IllegalStateException("Source wallet not found")
                 val tgt = tx.get(tgtRef).toWalletOrNull()
@@ -389,17 +368,15 @@ class FirebaseRepositories {
 
     suspend fun addWallet(userId: String, wallet: Wallet): String {
         return try {
-            val doc = db.collection("users").document(userId)
-                .collection("wallets").document()
+            val doc = db.userWallets(userId).document()
             val position = if (wallet.position != 0L) {
                 wallet.position
             } else {
                 System.currentTimeMillis() * 1000
             }
-            val payload = wallet.copy(
-                id = doc.id,
-                userId = wallet.userId.ifBlank { userId },
-                position = position
+            val payload = wallet.toFirestoreMap(
+                userIdOverride = wallet.userId.ifBlank { userId },
+                positionOverride = position
             )
             doc.set(payload).await()
             doc.id
@@ -410,16 +387,17 @@ class FirebaseRepositories {
 
     suspend fun updateWallet(userId: String, wallet: Wallet): Boolean {
         return try {
-            db.collection("users").document(userId)
-                .collection("wallets").document(wallet.id)
+            val resolvedPosition = if (wallet.position != 0L) {
+                wallet.position
+            } else {
+                System.currentTimeMillis() * 1000
+            }
+            db.userWallets(userId)
+                .document(wallet.id)
                 .set(
-                    wallet.copy(
-                        userId = wallet.userId.ifBlank { userId },
-                        position = if (wallet.position != 0L) {
-                            wallet.position
-                        } else {
-                            System.currentTimeMillis() * 1000
-                        }
+                    wallet.toFirestoreMap(
+                        userIdOverride = wallet.userId.ifBlank { userId },
+                        positionOverride = resolvedPosition
                     )
                 ).await()
             true
@@ -430,8 +408,8 @@ class FirebaseRepositories {
 
     suspend fun deleteWallet(userId: String, walletId: String): Boolean {
         return try {
-            db.collection("users").document(userId)
-                .collection("wallets").document(walletId)
+            db.userWallets(userId)
+                .document(walletId)
                 .delete().await()
             true
         } catch (_: Exception) {
@@ -440,8 +418,8 @@ class FirebaseRepositories {
     }
 
     suspend fun getAllWallets(userId: String): List<Wallet> = try {
-        db.collection("users").document(userId)
-            .collection("wallets").get().await()
+        db.userWallets(userId)
+            .get().await()
             .documents
             .mapNotNull { it.toWalletOrNull() }
             .sortedForDisplay()
@@ -461,10 +439,13 @@ class FirebaseRepositories {
         }
         
         val listener = try {
-            db.collection("users").document(userId).collection("categories")
+            db.userCategories(userId)
                 .addSnapshotListener { snap, err ->
                     if (err != null) { close(err); return@addSnapshotListener }
-                    trySend(snap?.toObjects(Category::class.java).orEmpty())
+                    val categories = snap?.documents
+                        ?.mapNotNull { it.toCategoryOrNull() }
+                        ?: emptyList()
+                    trySend(categories)
                 }
         } catch (e: Exception) {
             Log.e("MoneyBase", "Error in getCategoriesFlow: ${e.message}", e)
@@ -479,9 +460,8 @@ class FirebaseRepositories {
 
     suspend fun addCategory(userId: String, category: Category): String {
         return try {
-            val doc = db.collection("users").document(userId)
-                .collection("categories").document()
-            doc.set(category.copy(id = doc.id)).await()
+            val doc = db.userCategories(userId).document()
+            doc.set(category.toFirestoreMap(userIdOverride = userId)).await()
             doc.id
         } catch (_: Exception) {
             ""
@@ -490,9 +470,9 @@ class FirebaseRepositories {
 
     suspend fun updateCategory(userId: String, category: Category): Boolean {
         return try {
-            db.collection("users").document(userId)
-                .collection("categories").document(category.id)
-                .set(category).await()
+            db.userCategories(userId)
+                .document(category.id)
+                .set(category.toFirestoreMap(userIdOverride = userId)).await()
             true
         } catch (_: Exception) {
             false
@@ -501,8 +481,8 @@ class FirebaseRepositories {
 
     suspend fun deleteCategory(userId: String, categoryId: String): Boolean {
         return try {
-            db.collection("users").document(userId)
-                .collection("categories").document(categoryId)
+            db.userCategories(userId)
+                .document(categoryId)
                 .delete().await()
             true
         } catch (_: Exception) {
@@ -511,9 +491,10 @@ class FirebaseRepositories {
     }
 
     suspend fun getAllCategories(userId: String): List<Category> = try {
-        db.collection("users").document(userId)
-            .collection("categories").get().await()
-            .toObjects(Category::class.java)
+        db.userCategories(userId)
+            .get().await()
+            .documents
+            .mapNotNull { it.toCategoryOrNull() }
     } catch (e: Exception) {
         Log.e("MoneyBase", "Failed to get all categories", e)
         emptyList()

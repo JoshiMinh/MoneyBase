@@ -54,4 +54,19 @@ class Category {
       'parentCategoryId': parentCategoryId,
     };
   }
+
+  Map<String, dynamic> toFirestoreMap({String? userIdOverride}) {
+    final resolvedUserId =
+        (userIdOverride != null && userIdOverride.isNotEmpty)
+            ? userIdOverride
+            : userId;
+
+    return {
+      'userId': resolvedUserId,
+      'name': name,
+      'iconName': iconName,
+      'color': color,
+      'parentCategoryId': parentCategoryId,
+    };
+  }
 }

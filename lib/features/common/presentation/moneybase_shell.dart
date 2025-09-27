@@ -51,7 +51,9 @@ class MoneyBaseScaffold extends StatelessWidget {
       backgroundColor: Colors.transparent,
       floatingActionButton: floatingActionButton,
       floatingActionButtonLocation: floatingActionButtonLocation,
-      body: Container(
+      body: AnimatedContainer(
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
         decoration: _buildShellDecoration(context),
         child: SafeArea(
           child: LayoutBuilder(
@@ -69,6 +71,9 @@ class MoneyBaseScaffold extends StatelessWidget {
                   constraints: BoxConstraints(maxWidth: maxContentWidth),
                   child: SingleChildScrollView(
                     controller: scrollController,
+                    physics: const BouncingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics(),
+                    ),
                     padding: padding,
                     child: builder(context, layout),
                   ),
@@ -122,13 +127,20 @@ class MoneyBaseSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.moneyBaseColors;
-    final surfaceColor = backgroundColor ?? colors.surfaceBackground;
+    final theme = Theme.of(context);
+    final shouldBlendOverlay =
+        backgroundColor == null && theme.brightness == Brightness.dark;
+    final surfaceColor = backgroundColor ??
+        (shouldBlendOverlay
+            ? Color.alphaBlend(colors.glassOverlay, colors.surfaceBackground)
+            : colors.surfaceBackground);
     final border = borderColor ?? colors.surfaceBorder;
     final resolvedShadow = shadow ??
         BoxShadow(
           color: colors.surfaceShadow,
-          blurRadius: 24,
-          offset: const Offset(0, 16),
+          blurRadius: 28,
+          offset: const Offset(0, 18),
+          spreadRadius: shouldBlendOverlay ? 0 : -4,
         );
 
     return DecoratedBox(
@@ -170,8 +182,21 @@ class MoneyBaseFrostedPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final overlayBase =
-        theme.brightness == Brightness.dark ? Colors.white : Colors.black;
+    final colors = context.moneyBaseColors;
+    final overlayColor = theme.brightness == Brightness.dark
+        ? colors.glassOverlay
+        : Colors.white.withOpacity(backgroundOpacity);
+    final borderColor = theme.brightness == Brightness.dark
+        ? colors.surfaceBorder.withOpacity(0.8)
+        : Colors.black.withOpacity(borderOpacity);
+    final resolvedShadows = boxShadow ??
+        [
+          BoxShadow(
+            color: colors.surfaceShadow.withOpacity(0.35),
+            blurRadius: 32,
+            offset: const Offset(0, 18),
+          ),
+        ];
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
@@ -181,9 +206,9 @@ class MoneyBaseFrostedPanel extends StatelessWidget {
           padding: padding,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(borderRadius),
-            color: overlayBase.withOpacity(backgroundOpacity),
-            border: Border.all(color: overlayBase.withOpacity(borderOpacity)),
-            boxShadow: boxShadow,
+            color: overlayColor,
+            border: Border.all(color: borderColor),
+            boxShadow: resolvedShadows,
           ),
           child: child,
         ),
