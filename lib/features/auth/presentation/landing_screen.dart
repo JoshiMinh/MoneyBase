@@ -42,7 +42,7 @@ class LandingScreen extends StatelessWidget {
                           ClipRRect(
                             borderRadius: BorderRadius.circular(16),
                             child: Image.asset(
-                              'web/favicon.png',
+                              'app_icon.ico',
                               width: 64,
                               height: 64,
                               fit: BoxFit.cover,
@@ -117,7 +117,9 @@ class LandingScreen extends StatelessWidget {
                       const SizedBox(height: 12),
                       TextButton(
                         onPressed: () => _openAuth(context),
-                        child: const Text('Already exploring? Continue to sign in'),
+                        child: const Text(
+                          'Already exploring? Continue to sign in',
+                        ),
                       ),
                     ],
                   ),
@@ -234,7 +236,8 @@ class _PreviewCard extends StatelessWidget {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: theme
+                colors:
+                    theme
                         .extension<MoneyBaseThemeColors>()
                         ?.backgroundGradient ??
                     [theme.colorScheme.primary, theme.colorScheme.secondary],

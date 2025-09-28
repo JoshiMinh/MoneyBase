@@ -18,8 +18,10 @@ class AppShell extends StatelessWidget {
   final VoidCallback onLogout;
   final AppShellPage page;
 
-  void _handleDestinationSelected(BuildContext context,
-      _NavigationDestination destination) {
+  void _handleDestinationSelected(
+    BuildContext context,
+    _NavigationDestination destination,
+  ) {
     if (destination.path == ModalRoute.of(context)?.settings.name) {
       return;
     }
@@ -124,10 +126,12 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final destinations = _NavigationDestination.values;
-    final primaryDestinations =
-        destinations.where((destination) => !destination.isSecondary).toList();
-    final secondaryDestinations =
-        destinations.where((destination) => destination.isSecondary).toList();
+    final primaryDestinations = destinations
+        .where((destination) => !destination.isSecondary)
+        .toList();
+    final secondaryDestinations = destinations
+        .where((destination) => destination.isSecondary)
+        .toList();
     final currentDestination = _currentDestination;
     final body = _buildPageBody(context);
 
@@ -135,17 +139,21 @@ class AppShell extends StatelessWidget {
       builder: (context, constraints) {
         final useRail = constraints.maxWidth >= 900;
         final theme = Theme.of(context);
-        final floatingActions =
-            _buildFloatingActions(context, currentDestination);
+        final floatingActions = _buildFloatingActions(
+          context,
+          currentDestination,
+        );
 
         if (useRail) {
           final railTheme = NavigationRailTheme.of(context);
-          final railBackground = railTheme.backgroundColor ??
+          final railBackground =
+              railTheme.backgroundColor ??
               (theme.brightness == Brightness.dark
                   ? const Color(0xFF0F0F0F)
                   : const Color(0xFFF9F9F9));
-          final dividerColor =
-              theme.colorScheme.outlineVariant.withOpacity(0.4);
+          final dividerColor = theme.colorScheme.outlineVariant.withOpacity(
+            0.4,
+          );
 
           return Scaffold(
             backgroundColor: theme.colorScheme.background,
@@ -168,10 +176,7 @@ class AppShell extends StatelessWidget {
                 Expanded(
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 250),
-                    child: KeyedSubtree(
-                      key: ValueKey(page),
-                      child: body,
-                    ),
+                    child: KeyedSubtree(key: ValueKey(page), child: body),
                   ),
                 ),
               ],
@@ -180,7 +185,8 @@ class AppShell extends StatelessWidget {
         }
 
         final navTheme = NavigationBarTheme.of(context);
-        final navBackground = navTheme.backgroundColor ??
+        final navBackground =
+            navTheme.backgroundColor ??
             (theme.brightness == Brightness.dark
                 ? const Color(0xFF0F0F0F)
                 : const Color(0xFFF9F9F9));
@@ -289,7 +295,7 @@ class _SidebarNavigation extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.asset(
-                  'web/favicon.png',
+                  'app_icon.ico',
                   width: 36,
                   height: 36,
                   fit: BoxFit.cover,
@@ -414,10 +420,7 @@ class _PremiumPlaceholderButton extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.workspace_premium_outlined,
-                      color: iconColor,
-                    ),
+                    Icon(Icons.workspace_premium_outlined, color: iconColor),
                     const SizedBox(height: 6),
                     Text(
                       'Premium',

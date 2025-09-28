@@ -125,7 +125,7 @@ class _AuthCardState extends State<_AuthCard> {
                       .withOpacity(0.6),
                   child: ClipOval(
                     child: Image.asset(
-                      'web/favicon.png',
+                      'app_icon.ico',
                       width: 42,
                       height: 42,
                       fit: BoxFit.cover,
@@ -265,9 +265,7 @@ class _AuthCardState extends State<_AuthCard> {
             const SizedBox(height: 24),
             Text(
               'By continuing you agree to the MoneyBase Terms of Service and acknowledge our Privacy Policy.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: mutedTextColor,
-              ),
+              style: theme.textTheme.bodySmall?.copyWith(color: mutedTextColor),
             ),
           ],
         ),
@@ -603,8 +601,9 @@ class _MarketingBullet extends StatelessWidget {
     final theme = Theme.of(context);
     final isLightMode = theme.brightness == Brightness.light;
     final iconColor = isLightMode ? Colors.black87 : Colors.white;
-    final textColor =
-        (isLightMode ? Colors.black : Colors.white).withOpacity(0.85);
+    final textColor = (isLightMode ? Colors.black : Colors.white).withOpacity(
+      0.85,
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -616,9 +615,9 @@ class _MarketingBullet extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: textColor,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(color: textColor),
             ),
           ),
         ],

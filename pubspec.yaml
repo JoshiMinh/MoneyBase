@@ -67,7 +67,7 @@ flutter:
   uses-material-design: true
 
   assets:
-    - web/favicon.png
+    - app_icon.ico
     - .env
 
   # To add assets to your application, add an assets section, like this:
