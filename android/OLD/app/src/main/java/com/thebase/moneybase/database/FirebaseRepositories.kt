@@ -56,6 +56,22 @@ class FirebaseRepositories {
         )
     }
 
+    private fun DocumentSnapshot.toCategoryOrNull(): Category? {
+        val payload = data ?: return null
+        val userId = getString("userId")
+            ?.takeIf { it.isNotBlank() }
+            ?: reference?.parent?.parent?.id.orEmpty()
+        val parentId = (payload["parentCategoryId"] as? String)?.takeUnless { it.isBlank() }
+        return Category(
+            id = id,
+            userId = userId,
+            name = getString("name").orEmpty(),
+            iconName = getString("iconName").orEmpty(),
+            color = getString("color").orEmpty(),
+            parentCategoryId = parentId
+        )
+    }
+
     // ----------------------------
     // Authentication Functions
     // ----------------------------
@@ -101,7 +117,7 @@ class FirebaseRepositories {
             val doc = db
                 .collection("users").document(userId)
                 .collection("categories").document()
-            doc.set(cat.copy(id = doc.id)).await()
+            doc.set(cat.copy(id = doc.id).toFirestoreMap()).await()
         }
     }
 
@@ -459,12 +475,14 @@ class FirebaseRepositories {
             trySend(emptyList())
             return@callbackFlow
         }
-        
+
         val listener = try {
             db.collection("users").document(userId).collection("categories")
                 .addSnapshotListener { snap, err ->
                     if (err != null) { close(err); return@addSnapshotListener }
-                    trySend(snap?.toObjects(Category::class.java).orEmpty())
+                    val categories = snap?.documents.orEmpty()
+                        .mapNotNull { it.toCategoryOrNull() }
+                    trySend(categories)
                 }
         } catch (e: Exception) {
             Log.e("MoneyBase", "Error in getCategoriesFlow: ${e.message}", e)
@@ -481,7 +499,7 @@ class FirebaseRepositories {
         return try {
             val doc = db.collection("users").document(userId)
                 .collection("categories").document()
-            doc.set(category.copy(id = doc.id)).await()
+            doc.set(category.copy(id = doc.id).toFirestoreMap()).await()
             doc.id
         } catch (_: Exception) {
             ""
@@ -492,7 +510,7 @@ class FirebaseRepositories {
         return try {
             db.collection("users").document(userId)
                 .collection("categories").document(category.id)
-                .set(category).await()
+                .set(category.toFirestoreMap()).await()
             true
         } catch (_: Exception) {
             false
@@ -513,7 +531,8 @@ class FirebaseRepositories {
     suspend fun getAllCategories(userId: String): List<Category> = try {
         db.collection("users").document(userId)
             .collection("categories").get().await()
-            .toObjects(Category::class.java)
+            .documents
+            .mapNotNull { it.toCategoryOrNull() }
     } catch (e: Exception) {
         Log.e("MoneyBase", "Failed to get all categories", e)
         emptyList()
@@ -581,4 +600,12 @@ private fun Transaction.normalized(): Transaction {
 private fun Transaction.flowDelta(): Double {
     val value = abs(amount)
     return if (isIncome) value else -value
+}
+
+private fun Category.toFirestoreMap(): Map<String, Any?> = buildMap {
+    put("userId", userId)
+    put("name", name)
+    put("iconName", iconName)
+    put("color", color)
+    parentCategoryId?.takeUnless { it.isBlank() }?.let { put("parentCategoryId", it) }
 }

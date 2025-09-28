@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../core/models/transaction.dart';
 import '../features/add_transaction/presentation/add_transaction_screen.dart';
 import '../features/app_shell/presentation/app_shell.dart';
+import '../features/app_shell/presentation/app_shell_page.dart';
 import '../features/auth/presentation/landing_screen.dart';
 import '../features/shopping_list/presentation/shopping_list_screen.dart';
 import '../features/transactions/presentation/transactions_screen.dart'

@@ -8,22 +8,32 @@ import '../../common/presentation/moneybase_shell.dart';
 import '../../../core/services/google_sign_in_service.dart';
 
 class AuthScreen extends StatelessWidget {
-  const AuthScreen({super.key, this.onLoginSuccess});
+  const AuthScreen({
+    super.key,
+    this.onLoginSuccess,
+    this.showMarketingPanel = true,
+  });
 
   final VoidCallback? onLoginSuccess;
+  final bool showMarketingPanel;
 
   @override
   Widget build(BuildContext context) {
+    final maxWidth = showMarketingPanel ? 1200.0 : 720.0;
+    final widePadding = showMarketingPanel
+        ? const EdgeInsets.symmetric(horizontal: 64, vertical: 64)
+        : const EdgeInsets.symmetric(horizontal: 40, vertical: 56);
+
     return MoneyBaseScaffold(
-      maxContentWidth: 1200,
-      widePadding: const EdgeInsets.symmetric(horizontal: 64, vertical: 64),
+      maxContentWidth: maxWidth,
+      widePadding: widePadding,
       builder: (context, layout) {
         final authCard = _AuthCard(
           onLoginSuccess: onLoginSuccess,
           isWide: layout.isWide,
         );
 
-        if (layout.isWide) {
+        if (layout.isWide && showMarketingPanel) {
           return Row(
             children: [
               const Expanded(
@@ -45,13 +55,23 @@ class AuthScreen extends StatelessWidget {
           );
         }
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Align(alignment: Alignment.topCenter, child: authCard),
-            const SizedBox(height: 24),
-            const _AuthMarketingPanel(compact: true),
-          ],
+        if (showMarketingPanel) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Align(alignment: Alignment.topCenter, child: authCard),
+              const SizedBox(height: 24),
+              const _AuthMarketingPanel(compact: true),
+            ],
+          );
+        }
+
+        return Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: authCard,
+          ),
         );
       },
     );
@@ -189,7 +209,7 @@ class _AuthCardState extends State<_AuthCard> {
             ],
             _ThirdPartyButton(
               label: 'Continue with Google',
-              icon: Icons.account_circle,
+              leading: const _GoogleLogoIcon(size: 22),
               onPressed: _isLoading ? null : _signInWithGoogle,
             ),
             const SizedBox(height: 20),
@@ -629,12 +649,12 @@ class _MarketingBullet extends StatelessWidget {
 class _ThirdPartyButton extends StatelessWidget {
   const _ThirdPartyButton({
     required this.label,
-    required this.icon,
+    required this.leading,
     required this.onPressed,
   });
 
   final String label;
-  final IconData icon;
+  final Widget leading;
   final VoidCallback? onPressed;
 
   @override
@@ -654,11 +674,54 @@ class _ThirdPartyButton extends StatelessWidget {
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: theme.colorScheme.primary),
+          SizedBox(width: 22, height: 22, child: leading),
           const SizedBox(width: 12),
-          Text(label),
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _GoogleLogoIcon extends StatelessWidget {
+  const _GoogleLogoIcon({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final borderRadius = BorderRadius.circular(size * 0.24);
+    return ClipRRect(
+      borderRadius: borderRadius,
+      child: Image.network(
+        'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/150px-Google_%22G%22_logo.png',
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.high,
+        errorBuilder: (context, error, stackTrace) {
+          final theme = Theme.of(context);
+          final surface = theme.colorScheme.surfaceVariant.withOpacity(
+            theme.brightness == Brightness.dark ? 0.4 : 0.18,
+          );
+
+          return Container(
+            color: surface,
+            alignment: Alignment.center,
+            child: Icon(
+              Icons.g_translate,
+              size: size * 0.72,
+              color: theme.colorScheme.primary,
+            ),
+          );
+        },
       ),
     );
   }

@@ -43,11 +43,11 @@ class MoneyBaseThemeColors extends ThemeExtension<MoneyBaseThemeColors> {
   factory MoneyBaseThemeColors.fallback({required bool darkMode}) {
     if (darkMode) {
       return MoneyBaseThemeColors(
-        backgroundGradient: const [MoneyBaseColors.grey, MoneyBaseColors.grey],
-        surfaceBackground: MoneyBaseColors.grey.withOpacity(0.96),
-        surfaceElevated: MoneyBaseColors.grey.withOpacity(0.84),
-        surfaceBorder: MoneyBaseColors.grey.withOpacity(0.32),
-        surfaceShadow: MoneyBaseColors.grey.withOpacity(0.6),
+        backgroundGradient: const [Colors.black, Colors.black],
+        surfaceBackground: Colors.black,
+        surfaceElevated: Colors.black,
+        surfaceBorder: Colors.white24,
+        surfaceShadow: Colors.black,
         primaryText: Colors.white,
         mutedText: Colors.white.withOpacity(0.68),
         primaryAccent: MoneyBaseColors.purple,
@@ -63,9 +63,9 @@ class MoneyBaseThemeColors extends ThemeExtension<MoneyBaseThemeColors> {
     return MoneyBaseThemeColors(
       backgroundGradient: const [Colors.white, Colors.white],
       surfaceBackground: Colors.white,
-      surfaceElevated: Colors.white.withOpacity(0.92),
-      surfaceBorder: MoneyBaseColors.grey.withOpacity(0.18),
-      surfaceShadow: MoneyBaseColors.grey.withOpacity(0.12),
+      surfaceElevated: Colors.white,
+      surfaceBorder: MoneyBaseColors.grey.withOpacity(0.12),
+      surfaceShadow: MoneyBaseColors.grey.withOpacity(0.08),
       primaryText: MoneyBaseColors.grey,
       mutedText: MoneyBaseColors.grey.withOpacity(0.68),
       primaryAccent: MoneyBaseColors.purple,
@@ -178,18 +178,13 @@ class MoneyBaseTheme {
     final baseColors = MoneyBaseThemeColors.fallback(darkMode: darkMode);
     final backgroundColor = baseColors.backgroundGradient.first;
     final themeColors = baseColors.copyWith(
-      surfaceBackground: darkMode
-          ? MoneyBaseColors.grey.withOpacity(0.96)
-          : Colors.white,
-      surfaceElevated: darkMode
-          ? MoneyBaseColors.grey.withOpacity(0.88)
-          : Colors.white,
+      surfaceBackground: darkMode ? Colors.black : Colors.white,
+      surfaceElevated: darkMode ? const Color(0xFF101010) : Colors.white,
       surfaceBorder: darkMode
-          ? MoneyBaseColors.grey.withOpacity(0.32)
+          ? Colors.white.withOpacity(0.08)
           : baseColors.surfaceBorder,
-      surfaceShadow: darkMode
-          ? MoneyBaseColors.grey.withOpacity(0.6)
-          : baseColors.surfaceShadow,
+      surfaceShadow:
+          darkMode ? Colors.black.withOpacity(0.7) : baseColors.surfaceShadow,
     );
 
     final colorScheme =
