@@ -871,7 +871,9 @@ class _ListMetadataChip extends StatelessWidget {
 
 enum _ListAction { edit, delete }
 
-class _ShoppingListItemsView extends StatelessWidget {
+enum _ShoppingItemsLayout { list, grid }
+
+class _ShoppingListItemsView extends StatefulWidget {
   const _ShoppingListItemsView({
     required this.userId,
     required this.list,
@@ -890,6 +892,13 @@ class _ShoppingListItemsView extends StatelessWidget {
   final void Function(ShoppingList, ShoppingItem) onDeleteItem;
   final void Function(ShoppingList, ShoppingItem, bool) onToggleItem;
 
+  @override
+  State<_ShoppingListItemsView> createState() => _ShoppingListItemsViewState();
+}
+
+class _ShoppingListItemsViewState extends State<_ShoppingListItemsView> {
+  _ShoppingItemsLayout _layout = _ShoppingItemsLayout.list;
+
   List<Widget> _buildGroceryItems(List<ShoppingItem> items, ShoppingList list) {
     final widgets = <Widget>[];
 
@@ -899,9 +908,9 @@ class _ShoppingListItemsView extends StatelessWidget {
         _ItemTile(
           list: list,
           item: item,
-          onEdit: () => onEditItem(list, item),
-          onDelete: () => onDeleteItem(list, item),
-          onToggle: (value) => onToggleItem(list, item, value),
+          onEdit: () => widget.onEditItem(list, item),
+          onDelete: () => widget.onDeleteItem(list, item),
+          onToggle: (value) => widget.onToggleItem(list, item, value),
         ),
       );
 
@@ -944,9 +953,9 @@ class _ShoppingListItemsView extends StatelessWidget {
         list: list,
         item: item,
         indent: depth * 28.0,
-        onEdit: () => onEditItem(list, item),
-        onDelete: () => onDeleteItem(list, item),
-        onToggle: (value) => onToggleItem(list, item, value),
+        onEdit: () => widget.onEditItem(list, item),
+        onDelete: () => widget.onDeleteItem(list, item),
+        onToggle: (value) => widget.onToggleItem(list, item, value),
         children: nested,
       );
     }
@@ -968,6 +977,50 @@ class _ShoppingListItemsView extends StatelessWidget {
     return widgets;
   }
 
+  Widget _buildItemsGrid(
+    BuildContext context,
+    List<ShoppingItem> items,
+    ShoppingList list,
+  ) {
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    final sorted = List<ShoppingItem>.from(items);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth;
+        final rawCount = (maxWidth / 260).floor();
+        final crossAxisCount = rawCount < 1
+            ? 1
+            : rawCount > 4
+                ? 4
+                : rawCount;
+
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: sorted.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: 20,
+            mainAxisSpacing: 20,
+            childAspectRatio: 0.78,
+          ),
+          itemBuilder: (context, index) {
+            final item = sorted[index];
+            return _ItemGridCard(
+              list: list,
+              item: item,
+              onEdit: () => widget.onEditItem(list, item),
+              onDelete: () => widget.onDeleteItem(list, item),
+              onToggle: (value) => widget.onToggleItem(list, item, value),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -976,13 +1029,19 @@ class _ShoppingListItemsView extends StatelessWidget {
     final onSurface = colors.primaryText;
 
     return StreamBuilder<List<ShoppingItem>>(
-      stream: repository.watchItems(userId, list.id),
+      stream: widget.repository.watchItems(widget.userId, widget.list.id),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _ItemsHeader(onSurface: onSurface, textTheme: textTheme, onAddItem: () => onAddItem(list)),
+              _ItemsHeader(
+                onSurface: onSurface,
+                textTheme: textTheme,
+                layout: _layout,
+                onLayoutChanged: (value) => setState(() => _layout = value),
+                onAddItem: () => widget.onAddItem(widget.list),
+              ),
               const SizedBox(height: 16),
               Text(
                 'Unable to load items: ${snapshot.error}',
@@ -995,7 +1054,7 @@ class _ShoppingListItemsView extends StatelessWidget {
         }
 
         final items = snapshot.data ?? const <ShoppingItem>[];
-        final currentList = list;
+        final currentList = widget.list;
         final listType = currentList.type;
 
         return Column(
@@ -1004,7 +1063,9 @@ class _ShoppingListItemsView extends StatelessWidget {
             _ItemsHeader(
               onSurface: onSurface,
               textTheme: textTheme,
-              onAddItem: () => onAddItem(currentList),
+              layout: _layout,
+              onLayoutChanged: (value) => setState(() => _layout = value),
+              onAddItem: () => widget.onAddItem(currentList),
             ),
             const SizedBox(height: 16),
             if (items.isEmpty)
@@ -1014,6 +1075,8 @@ class _ShoppingListItemsView extends StatelessWidget {
                   color: colors.mutedText,
                 ),
               )
+            else if (_layout == _ShoppingItemsLayout.grid)
+              _buildItemsGrid(context, items, currentList)
             else
               Column(
                 children: listType == ShoppingListType.shopping
@@ -1031,11 +1094,15 @@ class _ItemsHeader extends StatelessWidget {
   const _ItemsHeader({
     required this.onSurface,
     required this.textTheme,
+    required this.layout,
+    required this.onLayoutChanged,
     required this.onAddItem,
   });
 
   final Color onSurface;
   final TextTheme textTheme;
+  final _ShoppingItemsLayout layout;
+  final ValueChanged<_ShoppingItemsLayout> onLayoutChanged;
   final VoidCallback onAddItem;
 
   @override
@@ -1051,6 +1118,34 @@ class _ItemsHeader extends StatelessWidget {
             ),
           ),
         ),
+        SegmentedButton<_ShoppingItemsLayout>(
+          segments: const [
+            ButtonSegment<_ShoppingItemsLayout>(
+              value: _ShoppingItemsLayout.list,
+              icon: Icon(Icons.view_list_outlined),
+              label: Text('List'),
+            ),
+            ButtonSegment<_ShoppingItemsLayout>(
+              value: _ShoppingItemsLayout.grid,
+              icon: Icon(Icons.grid_view_outlined),
+              label: Text('Grid'),
+            ),
+          ],
+          selected: {layout},
+          onSelectionChanged: (selection) {
+            if (selection.isNotEmpty) {
+              onLayoutChanged(selection.first);
+            }
+          },
+          showSelectedIcon: false,
+          style: ButtonStyle(
+            visualDensity: VisualDensity.compact,
+            padding: MaterialStateProperty.all(
+              const EdgeInsets.symmetric(horizontal: 12),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
         FilledButton.icon(
           onPressed: onAddItem,
           icon: const Icon(Icons.add_shopping_cart_outlined),
@@ -1070,6 +1165,7 @@ class _ItemTile extends StatelessWidget {
     required this.onToggle,
     this.children = const <Widget>[],
     this.indent = 0,
+    this.mediaSize = 56,
   });
 
   final ShoppingList list;
@@ -1079,6 +1175,7 @@ class _ItemTile extends StatelessWidget {
   final ValueChanged<bool> onToggle;
   final List<Widget> children;
   final double indent;
+  final double mediaSize;
 
   Color _priorityColor(BuildContext context) {
     final colors = context.moneyBaseColors;
@@ -1092,58 +1189,6 @@ class _ItemTile extends StatelessWidget {
     }
   }
 
-  void _showImagePreview(BuildContext context, String url) {
-    showDialog<void>(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          insetPadding: const EdgeInsets.all(24),
-          clipBehavior: Clip.antiAlias,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420, maxHeight: 420),
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: InteractiveViewer(
-                    child: Image.network(
-                      url,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) => Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.broken_image_outlined, size: 48),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Unable to load image.',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -1151,80 +1196,24 @@ class _ItemTile extends StatelessWidget {
     final onSurface = colors.primaryText;
     final subtitleColor = colors.mutedText;
 
-    final emoji = item.iconEmoji;
-    final hasEmoji = emoji != null && emoji.trim().isNotEmpty;
-    final iconUrl = item.iconUrl;
-    final hasIconUrl =
-        list.type == ShoppingListType.shopping && iconUrl != null && iconUrl.trim().isNotEmpty;
     final createdLabel = _formatDate(item.createdAt);
     final updatedLabel = _formatDate(item.updatedAt);
     final metadataSummary = list.type == ShoppingListType.shopping
         ? 'Created $createdLabel · Updated $updatedLabel'
         : 'Updated $updatedLabel';
 
-    Widget buildIcon() {
-      if (hasIconUrl) {
-        final radius = BorderRadius.circular(14);
-        final sanitizedUrl = iconUrl!.trim();
-        return Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: radius,
-            onTap: () => _showImagePreview(context, sanitizedUrl),
-            child: Ink(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: colors.surfaceBackground,
-                borderRadius: radius,
-              ),
-              child: ClipRRect(
-                borderRadius: radius,
-                child: Image.network(
-                  sanitizedUrl,
-                  width: 44,
-                  height: 44,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Icon(
-                    Icons.image_not_supported_outlined,
-                    color: colors.primaryAccent,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      }
-
-      return Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: colors.primaryAccent.withOpacity(0.18),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        alignment: Alignment.center,
-        child: hasEmoji
-            ? Text(
-                emoji!,
-                style: const TextStyle(fontSize: 24),
-              )
-            : Icon(Icons.shopping_bag_outlined, color: colors.primaryAccent),
-      );
-    }
-
     final content = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Transform.scale(
-          scale: 1.2,
+          scale: 1.12,
           child: Checkbox(
             value: item.bought,
             onChanged: (value) => onToggle(value ?? false),
           ),
         ),
         const SizedBox(width: 12),
-        buildIcon(),
+        _ItemMedia(list: list, item: item, size: mediaSize),
         const SizedBox(width: 16),
         Expanded(
           child: Column(
@@ -1333,6 +1322,282 @@ class _ItemTile extends StatelessWidget {
 }
 
 enum _ItemAction { edit, delete }
+
+class _ItemGridCard extends StatelessWidget {
+  const _ItemGridCard({
+    required this.list,
+    required this.item,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onToggle,
+  });
+
+  final ShoppingList list;
+  final ShoppingItem item;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  final ValueChanged<bool> onToggle;
+
+  Color _priorityColor(BuildContext context) {
+    final colors = context.moneyBaseColors;
+    switch (item.priority) {
+      case ShoppingItemPriority.low:
+        return colors.info;
+      case ShoppingItemPriority.medium:
+        return colors.secondaryAccent;
+      case ShoppingItemPriority.high:
+        return colors.negative;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = context.moneyBaseColors;
+    final textTheme = theme.textTheme;
+    final subtitleColor = colors.mutedText;
+
+    final createdLabel = _formatDate(item.createdAt);
+    final updatedLabel = _formatDate(item.updatedAt);
+    final metadataSummary = list.type == ShoppingListType.shopping
+        ? 'Created $createdLabel · Updated $updatedLabel'
+        : 'Updated $updatedLabel';
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surfaceElevated,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: item.bought ? colors.surfaceBorder.withOpacity(0.6) : colors.surfaceBorder,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Transform.scale(
+                  scale: 1.05,
+                  child: Checkbox(
+                    value: item.bought,
+                    onChanged: (value) => onToggle(value ?? false),
+                  ),
+                ),
+                const Spacer(),
+                PopupMenuButton<_ItemAction>(
+                  onSelected: (action) {
+                    switch (action) {
+                      case _ItemAction.edit:
+                        onEdit();
+                        break;
+                      case _ItemAction.delete:
+                        onDelete();
+                        break;
+                    }
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(
+                      value: _ItemAction.edit,
+                      child: Text('Edit'),
+                    ),
+                    PopupMenuItem(
+                      value: _ItemAction.delete,
+                      child: Text('Delete'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Center(child: _ItemMedia(list: list, item: item, size: 76)),
+            const SizedBox(height: 16),
+            Text(
+              item.title,
+              style: textTheme.titleMedium?.copyWith(
+                color: colors.primaryText,
+                fontWeight: FontWeight.w600,
+                decoration: item.bought ? TextDecoration.lineThrough : TextDecoration.none,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                _MetadataChip(
+                  icon: Icons.flag_outlined,
+                  label: '${item.priority.label} priority',
+                  color: _priorityColor(context),
+                ),
+                if (item.price > 0)
+                  _MetadataChip(
+                    icon: Icons.attach_money,
+                    label: '${item.currency.toUpperCase()} ${item.price.toStringAsFixed(2)}',
+                    color: colors.primaryAccent,
+                  ),
+                if (item.purchaseDate != null)
+                  _MetadataChip(
+                    icon: Icons.schedule_outlined,
+                    label: 'Needed ${_formatDate(item.purchaseDate!)}',
+                    color: colors.secondaryAccent,
+                  ),
+                if (item.expiryDate != null && list.type == ShoppingListType.shopping)
+                  _MetadataChip(
+                    icon: Icons.hourglass_bottom,
+                    label: 'Expires ${_formatDate(item.expiryDate!)}',
+                    color: colors.info,
+                  ),
+                if (item.bought)
+                  _MetadataChip(
+                    icon: Icons.check_circle_outline,
+                    label: 'Purchased',
+                    color: colors.positive,
+                  ),
+              ],
+            ),
+            const Spacer(),
+            Text(
+              metadataSummary,
+              style: textTheme.bodySmall?.copyWith(color: subtitleColor),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ItemMedia extends StatelessWidget {
+  const _ItemMedia({
+    required this.list,
+    required this.item,
+    required this.size,
+  });
+
+  final ShoppingList list;
+  final ShoppingItem item;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.moneyBaseColors;
+    final emoji = item.iconEmoji;
+    final hasEmoji = emoji != null && emoji.trim().isNotEmpty;
+    final iconUrl = item.iconUrl;
+    final hasIconUrl =
+        list.type == ShoppingListType.shopping && iconUrl != null && iconUrl.trim().isNotEmpty;
+    final radius = BorderRadius.circular(size / 4);
+
+    if (hasIconUrl) {
+      final sanitizedUrl = iconUrl!.trim();
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: radius,
+          onTap: () => _showShoppingItemImagePreview(context, sanitizedUrl),
+          child: Ink(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: colors.surfaceBackground,
+              borderRadius: radius,
+            ),
+            child: ClipRRect(
+              borderRadius: radius,
+              child: Image.network(
+                sanitizedUrl,
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Icon(
+                  Icons.image_not_supported_outlined,
+                  color: colors.primaryAccent,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: colors.primaryAccent.withOpacity(0.18),
+        borderRadius: radius,
+      ),
+      alignment: Alignment.center,
+      child: hasEmoji
+          ? Text(
+              emoji!,
+              style: TextStyle(fontSize: size / 2.6),
+            )
+          : Icon(
+              Icons.shopping_bag_outlined,
+              color: colors.primaryAccent,
+              size: size / 2.2,
+            ),
+    );
+  }
+}
+
+void _showShoppingItemImagePreview(BuildContext context, String url) {
+  showDialog<void>(
+    context: context,
+    builder: (context) {
+      return Dialog(
+        insetPadding: const EdgeInsets.all(24),
+        clipBehavior: Clip.antiAlias,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420, maxHeight: 420),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: InteractiveViewer(
+                  child: Image.network(
+                    url,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.broken_image_outlined, size: 48),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Unable to load image.',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 0,
+                right: 0,
+                child: IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
 
 class _MetadataChip extends StatelessWidget {
   const _MetadataChip({
