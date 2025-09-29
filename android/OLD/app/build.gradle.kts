@@ -1,3 +1,5 @@
+@file:Suppress("PropertyName")
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -6,14 +8,21 @@ plugins {
     id("kotlin-kapt")
 }
 
+// pull values from gradle.properties
+val MB_KEYSTORE_FILE: String by project
+val MB_KEY_ALIAS: String by project
+val MB_STORE_PASSWORD: String by project
+val MB_KEY_PASSWORD: String by project
+
 @Suppress("UnstableApiUsage")
 android {
     namespace = "com.thebase.moneybase"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.thebase.moneybase"
         minSdk = 26
+        //noinspection OldTargetApi
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -21,35 +30,46 @@ android {
         vectorDrawables.useSupportLibrary = true
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file(MB_KEYSTORE_FILE)
+            storePassword = MB_STORE_PASSWORD
+            keyAlias = MB_KEY_ALIAS
+            keyPassword = MB_KEY_PASSWORD
+        }
+    }
+
     buildTypes {
-        release {
+        getByName("release") {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
+        // If you ever want debug to use the same keystore (usually NOT needed):
+        // getByName("debug") { signingConfig = signingConfigs.getByName("release") }
     }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-
     kotlinOptions {
         jvmTarget = "11"
     }
 
-    buildFeatures {
-        compose = true
-    }
+    buildFeatures { compose = true }
 
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.3"
     }
 
-    packaging.resources {
-        excludes += "/META-INF/{AL2.0,LGPL2.1}"
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
     }
 }
 
@@ -70,7 +90,6 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
 
     implementation(libs.coil.compose)
-
     implementation(libs.androidx.navigation.compose)
 
     implementation(libs.kotlinx.coroutines.android)
@@ -80,7 +99,7 @@ dependencies {
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.auth.ktx)
-    implementation(libs.google.firebase.auth)
+    // (Avoid duplicating firebase-auth; if libs.google.firebase.auth is the same, remove one)
     implementation(libs.play.services.auth)
 
     implementation(libs.androidx.credentials)
@@ -93,9 +112,8 @@ dependencies {
     implementation(libs.cloudinary.android)
     implementation(libs.cloudinary.core)
 
-
     implementation(libs.charts.android)
-    implementation(libs.material3)
+    // implementation(libs.material3) // likely duplicate of androidx.material3; keep only one
     implementation(libs.androidx.compose.foundation.layout)
 
     testImplementation(libs.junit)
