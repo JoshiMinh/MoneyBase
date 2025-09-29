@@ -56,6 +56,24 @@ class FirebaseRepositories {
         )
     }
 
+    private fun DocumentSnapshot.toCategoryOrNull(): Category? {
+        val payload = data ?: return null
+        val userId = (payload["userId"] as? String)
+            ?.takeIf { it.isNotBlank() }
+            ?: reference?.parent?.parent?.id.orEmpty()
+        val storedId = (payload["id"] as? String)?.takeIf { it.isNotBlank() }
+        val parentId = (payload["parentCategoryId"] as? String)
+            ?.takeIf { it.isNotBlank() }
+        return Category(
+            id = storedId ?: id,
+            userId = userId,
+            name = (payload["name"] as? String).orEmpty(),
+            iconName = (payload["iconName"] as? String).orEmpty(),
+            color = (payload["color"] as? String).orEmpty(),
+            parentCategoryId = parentId
+        )
+    }
+
     // ----------------------------
     // Authentication Functions
     // ----------------------------
@@ -464,7 +482,10 @@ class FirebaseRepositories {
             db.collection("users").document(userId).collection("categories")
                 .addSnapshotListener { snap, err ->
                     if (err != null) { close(err); return@addSnapshotListener }
-                    trySend(snap?.toObjects(Category::class.java).orEmpty())
+                    val categories = snap?.documents
+                        ?.mapNotNull { it.toCategoryOrNull() }
+                        .orEmpty()
+                    trySend(categories)
                 }
         } catch (e: Exception) {
             Log.e("MoneyBase", "Error in getCategoriesFlow: ${e.message}", e)
@@ -513,7 +534,8 @@ class FirebaseRepositories {
     suspend fun getAllCategories(userId: String): List<Category> = try {
         db.collection("users").document(userId)
             .collection("categories").get().await()
-            .toObjects(Category::class.java)
+            .documents
+            .mapNotNull { it.toCategoryOrNull() }
     } catch (e: Exception) {
         Log.e("MoneyBase", "Failed to get all categories", e)
         emptyList()

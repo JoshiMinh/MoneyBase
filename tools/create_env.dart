@@ -21,30 +21,43 @@ Future<void> main(List<String> args) async {
     values[key] = value;
   }
 
-  final candidateKeys = [
+  void upsertFromEnvironment(String key, List<String> environmentKeys) {
+    for (final environmentKey in environmentKeys) {
+      final envValue = Platform.environment[environmentKey];
+      if (envValue != null && envValue.trim().isNotEmpty) {
+        values[key] = envValue.trim();
+        return;
+      }
+    }
+
+    if (!values.containsKey(key)) {
+      values[key] = '';
+    }
+  }
+
+  upsertFromEnvironment('GEMINI_API_KEY', const [
     'GEMINI_API_KEY',
     'VERCEL_GEMINI_API_KEY',
     'NEXT_PUBLIC_GEMINI_API_KEY',
     'PUBLIC_GEMINI_API_KEY',
-  ];
+  ]);
 
-  String resolvedKey = '';
-  for (final key in candidateKeys) {
-    final value = Platform.environment[key];
-    if (value != null && value.trim().isNotEmpty) {
-      resolvedKey = value.trim();
-      break;
-    }
-  }
-
-  if (resolvedKey.isNotEmpty) {
-    values['GEMINI_API_KEY'] = resolvedKey;
-  } else {
-    stdout.writeln(
-      'No GEMINI_API_KEY found in the environment. Existing .env value will be preserved.',
-    );
-    values.putIfAbsent('GEMINI_API_KEY', () => '');
-  }
+  upsertFromEnvironment('CLOUDINARY_CLOUD_NAME', const [
+    'CLOUDINARY_CLOUD_NAME',
+    'VERCEL_CLOUDINARY_CLOUD_NAME',
+  ]);
+  upsertFromEnvironment('CLOUDINARY_API_KEY', const [
+    'CLOUDINARY_API_KEY',
+    'VERCEL_CLOUDINARY_API_KEY',
+  ]);
+  upsertFromEnvironment('CLOUDINARY_API_SECRET', const [
+    'CLOUDINARY_API_SECRET',
+    'VERCEL_CLOUDINARY_API_SECRET',
+  ]);
+  upsertFromEnvironment('CLOUDINARY_UPLOAD_PRESET', const [
+    'CLOUDINARY_UPLOAD_PRESET',
+    'VERCEL_CLOUDINARY_UPLOAD_PRESET',
+  ]);
 
   final buffer = StringBuffer();
   for (final line in preservedLines) {

@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import 'app/app.dart';
 import 'firebase_options.dart';
+import 'core/services/cloudinary_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,6 +14,11 @@ Future<void> main() async {
     await dotenv.load(fileName: '.env');
   } catch (error) {
     debugPrint('Could not load .env file: $error');
+  }
+
+  final cloudinaryReady = await cloudinaryService.ensureInitialized();
+  if (!cloudinaryReady) {
+    debugPrint('Cloudinary is not configured. Skipping Cloudinary setup.');
   }
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   if (!kIsWeb) {
