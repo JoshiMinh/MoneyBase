@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/currencies.dart';
@@ -8,6 +9,7 @@ import '../../../core/repositories/shopping_list_repository.dart';
 import '../../common/presentation/moneybase_shell.dart';
 import '../../common/presentation/currency_dropdown_field.dart';
 import '../../../app/theme/theme.dart';
+import '../../../core/services/cloudinary_service.dart';
 
 class ShoppingListScreen extends StatefulWidget {
   const ShoppingListScreen({super.key});
@@ -1600,6 +1602,10 @@ class _ShoppingItemDialogState extends State<_ShoppingItemDialog> {
   DateTime? _purchaseDate;
   DateTime? _expiryDate;
   late String _currencyCode;
+  bool _cloudinaryReady = cloudinaryService.isConfigured;
+  bool _uploadingImage = false;
+  String? _imageUploadError;
+  String? _imageUploadSuccess;
 
   bool get _isShoppingList => widget.list.type == ShoppingListType.shopping;
 
@@ -1622,6 +1628,7 @@ class _ShoppingItemDialogState extends State<_ShoppingItemDialog> {
     _bought = initial?.bought ?? false;
     _purchaseDate = initial?.purchaseDate;
     _expiryDate = _isShoppingList ? initial?.expiryDate : null;
+    _initializeCloudinary();
   }
 
   @override
@@ -1665,6 +1672,75 @@ class _ShoppingItemDialogState extends State<_ShoppingItemDialog> {
     });
   }
 
+  Future<void> _initializeCloudinary() async {
+    final ready = await cloudinaryService.ensureInitialized();
+    if (!mounted) return;
+    setState(() => _cloudinaryReady = ready);
+  }
+
+  Future<void> _uploadIconImage() async {
+    if (!_cloudinaryReady) {
+      setState(() {
+        _imageUploadError = 'Cloudinary is not configured for this build.';
+        _imageUploadSuccess = null;
+      });
+      return;
+    }
+
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: false,
+      type: FileType.image,
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) {
+      return;
+    }
+
+    final file = result.files.single;
+    final bytes = file.bytes;
+    if (bytes == null || bytes.isEmpty) {
+      setState(() {
+        _imageUploadError = 'Selected file does not contain any image data.';
+        _imageUploadSuccess = null;
+      });
+      return;
+    }
+
+    setState(() {
+      _uploadingImage = true;
+      _imageUploadError = null;
+      _imageUploadSuccess = null;
+    });
+
+    try {
+      final uploadResult = await cloudinaryService.uploadBytes(
+        bytes,
+        fileName: file.name,
+        folder: 'moneybase/shopping_items',
+      );
+      if (!mounted) return;
+      setState(() {
+        _iconUrlController.text = uploadResult.secureUrl;
+        _imageUploadSuccess = 'Image uploaded. URL added above.';
+      });
+    } on CloudinaryException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _imageUploadError = error.message;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _imageUploadError = 'Unexpected upload error: $error';
+      });
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _uploadingImage = false;
+      });
+    }
+  }
+
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
 
@@ -1696,6 +1772,8 @@ class _ShoppingItemDialogState extends State<_ShoppingItemDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = context.moneyBaseColors;
     return AlertDialog(
       title: Text(widget.initial == null ? 'Add item' : 'Edit item'),
       content: SingleChildScrollView(
@@ -1764,6 +1842,53 @@ class _ShoppingItemDialogState extends State<_ShoppingItemDialog> {
                   ),
                   keyboardType: TextInputType.url,
                 ),
+                const SizedBox(height: 8),
+                if (_cloudinaryReady)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _uploadingImage ? null : _uploadIconImage,
+                        icon: _uploadingImage
+                            ? const SizedBox(
+                                height: 16,
+                                width: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.cloud_upload_outlined),
+                        label: Text(
+                          _uploadingImage ? 'Uploading…' : 'Upload image',
+                        ),
+                      ),
+                      if (_imageUploadSuccess != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          _imageUploadSuccess!,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colors.primaryAccent,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                      if (_imageUploadError != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          _imageUploadError!,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.error,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ],
+                  )
+                else
+                  Text(
+                    'Add Cloudinary credentials to enable image uploads.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.mutedText,
+                    ),
+                  ),
               ],
               const SizedBox(height: 8),
               CheckboxListTile(

@@ -27,7 +27,7 @@ data class Currency(
 
 @Keep
 data class Category(
-    @DocumentId val id: String = "",
+    val id: String = "",
     val userId: String = "",
     val name: String = "",
     val iconName: String = "",
