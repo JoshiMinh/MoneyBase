@@ -175,9 +175,48 @@ class MoneyBaseTheme {
   const MoneyBaseTheme._();
 
   static ThemeData buildTheme({required bool darkMode}) {
+    final themeColors = _resolveThemeColors(darkMode);
+    final backgroundColor = _backgroundColorFor(themeColors);
+    final colorScheme = _buildColorScheme(themeColors, darkMode, backgroundColor);
+
+    final baseTheme = ThemeData(
+      colorScheme: colorScheme,
+      brightness: darkMode ? Brightness.dark : Brightness.light,
+      useMaterial3: true,
+      scaffoldBackgroundColor: backgroundColor,
+      canvasColor: backgroundColor,
+      cardColor: themeColors.surfaceBackground,
+      extensions: <ThemeExtension<dynamic>>[themeColors],
+    );
+
+    return baseTheme.copyWith(
+      appBarTheme: _buildAppBarTheme(themeColors, backgroundColor),
+      bottomAppBarTheme: _buildBottomAppBarTheme(themeColors),
+      navigationBarTheme:
+          _buildNavigationBarTheme(themeColors, backgroundColor, darkMode),
+      navigationRailTheme:
+          _buildNavigationRailTheme(themeColors, backgroundColor, darkMode),
+      floatingActionButtonTheme:
+          _buildFloatingActionButtonTheme(themeColors),
+      filledButtonTheme: _buildFilledButtonTheme(themeColors),
+      textButtonTheme: _buildTextButtonTheme(themeColors),
+      outlinedButtonTheme: _buildOutlinedButtonTheme(themeColors),
+      inputDecorationTheme: _buildInputDecorationTheme(themeColors, darkMode),
+      chipTheme: _buildChipTheme(themeColors, darkMode),
+      cardTheme: _buildCardTheme(themeColors),
+      dialogTheme: _buildDialogTheme(themeColors),
+      dividerTheme: _buildDividerTheme(themeColors),
+      listTileTheme: _buildListTileTheme(themeColors),
+      bottomSheetTheme: _buildBottomSheetTheme(themeColors),
+      snackBarTheme: _buildSnackBarTheme(themeColors),
+      progressIndicatorTheme: _buildProgressIndicatorTheme(themeColors),
+      extensions: <ThemeExtension<dynamic>>[themeColors],
+    );
+  }
+
+  static MoneyBaseThemeColors _resolveThemeColors(bool darkMode) {
     final baseColors = MoneyBaseThemeColors.fallback(darkMode: darkMode);
-    final backgroundColor = baseColors.backgroundGradient.first;
-    final themeColors = baseColors.copyWith(
+    return baseColors.copyWith(
       surfaceBackground: darkMode
           ? MoneyBaseColors.grey.withOpacity(0.96)
           : Colors.white,
@@ -191,235 +230,325 @@ class MoneyBaseTheme {
           ? MoneyBaseColors.grey.withOpacity(0.6)
           : baseColors.surfaceShadow,
     );
+  }
 
-    final colorScheme =
-        (darkMode ? const ColorScheme.dark() : const ColorScheme.light())
-            .copyWith(
-              primary: themeColors.primaryAccent,
-              onPrimary: Colors.white,
-              primaryContainer: darkMode
-                  ? MoneyBaseColors.purple.withOpacity(0.38)
-                  : MoneyBaseColors.purple.withOpacity(0.18),
-              onPrimaryContainer: darkMode
-                  ? Colors.white
-                  : themeColors.primaryText,
-              secondary: themeColors.secondaryAccent,
-              onSecondary: darkMode ? Colors.black : Colors.white,
-              secondaryContainer: themeColors.secondaryAccent.withOpacity(
-                darkMode ? 0.32 : 0.18,
-              ),
-              onSecondaryContainer: darkMode
-                  ? Colors.black
-                  : themeColors.primaryText,
-              tertiary: themeColors.tertiaryAccent,
-              onTertiary: Colors.white,
-              background: backgroundColor,
-              onBackground: themeColors.primaryText,
-              surface: themeColors.surfaceBackground,
-              surfaceTint: Colors.transparent,
-              onSurface: themeColors.primaryText,
-              onSurfaceVariant: themeColors.mutedText,
-              error: themeColors.negative,
-              onError: Colors.white,
-              outline: themeColors.surfaceBorder,
-              outlineVariant: themeColors.surfaceBorder,
-              surfaceContainerHigh: themeColors.surfaceElevated,
-              surfaceContainerHighest: themeColors.surfaceElevated,
-              shadow: themeColors.surfaceShadow,
-              scrim: Colors.black.withOpacity(darkMode ? 0.6 : 0.3),
-              inversePrimary: themeColors.primaryAccent.withOpacity(
-                darkMode ? 0.6 : 0.32,
-              ),
-            );
+  static Color _backgroundColorFor(MoneyBaseThemeColors colors) {
+    if (colors.backgroundGradient.isEmpty) {
+      return Colors.transparent;
+    }
+    return colors.backgroundGradient.first;
+  }
 
-    return ThemeData(
-      colorScheme: colorScheme,
-      brightness: darkMode ? Brightness.dark : Brightness.light,
-      useMaterial3: true,
-      scaffoldBackgroundColor: backgroundColor,
-      canvasColor: backgroundColor,
-      cardColor: themeColors.surfaceBackground,
-      appBarTheme: AppBarTheme(
-        backgroundColor: backgroundColor,
-        foregroundColor: themeColors.primaryText,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        iconTheme: IconThemeData(color: themeColors.primaryText),
-        titleTextStyle: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-          color: themeColors.primaryText,
-        ),
+  static ColorScheme _buildColorScheme(
+    MoneyBaseThemeColors themeColors,
+    bool darkMode,
+    Color backgroundColor,
+  ) {
+    final base = darkMode ? const ColorScheme.dark() : const ColorScheme.light();
+    return base.copyWith(
+      primary: themeColors.primaryAccent,
+      onPrimary: Colors.white,
+      primaryContainer: darkMode
+          ? MoneyBaseColors.purple.withOpacity(0.38)
+          : MoneyBaseColors.purple.withOpacity(0.18),
+      onPrimaryContainer:
+          darkMode ? Colors.white : themeColors.primaryText,
+      secondary: themeColors.secondaryAccent,
+      onSecondary: darkMode ? Colors.black : Colors.white,
+      secondaryContainer: themeColors.secondaryAccent.withOpacity(
+        darkMode ? 0.32 : 0.18,
       ),
-      bottomAppBarTheme: BottomAppBarThemeData(
-        color: themeColors.surfaceBackground,
-        surfaceTintColor:
-            Colors.transparent, // optional, to match your M3 usage
-        elevation: 0, // optional, mirrors your flat surfaces
+      onSecondaryContainer:
+          darkMode ? Colors.black : themeColors.primaryText,
+      tertiary: themeColors.tertiaryAccent,
+      onTertiary: Colors.white,
+      background: backgroundColor,
+      onBackground: themeColors.primaryText,
+      surface: themeColors.surfaceBackground,
+      surfaceTint: Colors.transparent,
+      onSurface: themeColors.primaryText,
+      onSurfaceVariant: themeColors.mutedText,
+      error: themeColors.negative,
+      onError: Colors.white,
+      outline: themeColors.surfaceBorder,
+      outlineVariant: themeColors.surfaceBorder,
+      surfaceContainerHigh: themeColors.surfaceElevated,
+      surfaceContainerHighest: themeColors.surfaceElevated,
+      shadow: themeColors.surfaceShadow,
+      scrim: Colors.black.withOpacity(darkMode ? 0.6 : 0.3),
+      inversePrimary: themeColors.primaryAccent.withOpacity(
+        darkMode ? 0.6 : 0.32,
       ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: Color.lerp(
-          backgroundColor,
-          themeColors.surfaceBackground,
-          darkMode ? 0.45 : 0.12,
-        ),
-        indicatorColor: themeColors.primaryAccent.withOpacity(
-          darkMode ? 0.24 : 0.18,
-        ),
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: MaterialStateProperty.resolveWith((states) {
-          final active = states.contains(MaterialState.selected);
-          final baseColor = themeColors.mutedText;
-          return IconThemeData(
-            color: active ? themeColors.primaryAccent : baseColor,
-          );
-        }),
-        labelTextStyle: MaterialStateProperty.resolveWith((states) {
-          final active = states.contains(MaterialState.selected);
-          final baseColor = themeColors.mutedText;
-          return TextStyle(
-            fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-            color: active ? themeColors.primaryAccent : baseColor,
-          );
-        }),
-      ),
-      navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: Color.lerp(
-          backgroundColor,
-          themeColors.surfaceBackground,
-          darkMode ? 0.45 : 0.12,
-        ),
-        indicatorColor: themeColors.primaryAccent.withOpacity(
-          darkMode ? 0.24 : 0.18,
-        ),
-        selectedLabelTextStyle: TextStyle(
-          fontWeight: FontWeight.w600,
-          color: themeColors.primaryAccent,
-        ),
-        unselectedLabelTextStyle: TextStyle(
-          fontWeight: FontWeight.w500,
-          color: themeColors.mutedText,
-        ),
-        unselectedIconTheme: IconThemeData(color: themeColors.mutedText),
-        selectedIconTheme: IconThemeData(color: themeColors.primaryAccent),
-      ),
-      floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: themeColors.secondaryAccent,
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: themeColors.primaryAccent,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-        ),
-      ),
-      textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: themeColors.primaryAccent,
-          textStyle: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: themeColors.primaryAccent,
-          side: BorderSide(color: themeColors.primaryAccent.withOpacity(0.5)),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        ),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: darkMode
-            ? Color.lerp(themeColors.surfaceBackground, Colors.black, 0.35) ??
-                  themeColors.surfaceBackground
-            : Colors.white,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 18,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(color: themeColors.surfaceBorder),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(color: themeColors.surfaceBorder),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(color: themeColors.primaryAccent),
-        ),
-        hintStyle: TextStyle(color: themeColors.mutedText),
-        labelStyle: TextStyle(color: themeColors.mutedText),
-      ),
-      chipTheme: ChipThemeData(
-        backgroundColor: themeColors.secondaryAccent.withOpacity(
-          darkMode ? 0.16 : 0.12,
-        ),
-        selectedColor: themeColors.secondaryAccent.withOpacity(
-          darkMode ? 0.26 : 0.2,
-        ),
-        disabledColor: themeColors.surfaceBorder.withOpacity(0.4),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        labelStyle: TextStyle(color: themeColors.primaryText),
-        secondaryLabelStyle: TextStyle(color: themeColors.primaryText),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        brightness: darkMode ? Brightness.dark : Brightness.light,
-      ),
-      cardTheme: CardThemeData(
-        color: themeColors.surfaceBackground,
-        shadowColor: themeColors.surfaceShadow,
-        elevation: 0,
-        margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(28),
-          side: BorderSide(color: themeColors.surfaceBorder),
-        ),
-      ),
-      dialogTheme: DialogThemeData(
-        backgroundColor: themeColors.surfaceBackground,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-      ),
-      dividerTheme: DividerThemeData(
-        color: themeColors.surfaceBorder,
-        thickness: 1,
-        space: 32,
-      ),
-      listTileTheme: ListTileThemeData(
-        iconColor: themeColors.primaryAccent,
-        textColor: themeColors.primaryText,
-        tileColor: themeColors.surfaceBackground,
-      ),
-      bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: themeColors.surfaceBackground,
-        modalBackgroundColor: themeColors.surfaceBackground,
-        surfaceTintColor: Colors.transparent,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-      ),
-      snackBarTheme: SnackBarThemeData(
-        backgroundColor: themeColors.primaryAccent,
-        contentTextStyle: const TextStyle(color: Colors.white),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      ),
-      progressIndicatorTheme: ProgressIndicatorThemeData(
-        color: themeColors.primaryAccent,
-        linearTrackColor: themeColors.surfaceBorder,
-        circularTrackColor: themeColors.surfaceBorder,
-      ),
-      extensions: [themeColors],
     );
+  }
+
+  static AppBarTheme _buildAppBarTheme(
+    MoneyBaseThemeColors themeColors,
+    Color backgroundColor,
+  ) {
+    return AppBarTheme(
+      backgroundColor: backgroundColor,
+      foregroundColor: themeColors.primaryText,
+      elevation: 0,
+      surfaceTintColor: Colors.transparent,
+      iconTheme: IconThemeData(color: themeColors.primaryText),
+      titleTextStyle: TextStyle(
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
+        color: themeColors.primaryText,
+      ),
+    );
+  }
+
+  static BottomAppBarTheme _buildBottomAppBarTheme(
+    MoneyBaseThemeColors themeColors,
+  ) {
+    return BottomAppBarTheme(
+      color: themeColors.surfaceBackground,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+    );
+  }
+
+  static NavigationBarThemeData _buildNavigationBarTheme(
+    MoneyBaseThemeColors themeColors,
+    Color backgroundColor,
+    bool darkMode,
+  ) {
+    return NavigationBarThemeData(
+      backgroundColor: _blend(
+        backgroundColor,
+        themeColors.surfaceBackground,
+        darkMode ? 0.45 : 0.12,
+      ),
+      indicatorColor: themeColors.primaryAccent.withOpacity(
+        darkMode ? 0.24 : 0.18,
+      ),
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      iconTheme: MaterialStateProperty.resolveWith((states) {
+        final active = states.contains(MaterialState.selected);
+        final baseColor = themeColors.mutedText;
+        return IconThemeData(
+          color: active ? themeColors.primaryAccent : baseColor,
+        );
+      }),
+      labelTextStyle: MaterialStateProperty.resolveWith((states) {
+        final active = states.contains(MaterialState.selected);
+        final baseColor = themeColors.mutedText;
+        return TextStyle(
+          fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+          color: active ? themeColors.primaryAccent : baseColor,
+        );
+      }),
+    );
+  }
+
+  static NavigationRailThemeData _buildNavigationRailTheme(
+    MoneyBaseThemeColors themeColors,
+    Color backgroundColor,
+    bool darkMode,
+  ) {
+    return NavigationRailThemeData(
+      backgroundColor: _blend(
+        backgroundColor,
+        themeColors.surfaceBackground,
+        darkMode ? 0.45 : 0.12,
+      ),
+      indicatorColor: themeColors.primaryAccent.withOpacity(
+        darkMode ? 0.24 : 0.18,
+      ),
+      selectedLabelTextStyle: TextStyle(
+        fontWeight: FontWeight.w600,
+        color: themeColors.primaryAccent,
+      ),
+      unselectedLabelTextStyle: TextStyle(
+        fontWeight: FontWeight.w500,
+        color: themeColors.mutedText,
+      ),
+      unselectedIconTheme: IconThemeData(color: themeColors.mutedText),
+      selectedIconTheme: IconThemeData(color: themeColors.primaryAccent),
+    );
+  }
+
+  static FloatingActionButtonThemeData _buildFloatingActionButtonTheme(
+    MoneyBaseThemeColors themeColors,
+  ) {
+    return FloatingActionButtonThemeData(
+      backgroundColor: themeColors.secondaryAccent,
+      foregroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    );
+  }
+
+  static FilledButtonThemeData _buildFilledButtonTheme(
+    MoneyBaseThemeColors themeColors,
+  ) {
+    return FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: themeColors.primaryAccent,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+        ),
+      ),
+    );
+  }
+
+  static TextButtonThemeData _buildTextButtonTheme(
+    MoneyBaseThemeColors themeColors,
+  ) {
+    return TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: themeColors.primaryAccent,
+        textStyle: const TextStyle(fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+
+  static OutlinedButtonThemeData _buildOutlinedButtonTheme(
+    MoneyBaseThemeColors themeColors,
+  ) {
+    return OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: themeColors.primaryAccent,
+        side: BorderSide(color: themeColors.primaryAccent.withOpacity(0.5)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      ),
+    );
+  }
+
+  static InputDecorationTheme _buildInputDecorationTheme(
+    MoneyBaseThemeColors themeColors,
+    bool darkMode,
+  ) {
+    return InputDecorationTheme(
+      filled: true,
+      fillColor: darkMode
+          ? _blend(themeColors.surfaceBackground, Colors.black, 0.35)
+          : Colors.white,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 20,
+        vertical: 18,
+      ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(20),
+        borderSide: BorderSide(color: themeColors.surfaceBorder),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(20),
+        borderSide: BorderSide(color: themeColors.surfaceBorder),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(20),
+        borderSide: BorderSide(color: themeColors.primaryAccent),
+      ),
+      hintStyle: TextStyle(color: themeColors.mutedText),
+      labelStyle: TextStyle(color: themeColors.mutedText),
+    );
+  }
+
+  static ChipThemeData _buildChipTheme(
+    MoneyBaseThemeColors themeColors,
+    bool darkMode,
+  ) {
+    return ChipThemeData(
+      backgroundColor: themeColors.secondaryAccent.withOpacity(
+        darkMode ? 0.16 : 0.12,
+      ),
+      selectedColor: themeColors.secondaryAccent.withOpacity(
+        darkMode ? 0.26 : 0.2,
+      ),
+      disabledColor: themeColors.surfaceBorder.withOpacity(0.4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      labelStyle: TextStyle(color: themeColors.primaryText),
+      secondaryLabelStyle: TextStyle(color: themeColors.primaryText),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      brightness: darkMode ? Brightness.dark : Brightness.light,
+    );
+  }
+
+  static CardTheme _buildCardTheme(MoneyBaseThemeColors themeColors) {
+    return CardTheme(
+      color: themeColors.surfaceBackground,
+      shadowColor: themeColors.surfaceShadow,
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(28),
+        side: BorderSide(color: themeColors.surfaceBorder),
+      ),
+    );
+  }
+
+  static DialogTheme _buildDialogTheme(MoneyBaseThemeColors themeColors) {
+    return DialogTheme(
+      backgroundColor: themeColors.surfaceBackground,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+    );
+  }
+
+  static DividerThemeData _buildDividerTheme(
+    MoneyBaseThemeColors themeColors,
+  ) {
+    return DividerThemeData(
+      color: themeColors.surfaceBorder,
+      thickness: 1,
+      space: 32,
+    );
+  }
+
+  static ListTileThemeData _buildListTileTheme(
+    MoneyBaseThemeColors themeColors,
+  ) {
+    return ListTileThemeData(
+      iconColor: themeColors.primaryAccent,
+      textColor: themeColors.primaryText,
+      tileColor: themeColors.surfaceBackground,
+    );
+  }
+
+  static BottomSheetThemeData _buildBottomSheetTheme(
+    MoneyBaseThemeColors themeColors,
+  ) {
+    return BottomSheetThemeData(
+      backgroundColor: themeColors.surfaceBackground,
+      modalBackgroundColor: themeColors.surfaceBackground,
+      surfaceTintColor: Colors.transparent,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+    );
+  }
+
+  static SnackBarThemeData _buildSnackBarTheme(
+    MoneyBaseThemeColors themeColors,
+  ) {
+    return SnackBarThemeData(
+      backgroundColor: themeColors.primaryAccent,
+      contentTextStyle: const TextStyle(color: Colors.white),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    );
+  }
+
+  static ProgressIndicatorThemeData _buildProgressIndicatorTheme(
+    MoneyBaseThemeColors themeColors,
+  ) {
+    return ProgressIndicatorThemeData(
+      color: themeColors.primaryAccent,
+      linearTrackColor: themeColors.surfaceBorder,
+      circularTrackColor: themeColors.surfaceBorder,
+    );
+  }
+
+  static Color _blend(Color a, Color b, double t) {
+    return Color.lerp(a, b, t) ?? a;
   }
 }
 
