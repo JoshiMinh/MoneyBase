@@ -300,10 +300,10 @@ class MoneyBaseTheme {
     );
   }
 
-  static BottomAppBarTheme _buildBottomAppBarTheme(
+  static BottomAppBarThemeData _buildBottomAppBarTheme(
     MoneyBaseThemeColors themeColors,
   ) {
-    return BottomAppBarTheme(
+    return BottomAppBarThemeData(
       color: themeColors.surfaceBackground,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
@@ -472,8 +472,8 @@ class MoneyBaseTheme {
     );
   }
 
-  static CardTheme _buildCardTheme(MoneyBaseThemeColors themeColors) {
-    return CardTheme(
+  static CardThemeData _buildCardTheme(MoneyBaseThemeColors themeColors) {
+    return CardThemeData(
       color: themeColors.surfaceBackground,
       shadowColor: themeColors.surfaceShadow,
       elevation: 0,
@@ -485,8 +485,8 @@ class MoneyBaseTheme {
     );
   }
 
-  static DialogTheme _buildDialogTheme(MoneyBaseThemeColors themeColors) {
-    return DialogTheme(
+  static DialogThemeData _buildDialogTheme(MoneyBaseThemeColors themeColors) {
+    return DialogThemeData(
       backgroundColor: themeColors.surfaceBackground,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
