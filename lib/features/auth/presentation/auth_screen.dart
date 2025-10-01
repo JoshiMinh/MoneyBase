@@ -125,7 +125,7 @@ class _AuthCardState extends State<_AuthCard> {
                       .withOpacity(0.6),
                   child: ClipOval(
                     child: Image.asset(
-                      'app_icon.ico',
+                      'icon.png',
                       width: 42,
                       height: 42,
                       fit: BoxFit.cover,
