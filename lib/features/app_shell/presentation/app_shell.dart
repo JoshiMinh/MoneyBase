@@ -9,6 +9,18 @@ import '../../reports/presentation/reports_screen.dart';
 import '../../settings/presentation/settings_screen.dart';
 import '../../shopping_list/presentation/shopping_list_screen.dart';
 
+class _BrandColors {
+  static const primary = Color(0xFF93278F);
+  static const secondary = Color(0xFF0071BC);
+  static const tertiary = Color(0xFF29ABE2);
+
+  static const lightBackground = Color(0xFFFFFFFF);
+  static const lightSurface = Color(0xFFF6F6FA);
+
+  static const darkBackground = Color(0xFF111113);
+  static const darkSurface = Color(0xFF1C1C21);
+}
+
 enum AppShellPage { home, budgets, shopping, settings }
 
 class AppShell extends StatefulWidget {
@@ -175,12 +187,19 @@ class _AppShellState extends State<AppShell> {
     required bool railExpanded,
   }) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final surfaceColor =
+        isDark ? _BrandColors.darkSurface : _BrandColors.lightSurface;
+    final foregroundColor =
+        isDark ? Colors.white : const Color(0xFF161616);
 
     return AppBar(
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: surfaceColor,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       titleSpacing: 0,
+      foregroundColor: foregroundColor,
+      iconTheme: IconThemeData(color: foregroundColor),
       leading: IconButton(
         icon: Icon(
           isMobile
@@ -209,15 +228,48 @@ class _AppShellState extends State<AppShell> {
               fit: BoxFit.cover,
             ),
           ),
-          const SizedBox(width: 12),
-          Text(
-            'MoneyBase',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(-0.05, 0),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              ),
             ),
+            child: isMobile || railExpanded
+                ? Padding(
+                    padding: const EdgeInsets.only(left: 12),
+                    child: Text(
+                      'MoneyBase',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: foregroundColor,
+                      ),
+                    ),
+                  )
+                : const SizedBox.shrink(),
           ),
         ],
       ),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: CircleAvatar(
+            radius: 18,
+            backgroundColor: isDark
+                ? _BrandColors.secondary.withOpacity(0.24)
+                : _BrandColors.secondary.withOpacity(0.12),
+            child: Icon(
+              Icons.person_outline,
+              color: _BrandColors.secondary,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -238,11 +290,13 @@ class _AppShellState extends State<AppShell> {
         final isMobile = constraints.maxWidth < 600;
         final isDesktop = constraints.maxWidth > 1024;
         final theme = Theme.of(context);
+        final isDark = theme.brightness == Brightness.dark;
         final floatingActions = _buildFloatingActions(
           context,
           currentDestination,
         );
-        final backgroundColor = theme.colorScheme.background;
+        final backgroundColor =
+            isDark ? _BrandColors.darkBackground : _BrandColors.lightBackground;
         final railExtended = _railExpanded ?? isDesktop;
 
         if (isMobile) {
@@ -274,13 +328,6 @@ class _AppShellState extends State<AppShell> {
           );
         }
 
-        final railTheme = NavigationRailTheme.of(context);
-        final railBackground = railTheme.backgroundColor ??
-            (theme.brightness == Brightness.dark
-                ? const Color(0xFF0F0F0F)
-                : const Color(0xFFF9F9F9));
-        final dividerColor = theme.colorScheme.outlineVariant.withOpacity(0.4);
-
         return Scaffold(
           key: _scaffoldKey,
           backgroundColor: backgroundColor,
@@ -294,18 +341,14 @@ class _AppShellState extends State<AppShell> {
           floatingActionButton: floatingActions,
           body: Row(
             children: [
-              Container(
-                color: railBackground,
-                child: _ResponsiveNavigationRail(
-                  destinations: primaryDestinations,
-                  secondaryDestinations: secondaryDestinations,
-                  selected: currentDestination,
-                  extended: railExtended,
-                  onSelect: (destination) =>
-                      _handleDestinationSelected(context, destination),
-                ),
+              _ResponsiveNavigationRail(
+                destinations: primaryDestinations,
+                secondaryDestinations: secondaryDestinations,
+                selected: currentDestination,
+                extended: railExtended,
+                onSelect: (destination) =>
+                    _handleDestinationSelected(context, destination),
               ),
-              VerticalDivider(width: 1, color: dividerColor),
               Expanded(
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 250),
@@ -337,7 +380,7 @@ enum _NavigationDestination {
     path: '/budgets',
   ),
   shoppingList(
-    label: 'Shopping List',
+    label: 'Shopping',
     icon: Icons.shopping_cart_outlined,
     selectedIcon: Icons.shopping_cart,
     path: '/shopping',
@@ -356,6 +399,7 @@ enum _NavigationDestination {
     required this.selectedIcon,
     required this.path,
     this.isSecondary = false,
+    this.badgeCount,
   });
 
   final String label;
@@ -363,6 +407,7 @@ enum _NavigationDestination {
   final IconData selectedIcon;
   final String path;
   final bool isSecondary;
+  final int? badgeCount;
 }
 
 class _ResponsiveNavigationRail extends StatelessWidget {
@@ -374,6 +419,8 @@ class _ResponsiveNavigationRail extends StatelessWidget {
     required this.onSelect,
   });
 
+  static const _animationDuration = Duration(milliseconds: 250);
+
   final List<_NavigationDestination> destinations;
   final List<_NavigationDestination> secondaryDestinations;
   final _NavigationDestination? selected;
@@ -382,46 +429,85 @@ class _ResponsiveNavigationRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final allDestinations = <_NavigationDestination>[
-      ...destinations,
-      ...secondaryDestinations,
-    ];
-    final selectedIndex = selected != null
-        ? allDestinations.indexOf(selected!)
-        : 0;
-    final normalizedSelectedIndex =
-        selectedIndex >= 0 ? selectedIndex : 0;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final background =
+        isDark ? _BrandColors.darkSurface : _BrandColors.lightSurface;
+    final borderColor = _BrandColors.tertiary.withOpacity(isDark ? 0.36 : 0.18);
 
-    return NavigationRail(
-      extended: extended,
-      minExtendedWidth: 220,
-      labelType: NavigationRailLabelType.none,
-      selectedIndex: normalizedSelectedIndex,
-      onDestinationSelected: (index) {
-        if (index < 0 || index >= allDestinations.length) {
-          return;
-        }
-        onSelect(allDestinations[index]);
-      },
-      destinations: [
-        for (final destination in allDestinations)
-          NavigationRailDestination(
-            icon: Icon(destination.icon),
-            selectedIcon: Icon(destination.selectedIcon),
-            label: Text(destination.label),
-          ),
-      ],
-      leading: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 24),
-        child: _RailHeader(extended: extended),
+    return AnimatedContainer(
+      duration: _animationDuration,
+      curve: Curves.easeInOut,
+      width: extended ? 260 : 88,
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: const BorderRadius.only(
+          topRight: Radius.circular(28),
+          bottomRight: Radius.circular(28),
+        ),
+        border: Border(
+          right: BorderSide(color: borderColor, width: 1),
+        ),
       ),
-      trailing: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 8),
-          _RailPremiumPlaceholder(extended: extended),
-          const SizedBox(height: 16),
-        ],
+      child: SafeArea(
+        left: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            crossAxisAlignment:
+                extended ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+            children: [
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: extended ? 20 : 0),
+                child: _RailHeader(extended: extended),
+              ),
+              const SizedBox(height: 24),
+              Expanded(
+                child: Padding(
+                  padding:
+                      EdgeInsets.symmetric(horizontal: extended ? 12 : 0),
+                  child: _RailDestinationList(
+                    destinations: destinations,
+                    extended: extended,
+                    selected: selected,
+                    onSelect: onSelect,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: extended ? 12 : 0),
+                child: Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: borderColor,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: extended ? 12 : 0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: extended
+                      ? CrossAxisAlignment.start
+                      : CrossAxisAlignment.center,
+                  children: [
+                    for (final destination in secondaryDestinations)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _RailDestinationTile(
+                          destination: destination,
+                          extended: extended,
+                          isSelected: destination == selected,
+                          onTap: () => onSelect(destination),
+                        ),
+                      ),
+                    _RailPremiumButton(extended: extended),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -435,83 +521,341 @@ class _RailHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: extended ? 16 : 0),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment:
+          extended ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.asset(
+            'icon.png',
+            width: 40,
+            height: 40,
+            fit: BoxFit.cover,
+          ),
+        ),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          transitionBuilder: (child, animation) {
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(-0.05, 0),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              ),
+            );
+          },
+          child: extended
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(
+                    'MoneyBase',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color:
+                          isDark ? Colors.white : const Color(0xFF161616),
+                    ),
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
+      ],
+    );
+  }
+}
+
+class _RailDestinationList extends StatelessWidget {
+  const _RailDestinationList({
+    required this.destinations,
+    required this.extended,
+    required this.selected,
+    required this.onSelect,
+  });
+
+  final List<_NavigationDestination> destinations;
+  final bool extended;
+  final _NavigationDestination? selected;
+  final ValueChanged<_NavigationDestination> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.zero,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment:
             extended ? CrossAxisAlignment.start : CrossAxisAlignment.center,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.asset(
-              'icon.png',
-              width: 40,
-              height: 40,
-              fit: BoxFit.cover,
-            ),
-          ),
-          if (extended) ...[
-            const SizedBox(height: 12),
-            Text(
-              'MoneyBase',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
+          for (final destination in destinations)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _RailDestinationTile(
+                destination: destination,
+                extended: extended,
+                isSelected: destination == selected,
+                onTap: () => onSelect(destination),
               ),
             ),
-          ],
         ],
       ),
     );
   }
 }
 
-class _RailPremiumPlaceholder extends StatelessWidget {
-  const _RailPremiumPlaceholder({required this.extended});
+class _RailDestinationTile extends StatelessWidget {
+  const _RailDestinationTile({
+    required this.destination,
+    required this.extended,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  static const _indicatorWidth = 3.0;
+  static const _animationDuration = Duration(milliseconds: 220);
+
+  final _NavigationDestination destination;
+  final bool extended;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final accent = _BrandColors.primary;
+    final inactiveTextColor = isDark
+        ? Colors.white.withOpacity(0.8)
+        : const Color(0xFF3A3A3C);
+    final iconColor = isSelected ? accent : inactiveTextColor;
+    final textStyle = theme.textTheme.titleMedium?.copyWith(
+      color: isSelected ? accent : inactiveTextColor,
+      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+    );
+    final tooltipMessage = destination.label;
+    final iconWidget = _DestinationIcon(
+      destination: destination,
+      iconColor: iconColor,
+      isSelected: isSelected,
+    );
+
+    final tile = Material(
+      color: Colors.transparent,
+      child: InkWell(
+        hoverColor: _BrandColors.tertiary.withOpacity(isDark ? 0.18 : 0.12),
+        splashColor: accent.withOpacity(0.18),
+        highlightColor: accent.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: _animationDuration,
+          curve: Curves.easeInOut,
+          padding: EdgeInsets.symmetric(
+            horizontal: extended ? 12 : 0,
+            vertical: 12,
+          ),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? accent.withOpacity(isDark ? 0.28 : 0.1)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.max,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              AnimatedContainer(
+                duration: _animationDuration,
+                curve: Curves.easeInOut,
+                height: 36,
+                width: _indicatorWidth,
+                decoration: BoxDecoration(
+                  color: isSelected ? accent : Colors.transparent,
+                  borderRadius: BorderRadius.circular(_indicatorWidth),
+                ),
+              ),
+              const SizedBox(width: 12),
+              iconWidget,
+              if (extended) ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: _animationDuration,
+                    transitionBuilder: (child, animation) {
+                      return FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(
+                          position: Tween<Offset>(
+                            begin: const Offset(-0.05, 0),
+                            end: Offset.zero,
+                          ).animate(animation),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: Text(
+                      destination.label,
+                      key: ValueKey<bool>(isSelected),
+                      style: textStyle,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (extended) {
+      return tile;
+    }
+
+    return Tooltip(
+      message: tooltipMessage,
+      waitDuration: const Duration(milliseconds: 400),
+      preferBelow: false,
+      child: tile,
+    );
+  }
+}
+
+class _DestinationIcon extends StatelessWidget {
+  const _DestinationIcon({
+    required this.destination,
+    required this.iconColor,
+    required this.isSelected,
+  });
+
+  final _NavigationDestination destination;
+  final Color iconColor;
+  final bool isSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = Icon(
+      isSelected ? destination.selectedIcon : destination.icon,
+      color: iconColor,
+      size: 24,
+    );
+    final badgeCount = destination.badgeCount ?? 0;
+    if (badgeCount <= 0) {
+      return icon;
+    }
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        icon,
+        Positioned(
+          right: -6,
+          top: -4,
+          child: _NotificationBadge(count: badgeCount),
+        ),
+      ],
+    );
+  }
+}
+
+class _NotificationBadge extends StatelessWidget {
+  const _NotificationBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final displayCount = count > 9 ? '9+' : '$count';
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colorScheme.error,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: colorScheme.onError, width: 1),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
+        child: Text(
+          displayCount,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: colorScheme.onError,
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RailPremiumButton extends StatelessWidget {
+  const _RailPremiumButton({required this.extended});
+
+  static const _animationDuration = Duration(milliseconds: 220);
 
   final bool extended;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final iconColor = colorScheme.primary;
+    final isDark = theme.brightness == Brightness.dark;
 
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: extended ? 16 : 12),
-      child: DecoratedBox(
+    return Tooltip(
+      message: 'Premium',
+      waitDuration: const Duration(milliseconds: 400),
+      triggerMode:
+          extended ? TooltipTriggerMode.manual : TooltipTriggerMode.longPress,
+      child: AnimatedContainer(
+        duration: _animationDuration,
+        curve: Curves.easeInOut,
+        width: double.infinity,
         decoration: BoxDecoration(
-          color: iconColor.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: iconColor.withOpacity(0.28)),
+          borderRadius: BorderRadius.circular(18),
+          color: _BrandColors.primary,
+          boxShadow: [
+            BoxShadow(
+              color: _BrandColors.primary.withOpacity(isDark ? 0.4 : 0.28),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: Material(
           type: MaterialType.transparency,
           child: InkWell(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(18),
+            splashColor: Colors.white.withOpacity(0.12),
+            highlightColor: Colors.white.withOpacity(0.08),
             onTap: () {},
             child: Padding(
               padding: EdgeInsets.symmetric(
-                horizontal: extended ? 16 : 12,
+                horizontal: extended ? 16 : 0,
                 vertical: 12,
               ),
-              child: Column(
+              child: Row(
+                mainAxisAlignment:
+                    extended ? MainAxisAlignment.start : MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: extended
-                    ? CrossAxisAlignment.start
-                    : CrossAxisAlignment.center,
                 children: [
-                  Icon(Icons.workspace_premium_outlined, color: iconColor),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Premium',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: iconColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    textAlign: extended ? TextAlign.start : TextAlign.center,
+                  const Icon(
+                    Icons.workspace_premium_outlined,
+                    color: Colors.white,
                   ),
+                  if (extended) ...[
+                    const SizedBox(width: 12),
+                    Text(
+                      'Go Premium',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -538,30 +882,38 @@ class _ShellNavigationDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final backgroundColor =
+        isDark ? _BrandColors.darkSurface : _BrandColors.lightSurface;
+    final dividerColor = _BrandColors.tertiary.withOpacity(isDark ? 0.4 : 0.2);
+    final titleColor = isDark ? Colors.white : const Color(0xFF161616);
 
     return Drawer(
+      backgroundColor: backgroundColor,
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: Image.asset(
                       'icon.png',
-                      width: 40,
-                      height: 40,
+                      width: 44,
+                      height: 44,
                       fit: BoxFit.cover,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(height: 12),
                   Text(
                     'MoneyBase',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: titleColor,
                     ),
                   ),
                 ],
@@ -569,7 +921,7 @@ class _ShellNavigationDrawer extends StatelessWidget {
             ),
             Expanded(
               child: ListView(
-                padding: EdgeInsets.zero,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 children: [
                   for (final destination in destinations)
                     _DrawerDestinationTile(
@@ -577,16 +929,33 @@ class _ShellNavigationDrawer extends StatelessWidget {
                       selected: destination == selected,
                       onTap: () => onSelect(destination),
                     ),
-                  if (destinations.isNotEmpty && secondaryDestinations.isNotEmpty)
-                    const Divider(),
-                  _DrawerPremiumPlaceholder(),
-                  if (secondaryDestinations.isNotEmpty) const Divider(),
+                ],
+              ),
+            ),
+            if (destinations.isNotEmpty && secondaryDestinations.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Divider(
+                  height: 1,
+                  color: dividerColor,
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                   for (final destination in secondaryDestinations)
-                    _DrawerDestinationTile(
-                      destination: destination,
-                      selected: destination == selected,
-                      onTap: () => onSelect(destination),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _DrawerDestinationTile(
+                        destination: destination,
+                        selected: destination == selected,
+                        onTap: () => onSelect(destination),
+                      ),
                     ),
+                  _DrawerPremiumButton(),
                 ],
               ),
             ),
@@ -611,76 +980,86 @@ class _DrawerDestinationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final activeColor = colorScheme.primary;
+    final isDark = theme.brightness == Brightness.dark;
+    final activeColor = _BrandColors.primary;
+    final inactiveColor = isDark
+        ? Colors.white.withOpacity(0.85)
+        : const Color(0xFF3A3A3C);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: ListTile(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      hoverColor: _BrandColors.tertiary.withOpacity(isDark ? 0.22 : 0.12),
+      splashColor: activeColor.withOpacity(0.18),
+      onTap: () {
+        Navigator.of(context).pop();
+        onTap();
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: selected
+              ? activeColor.withOpacity(isDark ? 0.3 : 0.12)
+              : Colors.transparent,
         ),
-        leading: Icon(
-          selected ? destination.selectedIcon : destination.icon,
-          color: selected ? activeColor : colorScheme.onSurfaceVariant,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              width: 4,
+              height: 36,
+              decoration: BoxDecoration(
+                color: selected ? activeColor : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            const SizedBox(width: 12),
+            _DestinationIcon(
+              destination: destination,
+              iconColor: selected ? activeColor : inactiveColor,
+              isSelected: selected,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                destination.label,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: selected ? activeColor : inactiveColor,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
         ),
-        title: Text(
-          destination.label,
-          style: theme.textTheme.titleMedium?.copyWith(
-            color: selected ? activeColor : null,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-          ),
-        ),
-        selected: selected,
-        selectedTileColor: activeColor.withOpacity(0.12),
-        onTap: () {
-          Navigator.of(context).pop();
-          onTap();
-        },
       ),
     );
   }
 }
 
-class _DrawerPremiumPlaceholder extends StatelessWidget {
-  const _DrawerPremiumPlaceholder();
+class _DrawerPremiumButton extends StatelessWidget {
+  const _DrawerPremiumButton();
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final iconColor = theme.colorScheme.primary;
+    final isDark = theme.brightness == Brightness.dark;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: iconColor.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: iconColor.withOpacity(0.28)),
+    return FilledButton.icon(
+      onPressed: () {},
+      icon: const Icon(Icons.workspace_premium_outlined),
+      label: const Text('Go Premium'),
+      style: FilledButton.styleFrom(
+        backgroundColor: _BrandColors.primary,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        textStyle: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w700,
         ),
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () {},
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  Icon(Icons.workspace_premium_outlined, color: iconColor),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Premium',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: iconColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(
+            color: Colors.white.withOpacity(isDark ? 0.16 : 0.08),
           ),
         ),
       ),
