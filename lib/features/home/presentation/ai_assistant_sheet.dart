@@ -1275,6 +1275,116 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     }
   }
 
+  Future<void> _handleDeleteChat(String chatId) async {
+    final userId = _userId;
+    if (userId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sign in to manage MoneyBase Assistant chats.'),
+          ),
+        );
+      }
+      return;
+    }
+
+    final wasActive = chatId == _activeChatId;
+    final chatRef = _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('chats')
+        .doc(chatId);
+
+    try {
+      const batchSize = 100;
+      while (true) {
+        final snapshot = await chatRef.collection('messages').limit(batchSize).get();
+        if (snapshot.docs.isEmpty) {
+          break;
+        }
+        final batch = _firestore.batch();
+        for (final doc in snapshot.docs) {
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
+      }
+
+      await chatRef.delete();
+    } on FirebaseException catch (error, stackTrace) {
+      debugPrint(
+        'Failed to delete MoneyBase Assistant chat: $error\n$stackTrace',
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unable to delete chat. Please try again.'),
+          ),
+        );
+      }
+      return;
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Failed to delete MoneyBase Assistant chat: $error\n$stackTrace',
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unable to delete chat. Please try again.'),
+          ),
+        );
+      }
+      return;
+    }
+
+    final remainingThreads = _chatThreads
+        .where((thread) => thread.id != chatId)
+        .toList()
+      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+
+    if (mounted) {
+      setState(() {
+        _chatThreads = remainingThreads;
+      });
+    } else {
+      _chatThreads = remainingThreads;
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Chat deleted.')),
+      );
+    }
+
+    if (!wasActive) {
+      return;
+    }
+
+    if (remainingThreads.isNotEmpty) {
+      unawaited(_loadChat(remainingThreads.first.id));
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _activeChatId = null;
+        _chatSession = null;
+        _messages
+          ..clear()
+          ..add(_welcomeMessage);
+        _isLoadingMessages = false;
+        _errorMessage = null;
+      });
+    } else {
+      _activeChatId = null;
+      _chatSession = null;
+      _messages
+        ..clear()
+        ..add(_welcomeMessage);
+      _isLoadingMessages = false;
+      _errorMessage = null;
+    }
+  }
+
   void _handleSelectChat(String? chatId) {
     if (chatId == null || chatId == _activeChatId || _isLoadingMessages) {
       return;
@@ -1570,6 +1680,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         'updatedAt': FieldValue.serverTimestamp(),
         'lastMessagePreview': userPreview,
       };
+      if (thread == null) {
+        metadata['createdAt'] = FieldValue.serverTimestamp();
+      }
       final shouldUpdateTitle =
           thread == null || thread.autoTitle || (thread.title?.isEmpty ?? true);
       if (shouldUpdateTitle) {
@@ -4245,6 +4358,13 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
                           onTap: disabled
                               ? null
                               : () => _handleSelectChat(thread.id),
+                          trailing: IconButton(
+                            tooltip: 'Delete chat',
+                            icon: const Icon(Icons.close),
+                            onPressed: disabled
+                                ? null
+                                : () => _handleDeleteChat(thread.id),
+                          ),
                         );
                       },
                       separatorBuilder: (context, _) => const SizedBox(height: 8),
@@ -4285,12 +4405,16 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         child: Row(
           children: [
             for (final thread in _chatThreads) ...[
-              ChoiceChip(
+              InputChip(
                 label: Text(thread.displayTitle),
                 selected: thread.id == _activeChatId,
                 onSelected: disabled
                     ? null
                     : (_) => _handleSelectChat(thread.id),
+                onDeleted: disabled
+                    ? null
+                    : () => _handleDeleteChat(thread.id),
+                deleteIcon: const Icon(Icons.close, size: 18),
               ),
               const SizedBox(width: 8),
             ],

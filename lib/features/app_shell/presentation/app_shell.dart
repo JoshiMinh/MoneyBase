@@ -138,13 +138,30 @@ class _AppShellState extends State<AppShell> {
   Widget? _buildFloatingActions(
     BuildContext context,
     _NavigationDestination? destination,
-  ) {
+    {
+    required bool isMobile,
+  }) {
     if (destination == _NavigationDestination.settings) {
       return null;
     }
 
     final width = MediaQuery.of(context).size.width;
     final horizontalPadding = width > 640 ? 32.0 : 20.0;
+
+    if (!isMobile) {
+      return Align(
+        alignment: Alignment.bottomRight,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+          child: FloatingActionButton.extended(
+            heroTag: 'addTransactionFab',
+            onPressed: () => _openAddTransaction(context),
+            icon: const Icon(Icons.add),
+            label: const Text('Add transaction'),
+          ),
+        ),
+      );
+    }
 
     return SizedBox(
       width: width,
@@ -166,24 +183,6 @@ class _AppShellState extends State<AppShell> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildProfileAvatar(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final themeColors = context.themeColors;
-    final backgroundColor = themeColors.secondaryAccent.withOpacity(
-      isDark ? 0.24 : 0.12,
-    );
-
-    return CircleAvatar(
-      radius: 18,
-      backgroundColor: backgroundColor,
-      child: Icon(
-        Icons.person_outline,
-        color: themeColors.secondaryAccent,
       ),
     );
   }
@@ -249,7 +248,7 @@ class _AppShellState extends State<AppShell> {
                 ? Padding(
                     padding: const EdgeInsets.only(left: 12),
                     child: Text(
-                      'MoneyBase',
+                      'Monbase',
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: foregroundColor,
@@ -260,12 +259,7 @@ class _AppShellState extends State<AppShell> {
           ),
         ],
       ),
-      actions: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: _buildProfileAvatar(context),
-        ),
-      ],
+      actions: const [],
     );
   }
 
@@ -289,10 +283,10 @@ class _AppShellState extends State<AppShell> {
         final floatingActions = _buildFloatingActions(
           context,
           currentDestination,
+          isMobile: isMobile,
         );
         final backgroundColor = theme.scaffoldBackgroundColor;
         final railExtended = _railExpanded ?? isDesktop;
-        final profileAvatar = _buildProfileAvatar(context);
 
         if (isMobile) {
           return Scaffold(
@@ -329,31 +323,68 @@ class _AppShellState extends State<AppShell> {
           floatingActionButtonLocation:
               FloatingActionButtonLocation.centerFloat,
           floatingActionButton: floatingActions,
-          body: Row(
+          body: Stack(
+            clipBehavior: Clip.none,
             children: [
-              _ResponsiveNavigationRail(
-                destinations: primaryDestinations,
-                secondaryDestinations: secondaryDestinations,
-                selected: currentDestination,
-                extended: railExtended,
-                onSelect: (destination) =>
-                    _handleDestinationSelected(context, destination),
-                onToggleExtended: () => _toggleRailExpanded(railExtended),
-                profileAvatar: profileAvatar,
-              ),
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  child: KeyedSubtree(
-                    key: ValueKey(widget.page),
-                    child: body,
+              Row(
+                children: [
+                  _ResponsiveNavigationRail(
+                    destinations: primaryDestinations,
+                    secondaryDestinations: secondaryDestinations,
+                    selected: currentDestination,
+                    extended: railExtended,
+                    onSelect: (destination) =>
+                        _handleDestinationSelected(context, destination),
+                    onToggleExtended: () => _toggleRailExpanded(railExtended),
                   ),
-                ),
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      child: KeyedSubtree(
+                        key: ValueKey(widget.page),
+                        child: body,
+                      ),
+                    ),
+                  ),
+                ],
               ),
+              if (currentDestination != _NavigationDestination.settings)
+                _DesktopAiAssistantButton(
+                  extendedRail: railExtended,
+                  onPressed: () => _openAiAssistant(context),
+                ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+class _DesktopAiAssistantButton extends StatelessWidget {
+  const _DesktopAiAssistantButton({
+    required this.extendedRail,
+    required this.onPressed,
+  });
+
+  final bool extendedRail;
+  final VoidCallback onPressed;
+
+  static const double _extendedWidth = 260;
+  static const double _collapsedWidth = 88;
+
+  @override
+  Widget build(BuildContext context) {
+    final railWidth = extendedRail ? _extendedWidth : _collapsedWidth;
+
+    return Positioned(
+      left: railWidth - 28,
+      bottom: 32,
+      child: FloatingActionButton(
+        heroTag: 'aiChatDesktopFab',
+        onPressed: onPressed,
+        child: const Icon(Icons.smart_toy_outlined),
+      ),
     );
   }
 }
@@ -410,7 +441,6 @@ class _ResponsiveNavigationRail extends StatelessWidget {
     required this.extended,
     required this.onSelect,
     required this.onToggleExtended,
-    required this.profileAvatar,
   });
 
   static const _animationDuration = Duration(milliseconds: 250);
@@ -421,7 +451,6 @@ class _ResponsiveNavigationRail extends StatelessWidget {
   final bool extended;
   final ValueChanged<_NavigationDestination> onSelect;
   final VoidCallback onToggleExtended;
-  final Widget profileAvatar;
 
   @override
   Widget build(BuildContext context) {
@@ -430,7 +459,7 @@ class _ResponsiveNavigationRail extends StatelessWidget {
     final background = themeColors.surfaceBackground;
     final borderColor = themeColors.surfaceBorder;
 
-    return AnimatedContainer(
+    final rail = AnimatedContainer(
       duration: _animationDuration,
       curve: Curves.easeInOut,
       width: extended ? 260 : 88,
@@ -450,14 +479,13 @@ class _ResponsiveNavigationRail extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 20),
           child: Column(
             crossAxisAlignment:
-                extended ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+                extended ? CrossAxisAlignment.center : CrossAxisAlignment.center,
             children: [
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: extended ? 20 : 0),
                 child: _RailHeader(
                   extended: extended,
                   onToggleExtended: onToggleExtended,
-                  profileAvatar: profileAvatar,
                 ),
               ),
               const SizedBox(height: 24),
@@ -487,9 +515,11 @@ class _ResponsiveNavigationRail extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: extended
-                      ? CrossAxisAlignment.start
+                      ? CrossAxisAlignment.center
                       : CrossAxisAlignment.center,
                   children: [
+                    _RailPremiumButton(extended: extended),
+                    const SizedBox(height: 12),
                     for (final destination in secondaryDestinations)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12),
@@ -500,13 +530,28 @@ class _ResponsiveNavigationRail extends StatelessWidget {
                           onTap: () => onSelect(destination),
                         ),
                       ),
-                    _RailPremiumButton(extended: extended),
                   ],
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+
+    return SizedBox(
+      width: extended ? 260 : 88,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          rail,
+          if (!extended)
+            Positioned(
+              right: -20,
+              top: 36,
+              child: _RailFloatingToggleButton(onPressed: onToggleExtended),
+            ),
+        ],
       ),
     );
   }
@@ -516,31 +561,16 @@ class _RailHeader extends StatelessWidget {
   const _RailHeader({
     required this.extended,
     required this.onToggleExtended,
-    required this.profileAvatar,
   });
 
   final bool extended;
   final VoidCallback onToggleExtended;
-  final Widget profileAvatar;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final themeColors = context.themeColors;
     final textColor = themeColors.primaryText;
-    final toggleIcon = extended ? Icons.chevron_left : Icons.chevron_right;
-    final toggleTooltip =
-        extended ? 'Collapse navigation' : 'Expand navigation';
-
-    Widget buildToggleButton() {
-      return IconButton(
-        icon: Icon(toggleIcon, color: themeColors.mutedText),
-        tooltip: toggleTooltip,
-        onPressed: onToggleExtended,
-        visualDensity: VisualDensity.compact,
-      );
-    }
-
     final logo = ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: Image.asset(
@@ -551,6 +581,31 @@ class _RailHeader extends StatelessWidget {
       ),
     );
 
+    final name = AnimatedSwitcher(
+      duration: const Duration(milliseconds: 220),
+      transitionBuilder: (child, animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(-0.05, 0),
+              end: Offset.zero,
+            ).animate(animation),
+            child: child,
+          ),
+        );
+      },
+      child: Text(
+        'Monbase',
+        key: ValueKey<bool>(extended),
+        textAlign: TextAlign.center,
+        style: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w700,
+          color: textColor,
+        ),
+      ),
+    );
+
     if (!extended) {
       return Column(
         mainAxisSize: MainAxisSize.min,
@@ -558,58 +613,56 @@ class _RailHeader extends StatelessWidget {
         children: [
           logo,
           const SizedBox(height: 12),
-          buildToggleButton(),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 36,
-            width: 36,
-            child: profileAvatar,
-          ),
+          name,
         ],
       );
     }
 
-    return Row(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         logo,
-        const SizedBox(width: 12),
-        Expanded(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 220),
-            transitionBuilder: (child, animation) {
-              return FadeTransition(
-                opacity: animation,
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(-0.05, 0),
-                    end: Offset.zero,
-                  ).animate(animation),
-                  child: child,
-                ),
-              );
-            },
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'MoneyBase',
-                textAlign: TextAlign.left,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: textColor,
-                ),
-              ),
-            ),
-          ),
-        ),
-        buildToggleButton(),
-        const SizedBox(width: 8),
-        SizedBox(
-          height: 36,
-          width: 36,
-          child: profileAvatar,
+        const SizedBox(height: 12),
+        name,
+        const SizedBox(height: 12),
+        IconButton(
+          icon: Icon(Icons.chevron_left, color: themeColors.mutedText),
+          tooltip: 'Collapse navigation',
+          onPressed: onToggleExtended,
         ),
       ],
+    );
+  }
+}
+
+class _RailFloatingToggleButton extends StatelessWidget {
+  const _RailFloatingToggleButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final themeColors = context.themeColors;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: themeColors.surfaceElevated,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(theme.brightness == Brightness.dark ? 0.4 : 0.18),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: IconButton(
+        icon: Icon(Icons.chevron_right, color: themeColors.primaryAccent),
+        tooltip: 'Expand navigation',
+        onPressed: onPressed,
+      ),
     );
   }
 }
@@ -881,7 +934,7 @@ class _RailPremiumButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
             splashColor: Colors.white.withOpacity(0.12),
             highlightColor: Colors.white.withOpacity(0.08),
-            onTap: () {},
+            onTap: () => _showPremiumDialog(context),
             child: Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: extended ? 16 : 0,
@@ -959,7 +1012,7 @@ class _ShellNavigationDrawer extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'MoneyBase',
+                    'Monbase',
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: titleColor,
@@ -995,6 +1048,9 @@ class _ShellNavigationDrawer extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  _DrawerPremiumButton(),
+                  if (secondaryDestinations.isNotEmpty)
+                    const SizedBox(height: 12),
                   for (final destination in secondaryDestinations)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
@@ -1004,7 +1060,6 @@ class _ShellNavigationDrawer extends StatelessWidget {
                         onTap: () => onSelect(destination),
                       ),
                     ),
-                  _DrawerPremiumButton(),
                 ],
               ),
             ),
@@ -1097,7 +1152,7 @@ class _DrawerPremiumButton extends StatelessWidget {
     final accent = themeColors.primaryAccent;
 
     return FilledButton.icon(
-      onPressed: () {},
+      onPressed: () => _showPremiumDialog(context),
       icon: const Icon(Icons.workspace_premium_outlined),
       label: const Text('Go Premium'),
       style: FilledButton.styleFrom(
@@ -1114,6 +1169,141 @@ class _DrawerPremiumButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+Future<void> _showPremiumDialog(BuildContext context) {
+  return showDialog<void>(
+    context: context,
+    builder: (context) => const _PremiumDialog(),
+  );
+}
+
+class _PremiumDialog extends StatelessWidget {
+  const _PremiumDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+    final colorScheme = theme.colorScheme;
+    final mutedColor =
+        colorScheme.onSurface.withOpacity(theme.brightness == Brightness.dark ? 0.7 : 0.6);
+
+    void handleSelection(String label) {
+      final messenger = ScaffoldMessenger.of(context);
+      Navigator.of(context).pop();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('$label plan is coming soon.'),
+        ),
+      );
+    }
+
+    Widget buildOption({
+      required String title,
+      required String price,
+      required String description,
+    }) {
+      return Card(
+        margin: const EdgeInsets.only(top: 12),
+        elevation: 0,
+        color: colorScheme.surfaceVariant
+            .withOpacity(theme.brightness == Brightness.dark ? 0.35 : 0.7),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => handleSelection(title),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        title,
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        description,
+                        style: textTheme.bodySmall?.copyWith(color: mutedColor),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Text(
+                  price,
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+      contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+      title: Row(
+        children: [
+          Icon(Icons.workspace_premium_outlined, color: colorScheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'MoneyBase Premium',
+              style: textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: colorScheme.onSurface,
+              ),
+            ),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Unlock deeper insights, advanced planning tools, and personalized coaching with Premium.',
+            style: textTheme.bodyMedium?.copyWith(color: mutedColor),
+          ),
+          buildOption(
+            title: 'Monthly',
+            price: r'$2 / month',
+            description: 'Flexible access with a low monthly rate.',
+          ),
+          buildOption(
+            title: 'Annual',
+            price: r'$20 / year',
+            description: 'Stay on track all year and save more than 15%.',
+          ),
+          buildOption(
+            title: 'Lifetime',
+            price: r'$25 one-time',
+            description: 'Pay once and enjoy MoneyBase Premium forever.',
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Not now'),
+        ),
+      ],
     );
   }
 }
