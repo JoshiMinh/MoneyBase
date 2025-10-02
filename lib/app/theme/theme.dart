@@ -43,13 +43,16 @@ class MoneyBaseThemeColors extends ThemeExtension<MoneyBaseThemeColors> {
   factory MoneyBaseThemeColors.fallback({required bool darkMode}) {
     if (darkMode) {
       return MoneyBaseThemeColors(
-        backgroundGradient: const [MoneyBaseColors.grey, MoneyBaseColors.grey],
-        surfaceBackground: MoneyBaseColors.grey.withOpacity(0.96),
-        surfaceElevated: MoneyBaseColors.grey.withOpacity(0.84),
-        surfaceBorder: MoneyBaseColors.grey.withOpacity(0.32),
-        surfaceShadow: MoneyBaseColors.grey.withOpacity(0.6),
+        backgroundGradient: const [
+          Color(0xFF0F1117),
+          Color(0xFF131720),
+        ],
+        surfaceBackground: const Color(0xFF191F2A),
+        surfaceElevated: const Color(0xFF212734),
+        surfaceBorder: const Color(0x33252C36),
+        surfaceShadow: const Color(0x99000000),
         primaryText: Colors.white,
-        mutedText: Colors.white.withOpacity(0.68),
+        mutedText: const Color(0xB3FFFFFF),
         primaryAccent: MoneyBaseColors.primary,
         secondaryAccent: MoneyBaseColors.secondary,
         tertiaryAccent: MoneyBaseColors.tertiary,
@@ -61,13 +64,13 @@ class MoneyBaseThemeColors extends ThemeExtension<MoneyBaseThemeColors> {
     }
 
     return MoneyBaseThemeColors(
-      backgroundGradient: const [Colors.white, Colors.white],
+      backgroundGradient: const [Colors.white, Color(0xFFF8FAFC)],
       surfaceBackground: Colors.white,
-      surfaceElevated: Colors.white.withOpacity(0.92),
-      surfaceBorder: MoneyBaseColors.grey.withOpacity(0.18),
-      surfaceShadow: MoneyBaseColors.grey.withOpacity(0.12),
+      surfaceElevated: const Color(0xFFF5F7FA),
+      surfaceBorder: const Color(0xFFE2E8F0),
+      surfaceShadow: const Color(0x1A000000),
       primaryText: MoneyBaseColors.grey,
-      mutedText: MoneyBaseColors.grey.withOpacity(0.68),
+      mutedText: const Color(0x9A1F2937),
       primaryAccent: MoneyBaseColors.primary,
       secondaryAccent: MoneyBaseColors.secondary,
       tertiaryAccent: MoneyBaseColors.tertiary,
@@ -218,17 +221,17 @@ class MoneyBaseTheme {
     final baseColors = MoneyBaseThemeColors.fallback(darkMode: darkMode);
     return baseColors.copyWith(
       surfaceBackground: darkMode
-          ? MoneyBaseColors.grey.withOpacity(0.96)
+          ? const Color(0xFF191F2A)
           : Colors.white,
       surfaceElevated: darkMode
-          ? MoneyBaseColors.grey.withOpacity(0.88)
-          : Colors.white,
+          ? const Color(0xFF212734)
+          : const Color(0xFFF5F7FA),
       surfaceBorder: darkMode
-          ? MoneyBaseColors.grey.withOpacity(0.32)
-          : baseColors.surfaceBorder,
+          ? const Color(0x33252C36)
+          : const Color(0xFFE2E8F0),
       surfaceShadow: darkMode
-          ? MoneyBaseColors.grey.withOpacity(0.6)
-          : baseColors.surfaceShadow,
+          ? const Color(0x99000000)
+          : const Color(0x1A000000),
     );
   }
 

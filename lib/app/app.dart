@@ -85,7 +85,9 @@ class _MoneyBaseAppState extends State<MoneyBaseApp> {
                 title: 'MoneyBase',
                 theme: theme,
                 debugShowCheckedModeBanner: false,
-                initialRoute: authenticated ? '/' : '/landing',
+                home: authenticated
+                    ? AppShell(onLogout: _onLogout)
+                    : const LandingScreen(),
                 onGenerateRoute: (settings) =>
                     _onGenerateRoute(settings, authenticated ? user : null),
               );
