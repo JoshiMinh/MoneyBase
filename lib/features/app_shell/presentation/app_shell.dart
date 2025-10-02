@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../../home/presentation/ai_assistant_sheet.dart';
@@ -8,7 +9,7 @@ import '../../shopping_list/presentation/shopping_list_screen.dart';
 
 enum AppShellPage { home, budgets, shopping, settings }
 
-class AppShell extends StatelessWidget {
+class AppShell extends StatefulWidget {
   const AppShell({
     required this.onLogout,
     this.page = AppShellPage.home,
@@ -18,32 +19,44 @@ class AppShell extends StatelessWidget {
   final VoidCallback onLogout;
   final AppShellPage page;
 
-  void _handleDestinationSelected(
-    BuildContext context,
-    _NavigationDestination destination,
-  ) {
-    if (destination.path == ModalRoute.of(context)?.settings.name) {
-      return;
-    }
+  @override
+  State<AppShell> createState() => _AppShellState();
+}
 
-    Navigator.of(context).pushReplacementNamed(destination.path);
+class _AppShellState extends State<AppShell> {
+  late AppShellPage _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = widget.page;
   }
 
-  _NavigationDestination? get _currentDestination {
-    switch (page) {
-      case AppShellPage.home:
-        return _NavigationDestination.home;
-      case AppShellPage.budgets:
-        return _NavigationDestination.budgets;
-      case AppShellPage.shopping:
-        return _NavigationDestination.shoppingList;
-      case AppShellPage.settings:
-        return _NavigationDestination.settings;
-    }
+  void _openAddTransaction(BuildContext context) {
+    Navigator.of(context).pushNamed('/add');
   }
 
-  Widget _buildPageBody(BuildContext context) {
-    switch (page) {
+  void _openReports(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const ReportsScreen()),
+    );
+  }
+
+  void _openTransactions(BuildContext context) {
+    Navigator.of(context).pushNamed('/transactions');
+  }
+
+  void _openAiAssistant(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const AiAssistantSheet(),
+    );
+  }
+
+  Widget _buildPage() {
+    switch (_selected) {
       case AppShellPage.home:
         return HomeScreen(
           onViewReports: () => _openReports(context),
@@ -58,384 +71,396 @@ class AppShell extends StatelessWidget {
       case AppShellPage.shopping:
         return const ShoppingListScreen();
       case AppShellPage.settings:
-        return SettingsScreen(onLogout: onLogout);
+        return SettingsScreen(onLogout: widget.onLogout);
     }
-  }
-
-  void _openAddTransaction(BuildContext context) {
-    final navigator = Navigator.of(context);
-    navigator.pushNamed('/add');
-  }
-
-  void _openReports(BuildContext context) {
-    final navigator = Navigator.of(context);
-    navigator.push(
-      MaterialPageRoute<void>(builder: (_) => const ReportsScreen()),
-    );
-  }
-
-  void _openTransactions(BuildContext context) {
-    final navigator = Navigator.of(context);
-    navigator.pushNamed('/transactions');
-  }
-
-  void _openAiAssistant(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const AiAssistantSheet(),
-    );
-  }
-
-  Widget? _buildFloatingActions(
-    BuildContext context,
-    _NavigationDestination? destination,
-  ) {
-    if (destination == _NavigationDestination.settings) {
-      return null;
-    }
-
-    final width = MediaQuery.of(context).size.width;
-    final horizontalPadding = width > 640 ? 32.0 : 20.0;
-
-    return SizedBox(
-      width: width,
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-        child: Row(
-          children: [
-            FloatingActionButton(
-              heroTag: 'aiChatFab',
-              onPressed: () => _openAiAssistant(context),
-              child: const Icon(Icons.smart_toy_outlined),
-            ),
-            const Spacer(),
-            FloatingActionButton.extended(
-              heroTag: 'addTransactionFab',
-              onPressed: () => _openAddTransaction(context),
-              icon: const Icon(Icons.add),
-              label: const Text('Add transaction'),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final destinations = _NavigationDestination.values;
-    final primaryDestinations = destinations
-        .where((destination) => !destination.isSecondary)
-        .toList();
-    final secondaryDestinations = destinations
-        .where((destination) => destination.isSecondary)
-        .toList();
-    final currentDestination = _currentDestination;
-    final body = _buildPageBody(context);
+    return LayoutBuilder(builder: (context, constraints) {
+      final useSidebar = constraints.maxWidth >= 768;
+      final body = _buildPage();
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final useRail = constraints.maxWidth >= 900;
-        final theme = Theme.of(context);
-        final floatingActions = _buildFloatingActions(
-          context,
-          currentDestination,
-        );
+      return Scaffold(
+        body: Row(
+          children: [
+            if (useSidebar)
+              _SidebarNavigation(
+                selected: _selected,
+                onSelect: (page) {
+                  setState(() => _selected = page);
+                },
+              ),
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: KeyedSubtree(key: ValueKey(_selected), child: body),
+              ),
+            ),
+          ],
+        ),
+        bottomNavigationBar: useSidebar
+            ? null
+            : NavigationBar(
+                selectedIndex: AppShellPage.values.indexOf(_selected),
+                onDestinationSelected: (index) {
+                  setState(() => _selected = AppShellPage.values[index]);
+                },
+                destinations: const [
+                  NavigationDestination(
+                    icon: Icon(Icons.home_outlined),
+                    selectedIcon: Icon(Icons.home_rounded),
+                    label: 'Home',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.account_balance_wallet_outlined),
+                    selectedIcon: Icon(Icons.account_balance_wallet_rounded),
+                    label: 'Budgets',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.shopping_cart_outlined),
+                    selectedIcon: Icon(Icons.shopping_cart_rounded),
+                    label: 'Shopping',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.settings_outlined),
+                    selectedIcon: Icon(Icons.settings_rounded),
+                    label: 'Settings',
+                  ),
+                ],
+              ),
+        floatingActionButton: _selected == AppShellPage.settings
+            ? null
+            : SizedBox(
+                width: MediaQuery.of(context).size.width,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      FloatingActionButton(
+                        heroTag: 'aiChatFab',
+                        onPressed: () => _openAiAssistant(context),
+                        child: const Icon(Icons.smart_toy_outlined),
+                      ),
+                      const Spacer(),
+                      FloatingActionButton.extended(
+                        heroTag: 'addTransactionFab',
+                        onPressed: () => _openAddTransaction(context),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add transaction'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      );
+    });
+  }
+}
 
-        if (useRail) {
-          final railTheme = NavigationRailTheme.of(context);
-          final railBackground =
-              railTheme.backgroundColor ??
-              (theme.brightness == Brightness.dark
-                  ? const Color(0xFF0F0F0F)
-                  : const Color(0xFFF9F9F9));
-          final dividerColor = theme.colorScheme.outlineVariant.withOpacity(
-            0.4,
-          );
+// ======================= Sidebar đẹp =========================
 
-          return Scaffold(
-            backgroundColor: theme.colorScheme.background,
-            floatingActionButtonLocation:
-                FloatingActionButtonLocation.centerFloat,
-            floatingActionButton: floatingActions,
-            body: Row(
+class _SidebarNavigation extends StatefulWidget {
+  const _SidebarNavigation({
+    required this.selected,
+    required this.onSelect,
+  });
+
+  final AppShellPage selected;
+  final ValueChanged<AppShellPage> onSelect;
+
+  @override
+  State<_SidebarNavigation> createState() => _SidebarNavigationState();
+}
+
+class _SidebarNavigationState extends State<_SidebarNavigation> {
+  bool _isExpanded = true;
+
+  void _toggleSidebar() {
+    setState(() => _isExpanded = !_isExpanded);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOutCubic,
+      width: _isExpanded ? 240 : 72,
+      decoration: BoxDecoration(
+        color: colorScheme.surface.withOpacity(0.95),
+        border: Border(
+          right: BorderSide(
+            color: colorScheme.outlineVariant.withOpacity(0.5),
+          ),
+        ),
+      ),
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: SafeArea(
+            child: Column(
               children: [
-                Container(
-                  color: railBackground,
-                  child: _SidebarNavigation(
-                    destinations: primaryDestinations,
-                    secondaryDestinations: secondaryDestinations,
-                    selected: currentDestination,
-                    onSelect: (destination) =>
-                        _handleDestinationSelected(context, destination),
+                // Header có nút toggle
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: _isExpanded
+                        ? MainAxisAlignment.start
+                        : MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: AnimatedRotation(
+                          turns: _isExpanded ? 0 : 0.25,
+                          duration: const Duration(milliseconds: 300),
+                          child: const Icon(Icons.menu),
+                        ),
+                        onPressed: _toggleSidebar,
+                        tooltip: _isExpanded ? 'Collapse' : 'Expand',
+                        style: IconButton.styleFrom(
+                          backgroundColor:
+                              colorScheme.surfaceVariant.withOpacity(0.5),
+                        ),
+                      ),
+                      // Title fade/slide in/out
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 250),
+                        transitionBuilder: (child, anim) {
+                          final offsetAnim = Tween<Offset>(
+                                  begin: const Offset(-0.15, 0),
+                                  end: Offset.zero)
+                              .animate(CurvedAnimation(
+                                  parent: anim, curve: Curves.easeInOut));
+                          return FadeTransition(
+                            opacity: anim,
+                            child: SlideTransition(
+                              position: offsetAnim,
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: _isExpanded
+                            ? Padding(
+                                key: const ValueKey('sidebar-title'),
+                                padding: const EdgeInsets.only(left: 8),
+                                child: Text(
+                                  'MoneyBase',
+                                  style:
+                                      theme.textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.primary,
+                                  ),
+                                ),
+                              )
+                            : const SizedBox(
+                                key: ValueKey('sidebar-title-empty'),
+                                width: 0,
+                                height: 0,
+                              ),
+                      ),
+                    ],
                   ),
                 ),
-                VerticalDivider(width: 1, color: dividerColor),
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 250),
-                    child: KeyedSubtree(key: ValueKey(page), child: body),
-                  ),
+
+                const Divider(),
+                const SizedBox(height: 16),
+
+                // Items
+                _SidebarItem(
+                  label: 'Home',
+                  icon: Icons.home_outlined,
+                  selectedIcon: Icons.home_rounded,
+                  isSelected: widget.selected == AppShellPage.home,
+                  isExpanded: _isExpanded,
+                  onTap: () => widget.onSelect(AppShellPage.home),
                 ),
+                _SidebarItem(
+                  label: 'Budgets',
+                  icon: Icons.account_balance_wallet_outlined,
+                  selectedIcon: Icons.account_balance_wallet_rounded,
+                  isSelected: widget.selected == AppShellPage.budgets,
+                  isExpanded: _isExpanded,
+                  onTap: () => widget.onSelect(AppShellPage.budgets),
+                ),
+                _SidebarItem(
+                  label: 'Shopping',
+                  icon: Icons.shopping_cart_outlined,
+                  selectedIcon: Icons.shopping_cart_rounded,
+                  isSelected: widget.selected == AppShellPage.shopping,
+                  isExpanded: _isExpanded,
+                  onTap: () => widget.onSelect(AppShellPage.shopping),
+                ),
+
+                const Spacer(),
+
+                _PremiumPlaceholderButton(isExpanded: _isExpanded),
+                const SizedBox(height: 12),
+
+                _SidebarItem(
+                  label: 'Settings',
+                  icon: Icons.settings_outlined,
+                  selectedIcon: Icons.settings_rounded,
+                  isSelected: widget.selected == AppShellPage.settings,
+                  isExpanded: _isExpanded,
+                  onTap: () => widget.onSelect(AppShellPage.settings),
+                ),
+                const SizedBox(height: 16),
               ],
             ),
-          );
-        }
-
-        final navTheme = NavigationBarTheme.of(context);
-        final navBackground =
-            navTheme.backgroundColor ??
-            (theme.brightness == Brightness.dark
-                ? const Color(0xFF0F0F0F)
-                : const Color(0xFFF9F9F9));
-
-        return Scaffold(
-          backgroundColor: theme.colorScheme.background,
-          floatingActionButtonLocation:
-              FloatingActionButtonLocation.centerFloat,
-          floatingActionButton: floatingActions,
-          body: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: KeyedSubtree(key: ValueKey(page), child: body),
           ),
-          bottomNavigationBar: NavigationBar(
-            backgroundColor: navBackground,
-            surfaceTintColor: Colors.transparent,
-            selectedIndex: currentDestination != null
-                ? destinations.indexOf(currentDestination)
-                : 0,
-            destinations: [
-              for (final destination in destinations)
-                NavigationDestination(
-                  icon: Icon(destination.icon),
-                  selectedIcon: Icon(destination.selectedIcon),
-                  label: destination.label,
-                ),
-            ],
-            onDestinationSelected: (index) {
-              if (index < 0 || index >= destinations.length) {
-                return;
-              }
-              final destination = destinations[index];
-              _handleDestinationSelected(context, destination);
-            },
-          ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
 
-enum _NavigationDestination {
-  home(
-    label: 'Home',
-    icon: Icons.home_outlined,
-    selectedIcon: Icons.home,
-    path: '/',
-  ),
-  budgets(
-    label: 'Budgets',
-    icon: Icons.account_balance_wallet_outlined,
-    selectedIcon: Icons.account_balance_wallet,
-    path: '/budgets',
-  ),
-  shoppingList(
-    label: 'Shopping List',
-    icon: Icons.shopping_cart_outlined,
-    selectedIcon: Icons.shopping_cart,
-    path: '/shopping',
-  ),
-  settings(
-    label: 'Settings',
-    icon: Icons.settings_outlined,
-    selectedIcon: Icons.settings,
-    path: '/settings',
-    isSecondary: true,
-  );
-
-  const _NavigationDestination({
+// Sidebar item với hover effect + fade+slide label
+class _SidebarItem extends StatefulWidget {
+  const _SidebarItem({
     required this.label,
     required this.icon,
     required this.selectedIcon,
-    required this.path,
-    this.isSecondary = false,
+    required this.isSelected,
+    required this.onTap,
+    required this.isExpanded,
   });
 
   final String label;
   final IconData icon;
   final IconData selectedIcon;
-  final String path;
-  final bool isSecondary;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final bool isExpanded;
+
+  @override
+  State<_SidebarItem> createState() => _SidebarItemState();
 }
 
-class _SidebarNavigation extends StatelessWidget {
-  const _SidebarNavigation({
-    required this.destinations,
-    required this.secondaryDestinations,
-    required this.selected,
-    required this.onSelect,
-  });
-
-  final List<_NavigationDestination> destinations;
-  final List<_NavigationDestination> secondaryDestinations;
-  final _NavigationDestination? selected;
-  final ValueChanged<_NavigationDestination> onSelect;
+class _SidebarItemState extends State<_SidebarItem> {
+  bool _isHovered = false;
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: SizedBox(
-        width: 84,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.asset(
-                  'app_icon.ico',
-                  width: 36,
-                  height: 36,
-                  fit: BoxFit.cover,
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: widget.isSelected
+              ? colors.primaryContainer
+              : _isHovered
+                  ? colors.surfaceVariant.withOpacity(0.6)
+                  : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: InkWell(
+          onTap: widget.onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Row(
+            children: [
+              Icon(
+                widget.isSelected ? widget.selectedIcon : widget.icon,
+                color: widget.isSelected
+                    ? colors.onPrimaryContainer
+                    : colors.onSurfaceVariant,
+              ),
+              // space between icon and label (kept even when collapsed for consistent look)
+              const SizedBox(width: 12),
+              // label area (animated)
+              Flexible(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  transitionBuilder: (child, anim) {
+                    final offsetAnim = Tween<Offset>(
+                            begin: const Offset(-0.12, 0), end: Offset.zero)
+                        .animate(CurvedAnimation(
+                            parent: anim, curve: Curves.easeInOut));
+                    return FadeTransition(
+                      opacity: anim,
+                      child: SlideTransition(position: offsetAnim, child: child),
+                    );
+                  },
+                  child: widget.isExpanded
+                      ? Text(
+                          widget.label,
+                          key: ValueKey('label-${widget.label}'),
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: widget.isSelected
+                                ? colors.onPrimaryContainer
+                                : colors.onSurfaceVariant,
+                            fontWeight: widget.isSelected
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        )
+                      : SizedBox(
+                          key: ValueKey('label-empty-${widget.label}'),
+                          width: 0,
+                          height: 0,
+                        ),
                 ),
               ),
-            ),
-            for (var i = 0; i < destinations.length; i++) ...[
-              _SidebarItem(
-                destination: destinations[i],
-                selected: destinations[i] == selected,
-                onTap: () => onSelect(destinations[i]),
-              ),
-              if (i != destinations.length - 1) const SizedBox(height: 12),
             ],
-            const Spacer(),
-            const _PremiumPlaceholderButton(),
-            const SizedBox(height: 12),
-            for (var i = 0; i < secondaryDestinations.length; i++) ...[
-              _SidebarItem(
-                destination: secondaryDestinations[i],
-                selected: secondaryDestinations[i] == selected,
-                onTap: () => onSelect(secondaryDestinations[i]),
-              ),
-              if (i != secondaryDestinations.length - 1)
-                const SizedBox(height: 12),
-            ],
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _SidebarItem extends StatelessWidget {
-  const _SidebarItem({
-    required this.destination,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final _NavigationDestination destination;
-  final bool selected;
-  final VoidCallback onTap;
+// Nút Premium Gradient (giữ y hệt)
+class _PremiumPlaceholderButton extends StatelessWidget {
+  const _PremiumPlaceholderButton({required this.isExpanded});
+  final bool isExpanded;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final backgroundColor = selected
-        ? colorScheme.primary.withOpacity(0.12)
-        : Colors.transparent;
-    final iconColor = selected ? colorScheme.primary : colorScheme.onSurface;
+    final colors = Theme.of(context).colorScheme;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: selected
-                ? colorScheme.primary.withOpacity(0.28)
-                : Colors.transparent,
-          ),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            colors.primary.withOpacity(0.2),
+            colors.tertiary.withOpacity(0.2),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.primary.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.workspace_premium_rounded, color: colors.primary),
+          if (isExpanded) ...[
+            const SizedBox(width: 12),
+            Expanded(
               child: Column(
-                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(destination.icon, color: iconColor),
-                  const SizedBox(height: 6),
-                  Text(
-                    destination.label,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: iconColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
+                  Text('Go Premium',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, color: colors.primary)),
+                  Text('Coming soon',
+                      style: TextStyle(color: colors.onSurfaceVariant)),
                 ],
               ),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PremiumPlaceholderButton extends StatelessWidget {
-  const _PremiumPlaceholderButton();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final iconColor = colorScheme.primary;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Tooltip(
-        message: 'Premium (coming soon)',
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: iconColor.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: iconColor.withOpacity(0.28)),
-          ),
-          child: Material(
-            type: MaterialType.transparency,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () {},
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.workspace_premium_outlined, color: iconColor),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Premium',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: iconColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
+          ]
+        ],
       ),
     );
   }
