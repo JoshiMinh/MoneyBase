@@ -50,9 +50,9 @@ class MoneyBaseThemeColors extends ThemeExtension<MoneyBaseThemeColors> {
         surfaceShadow: MoneyBaseColors.grey.withOpacity(0.6),
         primaryText: Colors.white,
         mutedText: Colors.white.withOpacity(0.68),
-        primaryAccent: MoneyBaseColors.purple,
-        secondaryAccent: MoneyBaseColors.blue,
-        tertiaryAccent: MoneyBaseColors.orange,
+        primaryAccent: MoneyBaseColors.primary,
+        secondaryAccent: MoneyBaseColors.secondary,
+        tertiaryAccent: MoneyBaseColors.tertiary,
         positive: MoneyBaseColors.green,
         negative: MoneyBaseColors.red,
         warning: MoneyBaseColors.yellow,
@@ -68,9 +68,9 @@ class MoneyBaseThemeColors extends ThemeExtension<MoneyBaseThemeColors> {
       surfaceShadow: MoneyBaseColors.grey.withOpacity(0.12),
       primaryText: MoneyBaseColors.grey,
       mutedText: MoneyBaseColors.grey.withOpacity(0.68),
-      primaryAccent: MoneyBaseColors.purple,
-      secondaryAccent: MoneyBaseColors.blue,
-      tertiaryAccent: MoneyBaseColors.orange,
+      primaryAccent: MoneyBaseColors.primary,
+      secondaryAccent: MoneyBaseColors.secondary,
+      tertiaryAccent: MoneyBaseColors.tertiary,
       positive: MoneyBaseColors.green,
       negative: MoneyBaseColors.red,
       warning: MoneyBaseColors.yellow,
@@ -249,8 +249,8 @@ class MoneyBaseTheme {
       primary: themeColors.primaryAccent,
       onPrimary: Colors.white,
       primaryContainer: darkMode
-          ? MoneyBaseColors.purple.withOpacity(0.38)
-          : MoneyBaseColors.purple.withOpacity(0.18),
+          ? MoneyBaseColors.primary.withOpacity(0.38)
+          : MoneyBaseColors.primary.withOpacity(0.18),
       onPrimaryContainer:
           darkMode ? Colors.white : themeColors.primaryText,
       secondary: themeColors.secondaryAccent,
