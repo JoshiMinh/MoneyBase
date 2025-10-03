@@ -571,70 +571,60 @@ class _RailHeader extends StatelessWidget {
     final theme = Theme.of(context);
     final themeColors = context.themeColors;
     final textColor = themeColors.primaryText;
-    final logo = ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: Image.asset(
-        'icon.png',
-        width: 40,
-        height: 40,
-        fit: BoxFit.cover,
-      ),
-    );
 
-    final name = AnimatedSwitcher(
-      duration: const Duration(milliseconds: 220),
-      transitionBuilder: (child, animation) {
-        return FadeTransition(
-          opacity: animation,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(-0.05, 0),
-              end: Offset.zero,
-            ).animate(animation),
-            child: child,
-          ),
-        );
-      },
-      child: Text(
-        'Monbase',
-        key: ValueKey<bool>(extended),
-        textAlign: TextAlign.center,
-        style: theme.textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w700,
-          color: textColor,
-        ),
-      ),
-    );
-
-    if (!extended) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          logo,
-          const SizedBox(height: 12),
-          name,
-        ],
-      );
-    }
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
+    // Logo + nút toggle chồng lên nhau
+    final logoWithButton = Stack(
+      clipBehavior: Clip.none,
       children: [
-        logo,
-        const SizedBox(height: 12),
-        name,
-        const SizedBox(height: 12),
-        IconButton(
-          icon: Icon(Icons.chevron_left, color: themeColors.mutedText),
-          tooltip: 'Collapse navigation',
-          onPressed: onToggleExtended,
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.asset(
+            'icon.png',
+            width: 40,
+            height: 40,
+            fit: BoxFit.cover,
+          ),
+        ),
+        // 👉 Nút toggle nằm đè lên góc trên phải của logo
+        Positioned(
+          top: -8, // nhích lên một chút cho đẹp
+          right: -8,
+          child: IconButton(
+            iconSize: 20,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            icon: Icon(
+              extended ? Icons.chevron_left : Icons.chevron_right,
+              color: themeColors.mutedText,
+            ),
+            onPressed: onToggleExtended,
+          ),
         ),
       ],
     );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      child: Row(
+        children: [
+          logoWithButton,
+          if (extended) ...[
+            const SizedBox(width: 12),
+            Text(
+              "Monbase",
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
+
+
 
 class _RailFloatingToggleButton extends StatelessWidget {
   const _RailFloatingToggleButton({required this.onPressed});
@@ -765,6 +755,7 @@ class _RailDestinationTile extends StatelessWidget {
             mainAxisSize: MainAxisSize.max,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              // Thanh indicator bên trái
               AnimatedContainer(
                 duration: _animationDuration,
                 curve: Curves.easeInOut,
@@ -775,11 +766,20 @@ class _RailDestinationTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(_indicatorWidth),
                 ),
               ),
-              const SizedBox(width: 12),
-              iconWidget,
+
+              // 👉 Chỉ có khoảng trống nếu extended
+              if (extended) const SizedBox(width: 12),
+
+              // Icon luôn nằm giữa
+              Expanded(
+                child: Center(child: iconWidget),
+              ),
+
+              // Nếu extended thì thêm label
               if (extended) ...[
                 const SizedBox(width: 12),
                 Expanded(
+                  flex: 3,
                   child: AnimatedSwitcher(
                     duration: _animationDuration,
                     transitionBuilder: (child, animation) {
@@ -824,6 +824,7 @@ class _RailDestinationTile extends StatelessWidget {
     );
   }
 }
+
 
 class _DestinationIcon extends StatelessWidget {
   const _DestinationIcon({
