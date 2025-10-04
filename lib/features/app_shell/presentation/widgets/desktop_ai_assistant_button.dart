@@ -1,4 +1,4 @@
-part of 'app_shell.dart';
+part of 'package:moneybase/features/app_shell/presentation/app_shell.dart';
 
 class _DesktopAiAssistantButton extends StatelessWidget {
   const _DesktopAiAssistantButton({
