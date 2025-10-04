@@ -647,20 +647,30 @@ class _BudgetListTile extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                '${_formatCurrency(spent, currency)} / ${_formatCurrency(limit, currency)}',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: onSurface,
-                  fontWeight: FontWeight.w600,
+              Expanded(
+                child: Text(
+                  '${_formatCurrency(spent, currency)} / ${_formatCurrency(limit, currency)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-              Text(
-                remainingLabel,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: remaining >= 0 ? colors.positive : colors.negative,
-                  fontWeight: FontWeight.w600,
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 120,
+                child: Text(
+                  remainingLabel,
+                  textAlign: TextAlign.right,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: remaining >= 0 ? colors.positive : colors.negative,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -1039,6 +1049,43 @@ class _HomeContent extends StatefulWidget {
 }
 
 class _HomeContentState extends State<_HomeContent> {
+  final _graphsKey = GlobalKey();
+  int _scrollTries = 0;
+  void _scrollToGraphs() {
+    _scrollTries = 0;
+
+    void tryScroll() {
+      final ctx = _graphsKey.currentContext;
+      if (ctx == null) return;
+      final render = ctx.findRenderObject();
+      if (render is RenderBox && render.hasSize && render.size.height > 0) {
+        try {
+          Scrollable.ensureVisible(
+            ctx,
+            duration: const Duration(milliseconds: 420),
+            curve: Curves.easeInOut,
+            alignment: 0.1,
+          );
+          _scrollTries = 0;
+        } catch (_) {
+          // If ensureVisible throws due to layout race, retry a few times.
+          if (_scrollTries < 5) {
+            _scrollTries += 1;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              Future.delayed(const Duration(milliseconds: 80), tryScroll);
+            });
+          }
+        }
+      } else {
+        if (_scrollTries < 5) {
+          _scrollTries += 1;
+          WidgetsBinding.instance.addPostFrameCallback((_) => tryScroll());
+        }
+      }
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => tryScroll());
+  }
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -1090,12 +1137,16 @@ class _HomeContentState extends State<_HomeContent> {
           builder: (context, constraints) {
             const sectionSpacing = 24.0;
 
-            final graphsSection = _GraphsTab(
-              userId: widget.userId,
-              budgetRepository: widget.budgetRepository,
-              transactionRepository: widget.transactionRepository,
-              categoryRepository: widget.categoryRepository,
-              showBudgetsOnly: false,
+            final graphsSection = ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 260),
+              child: _GraphsTab(
+                key: _graphsKey,
+                userId: widget.userId,
+                budgetRepository: widget.budgetRepository,
+                transactionRepository: widget.transactionRepository,
+                categoryRepository: widget.categoryRepository,
+                showBudgetsOnly: false,
+              ),
             );
 
             final trailingColumn = Column(
@@ -1107,6 +1158,7 @@ class _HomeContentState extends State<_HomeContent> {
                   transactionRepository: widget.transactionRepository,
                   walletRepository: widget.walletRepository,
                   categoryRepository: widget.categoryRepository,
+                  onJumpToGraphs: _scrollToGraphs,
                 ),
               ],
             );
@@ -1145,12 +1197,13 @@ class _HomeContentState extends State<_HomeContent> {
 
 class _GraphsTab extends StatefulWidget {
   const _GraphsTab({
+    Key? key,
     required this.userId,
     required this.budgetRepository,
     required this.transactionRepository,
     required this.categoryRepository,
     required this.showBudgetsOnly,
-  });
+  }) : super(key: key);
 
   final String? userId;
   final BudgetRepository budgetRepository;
@@ -1373,7 +1426,10 @@ class _GraphsTabState extends State<_GraphsTab> {
   }
 }
 
-const double _reportCardViewportHeight = 420;
+// Increased to give more vertical space so the report cards can show
+// their full contents (charts, legends and the "Open full reports" button)
+// without forcing the user to scroll inside the card.
+const double _reportCardViewportHeight = 460;
 
 class _ReportCardsSection extends StatefulWidget {
   const _ReportCardsSection({required this.onViewReports});
@@ -1506,22 +1562,28 @@ class _ReportsTab extends StatelessWidget {
     final mutedOnSurface = colors.mutedText;
 
     return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 360),
+      // Raised minHeight to match the larger card viewport so the
+      // Monthly insights content and its action button are visible.
+      constraints: const BoxConstraints(minHeight: 420),
       child: MoneyBaseSurface(
         padding: const EdgeInsets.all(28),
         backgroundColor: colors.surfaceBackground,
         borderColor: colors.surfaceBorder,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Monthly insights',
-              style: textTheme.titleMedium?.copyWith(
-                color: onSurface,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                'Monthly insights',
+                style: textTheme.titleMedium?.copyWith(
+                 
+                  color: onSurface,
                 fontWeight: FontWeight.w600,
+                fontSize: 22,
               ),
+              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             _ReportInsightTile(
               icon: Icons.trending_up,
               title: 'Net income is up 12%',
@@ -1530,7 +1592,7 @@ class _ReportsTab extends StatelessWidget {
               textColor: onSurface,
               subtitleColor: mutedOnSurface,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             _ReportInsightTile(
               icon: Icons.shopping_bag_outlined,
               title: 'Top category: Shopping',
@@ -1539,7 +1601,7 @@ class _ReportsTab extends StatelessWidget {
               textColor: onSurface,
               subtitleColor: mutedOnSurface,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             _ReportInsightTile(
               icon: Icons.savings_outlined,
               title: 'Savings streak ongoing',
@@ -1553,11 +1615,19 @@ class _ReportsTab extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: FilledButton.icon(
                 onPressed: onViewReports,
-                icon: const Icon(Icons.analytics_outlined),
-                label: const Text('Open full reports'),
+                icon: const Icon(Icons.analytics_outlined, size: 18),
+                label: const Text(
+                  'Open full reports',
+                  style: TextStyle(fontSize: 13),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
               ),
             ),
           ],
+          ),
         ),
       ),
     );
@@ -1591,10 +1661,10 @@ class _ReportInsightTile extends StatelessWidget {
         Container(
           decoration: BoxDecoration(
             color: iconTint.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(12),
           ),
-          padding: const EdgeInsets.all(12),
-          child: Icon(icon, color: iconTint),
+          padding: const EdgeInsets.all(10),
+          child: Icon(icon, color: iconTint, size: 18),
         ),
         const SizedBox(width: 16),
         Expanded(
@@ -1606,14 +1676,20 @@ class _ReportInsightTile extends StatelessWidget {
                 style: textTheme.titleSmall?.copyWith(
                   color: textColor,
                   fontWeight: FontWeight.w600,
+                  fontSize: 13,
                 ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: textTheme.bodyMedium?.copyWith(
+                style: textTheme.bodySmall?.copyWith(
                   color: subtitleColor,
+                  fontSize: 11,
                 ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
               ),
             ],
           ),
@@ -1639,22 +1715,29 @@ class _ThisWeekReportCard extends StatelessWidget {
         padding: const EdgeInsets.all(28),
         backgroundColor: colors.surfaceBackground,
         borderColor: colors.surfaceBorder,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'This week report',
-              style: textTheme.titleMedium?.copyWith(
-                color: onSurface,
-                fontWeight: FontWeight.w600,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                'This week report',
+                style: textTheme.titleMedium?.copyWith(
+                  color: onSurface,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 22,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Great job keeping things balanced. Here’s how the last seven days are shaping up.',
-              style: textTheme.bodyMedium?.copyWith(color: mutedOnSurface),
-            ),
-            const SizedBox(height: 24),
+            // const SizedBox(height: 16),
+            // Text(
+            //   'Great job keeping things balanced. Here’s how the last seven days are shaping up.',
+            //   style: textTheme.bodySmall?.copyWith(
+            //     color: mutedOnSurface,
+            //     fontSize: 12,
+            //   ),
+            //   overflow: TextOverflow.ellipsis,
+            //   maxLines: 3,
+            // ),
+            const SizedBox(height: 20),
             _ReportInsightTile(
               icon: Icons.payments_outlined,
               title: '42% of weekly budget used',
@@ -1663,7 +1746,7 @@ class _ThisWeekReportCard extends StatelessWidget {
               textColor: onSurface,
               subtitleColor: mutedOnSurface,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             _ReportInsightTile(
               icon: Icons.trending_down,
               title: 'Spending cooled since Monday',
@@ -1672,7 +1755,7 @@ class _ThisWeekReportCard extends StatelessWidget {
               textColor: onSurface,
               subtitleColor: mutedOnSurface,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             _ReportInsightTile(
               icon: Icons.check_circle_outline,
               title: '3 goals hit in a row',
@@ -1681,29 +1764,38 @@ class _ThisWeekReportCard extends StatelessWidget {
               textColor: onSurface,
               subtitleColor: mutedOnSurface,
             ),
-            const SizedBox(height: 24),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
+            const SizedBox(height: 16),
+            Column(
               children: const [
-                _WeeklyStatChip(
-                  label: 'Avg. daily spend',
-                  value: '\$56.40',
-                  icon: Icons.calendar_view_week,
+                Row(
+                  children: [
+                    Expanded(
+                      child: _WeeklyStatChip(
+                        label: 'Daily avg',
+                        value: '\$56.40',
+                        icon: Icons.calendar_view_week,
+                      ),
+                    ),
+                    SizedBox(width: 4),
+                    Expanded(
+                      child: _WeeklyStatChip(
+                        label: 'Top buy',
+                        value: '\$142',
+                        icon: Icons.home_outlined,
+                      ),
+                    ),
+                  ],
                 ),
+                SizedBox(height: 4),
                 _WeeklyStatChip(
-                  label: 'Largest purchase',
-                  value: '\$142 • Home',
-                  icon: Icons.home_outlined,
-                ),
-                _WeeklyStatChip(
-                  label: 'Upcoming bills',
-                  value: '2 due this weekend',
+                  label: 'Bills due',
+                  value: '2 this weekend',
                   icon: Icons.receipt_long_outlined,
                 ),
               ],
             ),
           ],
+          ),
         ),
       ),
     );
@@ -1727,36 +1819,43 @@ class _WeeklyStatChip extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: colors.surfaceBackground,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: colors.surfaceBorder),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: colors.primaryAccent, size: 18),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: textTheme.labelLarge?.copyWith(
-                  color: colors.mutedText,
-                  fontWeight: FontWeight.w600,
+          Icon(icon, color: colors.primaryAccent, size: 12),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: textTheme.labelSmall?.copyWith(
+                    color: colors.mutedText,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: textTheme.titleSmall?.copyWith(
-                  color: colors.primaryText,
-                  fontWeight: FontWeight.w600,
+                Text(
+                  value,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colors.primaryText,
+                   
+                    fontSize: 12,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -1889,17 +1988,14 @@ class _SpendingBreakdownCard extends StatelessWidget {
                   child: _PieChart(slices: slices),
                 );
 
-                final legend = Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      for (var index = 0; index < slices.length; index++) ...[
-                        _PieLegendRow(slice: slices[index]),
-                        if (index != slices.length - 1)
-                          const SizedBox(height: 12),
-                      ],
+                final legendContent = Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (var index = 0; index < slices.length; index++) ...[
+                      _PieLegendRow(slice: slices[index]),
+                      if (index != slices.length - 1) const SizedBox(height: 12),
                     ],
-                  ),
+                  ],
                 );
 
                 if (isStacked) {
@@ -1908,7 +2004,7 @@ class _SpendingBreakdownCard extends StatelessWidget {
                     children: [
                       Center(child: chart),
                       const SizedBox(height: 24),
-                      legend,
+                      legendContent,
                     ],
                   );
                 }
@@ -1918,7 +2014,7 @@ class _SpendingBreakdownCard extends StatelessWidget {
                   children: [
                     chart,
                     const SizedBox(width: 32),
-                    legend,
+                    Expanded(child: legendContent),
                   ],
                 );
               },
@@ -1961,60 +2057,54 @@ class _CashFlowSummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              _SummaryPill(
+                label: 'Income',
+                value: _formatCurrency(totalIncome, resolvedCurrency),
+                color: colors.tertiaryAccent,
+              ),
+              _SummaryPill(
+                label: 'Expenses',
+                value: _formatCurrency(totalExpense, resolvedCurrency),
+                color: colors.negative,
+              ),
+              _SummaryPill(
+                label: 'Net',
+                value:
+                    '${netValue >= 0 ? '+' : '-'}${_formatCurrency(netValue.abs(), resolvedCurrency)}',
+                color: netValue >= 0 ? colors.positive : colors.negative,
+              ),
+              if (currencyCodes.length > 1)
+                _SummaryPill(
+                  label: 'Currencies',
+                  value: '${currencyCodes.length}',
+                  color: colors.surfaceBorder,
+                  foreground: colors.primaryText,
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Cash flow this month',
-                      style: textTheme.titleMedium?.copyWith(
-                        color: colors.primaryText,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      hasData
-                          ? 'Weekly income versus expenses at a glance.'
-                          : 'Log income and expenses to build your cash flow timeline.',
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: colors.mutedText,
-                      ),
-                    ),
-                  ],
+              Text(
+                'Cash flow this month',
+                style: textTheme.titleMedium?.copyWith(
+                  color: colors.primaryText,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  _SummaryPill(
-                    label: 'Income',
-                    value: _formatCurrency(totalIncome, resolvedCurrency),
-                    color: colors.tertiaryAccent,
-                  ),
-                  _SummaryPill(
-                    label: 'Expenses',
-                    value: _formatCurrency(totalExpense, resolvedCurrency),
-                    color: colors.negative,
-                  ),
-                  _SummaryPill(
-                    label: 'Net',
-                    value:
-                        '${netValue >= 0 ? '+' : '-'}${_formatCurrency(netValue.abs(), resolvedCurrency)}',
-                    color: netValue >= 0 ? colors.positive : colors.negative,
-                  ),
-                  if (currencyCodes.length > 1)
-                    _SummaryPill(
-                      label: 'Currencies',
-                      value: '${currencyCodes.length}',
-                      color: colors.surfaceBorder,
-                      foreground: colors.primaryText,
-                    ),
-                ],
+              const SizedBox(height: 6),
+              Text(
+                hasData
+                    ? 'Weekly income versus expenses at a glance.'
+                    : 'Log income and expenses to build your cash flow timeline.',
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colors.mutedText,
+                ),
               ),
             ],
           ),
@@ -2394,6 +2484,7 @@ class _RecentTransactionsCard extends StatelessWidget {
     required this.transactionRepository,
     required this.walletRepository,
     required this.categoryRepository,
+    this.onJumpToGraphs,
   });
 
   final VoidCallback onViewTransactions;
@@ -2401,6 +2492,7 @@ class _RecentTransactionsCard extends StatelessWidget {
   final TransactionRepository transactionRepository;
   final WalletRepository walletRepository;
   final CategoryRepository categoryRepository;
+  final VoidCallback? onJumpToGraphs;
 
   static const _months = [
     'Jan',
@@ -2437,7 +2529,6 @@ class _RecentTransactionsCard extends StatelessWidget {
     Widget body,
     String subtitle,
   ) {
-    final theme = Theme.of(context);
     final colors = context.moneyBaseColors;
     final onSurface = colors.primaryText;
     final mutedOnSurface = colors.mutedText;
@@ -2472,16 +2563,28 @@ class _RecentTransactionsCard extends StatelessWidget {
                   ],
                 ),
               ),
-              TextButton.icon(
-                onPressed: userId == null ? null : onViewTransactions,
-                icon: const Icon(Icons.arrow_forward_rounded),
-                label: const Text('See all'),
-                style: TextButton.styleFrom(
-                  foregroundColor: colors.primaryAccent,
-                  textStyle: textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (onJumpToGraphs != null)
+                    IconButton(
+                      onPressed: onJumpToGraphs,
+                      icon: const Icon(Icons.analytics_outlined),
+                      tooltip: 'View charts',
+                      color: colors.primaryAccent,
+                    ),
+                  TextButton.icon(
+                    onPressed: userId == null ? null : onViewTransactions,
+                    icon: const Icon(Icons.arrow_forward_rounded),
+                    label: const Text('See all'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: colors.primaryAccent,
+                      textStyle: textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
           ),
