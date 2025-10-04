@@ -1,4 +1,4 @@
-part of 'app_shell.dart';
+part of 'package:moneybase/features/app_shell/presentation/app_shell.dart';
 
 Future<void> _showPremiumDialog(BuildContext context) {
   return showDialog<void>(
