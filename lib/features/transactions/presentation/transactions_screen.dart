@@ -186,8 +186,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         builder: (context, walletSnapshot) {
           if (walletSnapshot.hasError) {
             return _CenteredMessage(
-              message:
-                  'Unable to load wallets: ${walletSnapshot.error}',
+              message: 'Unable to load wallets: ${walletSnapshot.error}',
               isError: true,
             );
           }
@@ -199,8 +198,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             builder: (context, categorySnapshot) {
               if (categorySnapshot.hasError) {
                 return _CenteredMessage(
-                  message:
-                      'Unable to load categories: ${categorySnapshot.error}',
+                  message: 'Unable to load categories: ${categorySnapshot.error}',
                   isError: true,
                 );
               }
@@ -212,44 +210,24 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 builder: (context, transactionSnapshot) {
                   if (transactionSnapshot.hasError) {
                     return _CenteredMessage(
-                      message:
-                          'Unable to load transactions: ${transactionSnapshot.error}',
+                      message: 'Unable to load transactions: ${transactionSnapshot.error}',
                       isError: true,
                     );
                   }
 
-                  final transactions =
-                      transactionSnapshot.data ?? const <MoneyBaseTransaction>[];
-                  final loading =
-                      transactionSnapshot.connectionState ==
-                              ConnectionState.waiting &&
-                          transactions.isEmpty;
+                  final transactions = transactionSnapshot.data ?? const <MoneyBaseTransaction>[];
+                  final loading = transactionSnapshot.connectionState == ConnectionState.waiting && transactions.isEmpty;
 
-                  if (loading) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+                  if (loading) return const Center(child: CircularProgressIndicator());
+                  if (transactions.isEmpty) return const _CenteredMessage(message: 'No transactions yet. Capture a purchase to see it listed here.');
 
-                  if (transactions.isEmpty) {
-                    return const _CenteredMessage(
-                      message:
-                          'No transactions yet. Capture a purchase to see it listed here.',
-                    );
-                  }
-
-                  final walletById = {
-                    for (final wallet in wallets) wallet.id: wallet,
-                  };
-                  final categoryById = {
-                    for (final category in categories) category.id: category,
-                  };
+                  final walletById = { for (final w in wallets) w.id: w };
+                  final categoryById = { for (final c in categories) c.id: c };
 
                   return LayoutBuilder(
                     builder: (context, constraints) {
                       final isWide = constraints.maxWidth >= 900;
-                      final padding = EdgeInsets.symmetric(
-                        horizontal: isWide ? 48 : 24,
-                        vertical: 32,
-                      );
+                      final padding = EdgeInsets.symmetric(horizontal: isWide ? 48 : 24, vertical: 32);
 
                       if (isWide) {
                         return Center(
@@ -260,97 +238,32 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                               child: Card(
                                 clipBehavior: Clip.antiAlias,
                                 child: DataTable(
-                                  headingRowColor:
-                                      WidgetStateProperty.resolveWith<Color?>(
-                                    (_) => Theme.of(context)
-                                        .colorScheme
-                                        .surfaceContainerHighest
-                                        .withOpacity(0.4),
-                                  ),
+                                  headingRowColor: WidgetStateProperty.resolveWith<Color?>((_) => Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.4)),
                                   columns: const [
                                     DataColumn(label: Text('Date')),
                                     DataColumn(label: Text('Description')),
                                     DataColumn(label: Text('Category')),
                                     DataColumn(label: Text('Wallet')),
-                                    DataColumn(
-                                      label: Text('Amount'),
-                                      numeric: true,
-                                    ),
+                                    DataColumn(label: Text('Amount'), numeric: true),
                                     DataColumn(label: Text('Actions')),
                                   ],
                                   rows: transactions.map((transaction) {
-                                    final rawCategoryName =
-                                        categoryById[transaction.categoryId]?.name;
-                                    final displayCategoryName =
-                                        (rawCategoryName?.trim().isNotEmpty ?? false)
-                                            ? rawCategoryName!
-                                            : 'Uncategorised';
-                                    final rawWalletName =
-                                        walletById[transaction.walletId]?.name;
-                                    final displayWalletName =
-                                        (rawWalletName?.trim().isNotEmpty ?? false)
-                                            ? rawWalletName!
-                                            : 'Unknown wallet';
+                                    final rawCategoryName = categoryById[transaction.categoryId]?.name;
+                                    final displayCategoryName = (rawCategoryName?.trim().isNotEmpty ?? false) ? rawCategoryName! : 'Uncategorised';
+                                    final rawWalletName = walletById[transaction.walletId]?.name;
+                                    final displayWalletName = (rawWalletName?.trim().isNotEmpty ?? false) ? rawWalletName! : 'Unknown wallet';
 
-                                    return DataRow(
-                                      cells: [
-                                        DataCell(
-                                          Text(_formatDate(transaction.date)),
-                                        ),
-                                        DataCell(Text(transaction.description)),
-                                        DataCell(
-                                          Text(displayCategoryName),
-                                        ),
-                                        DataCell(
-                                          Text(displayWalletName),
-                                        ),
-                                        DataCell(
-                                          Align(
-                                            alignment: Alignment.centerRight,
-                                            child: Text(
-                                              _formatAmount(transaction),
-                                              style: TextStyle(
-                                                color: transaction.isIncome
-                                                    ? Colors.teal
-                                                    : Theme.of(context)
-                                                        .colorScheme
-                                                        .error,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        DataCell(
-                                          Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              IconButton(
-                                                tooltip: 'Edit',
-                                                icon:
-                                                    const Icon(Icons.edit_outlined),
-                                                onPressed: () => _editTransaction(
-                                                  context,
-                                                  user.uid,
-                                                  transaction,
-                                                  wallets,
-                                                  categories,
-                                                ),
-                                              ),
-                                              IconButton(
-                                                tooltip: 'Delete',
-                                                icon: const Icon(
-                                                    Icons.delete_outline),
-                                                onPressed: () => _deleteTransaction(
-                                                  context,
-                                                  user.uid,
-                                                  transaction,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    );
+                                    return DataRow(cells: [
+                                      DataCell(Text(_formatDate(transaction.date))),
+                                      DataCell(Text(transaction.description)),
+                                      DataCell(Text(displayCategoryName)),
+                                      DataCell(Text(displayWalletName)),
+                                      DataCell(Align(alignment: Alignment.centerRight, child: Text(_formatAmount(transaction), style: TextStyle(color: transaction.isIncome ? Colors.teal : Theme.of(context).colorScheme.error, fontWeight: FontWeight.w600)))),
+                                      DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
+                                        IconButton(icon: const Icon(Icons.edit_outlined), tooltip: 'Edit', onPressed: () => _editTransaction(context, user.uid, transaction, wallets, categories)),
+                                        IconButton(icon: const Icon(Icons.delete_outline), tooltip: 'Delete', onPressed: () => _deleteTransaction(context, user.uid, transaction)),
+                                      ])),
+                                    ]);
                                   }).toList(),
                                 ),
                               ),
@@ -367,74 +280,50 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                           final transaction = transactions[index];
                           final category = categoryById[transaction.categoryId];
                           final wallet = walletById[transaction.walletId];
-                          final categoryName = category?.name;
-                          final displayCategoryName =
-                              (categoryName?.trim().isNotEmpty ?? false)
-                                  ? categoryName!
-                                  : 'Uncategorised';
-                          final walletName = wallet?.name;
-                          final displayWalletName =
-                              (walletName?.trim().isNotEmpty ?? false)
-                                  ? walletName!
-                                  : 'Unknown wallet';
-                          final amountColor = transaction.isIncome
-                              ? Colors.teal
-                              : Theme.of(context).colorScheme.error;
-                          final icon = IconLibrary.iconForCategory(
-                            category?.iconName,
-                          );
-                          final accent =
-                              parseHexColor(category?.color) ?? amountColor;
+                          final displayCategoryName = (category?.name?.trim().isNotEmpty ?? false) ? category!.name : 'Uncategorised';
+                          final displayWalletName = (wallet?.name?.trim().isNotEmpty ?? false) ? wallet!.name : 'Unknown wallet';
+                          final amountColor = transaction.isIncome ? Colors.teal : Theme.of(context).colorScheme.error;
+                          final icon = IconLibrary.iconForCategory(category?.iconName);
+                          final accent = parseHexColor(category?.color) ?? amountColor;
 
-                          return ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: accent.withOpacity(0.18),
-                              child: Icon(icon, color: accent),
-                            ),
-                            title: Text(transaction.description),
-                            subtitle: Text(
-                              '${_formatDate(transaction.date)} • '
-                              '$displayWalletName • $displayCategoryName',
-                            ),
-                            trailing: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.end,
+                          return Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Text(
-                                  _formatAmount(transaction),
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(
-                                        color: amountColor,
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                Container(
+                                  width: 56,
+                                  height: 56,
+                                  decoration: BoxDecoration(color: accent.withOpacity(0.18), borderRadius: BorderRadius.circular(28)),
+                                  child: Icon(icon, color: accent),
                                 ),
-                                const SizedBox(height: 6),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      tooltip: 'Edit',
-                                      icon: const Icon(Icons.edit_outlined),
-                                      onPressed: () => _editTransaction(
-                                        context,
-                                        user.uid,
-                                        transaction,
-                                        wallets,
-                                        categories,
-                                      ),
-                                    ),
-                                    IconButton(
-                                      tooltip: 'Delete',
-                                      icon: const Icon(Icons.delete_outline),
-                                      onPressed: () => _deleteTransaction(
-                                        context,
-                                        user.uid,
-                                        transaction,
-                                      ),
-                                    ),
-                                  ],
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(transaction.description, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600)),
+                                      const SizedBox(height: 6),
+                                      Text('${_formatDate(transaction.date)} • $displayWalletName • $displayCategoryName', maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7))),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                SizedBox(
+                                  width: 120,
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(_formatAmount(transaction), maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: amountColor, fontWeight: FontWeight.w700)),
+                                      const SizedBox(height: 6),
+                                      Row(mainAxisSize: MainAxisSize.min, children: [
+                                        GestureDetector(onTap: () => _editTransaction(context, user.uid, transaction, wallets, categories), child: Padding(padding: const EdgeInsets.all(6.0), child: Icon(Icons.edit_outlined, size: 18, color: Theme.of(context).colorScheme.onSurface))),
+                                        GestureDetector(onTap: () => _deleteTransaction(context, user.uid, transaction), child: Padding(padding: const EdgeInsets.all(6.0), child: Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.onSurface))),
+                                      ]),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),

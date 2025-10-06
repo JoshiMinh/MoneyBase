@@ -361,7 +361,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               style: Theme.of(context)
                   .textTheme
                   .titleMedium
-                  ?.copyWith(color: Colors.white),
+                    ?.copyWith(color: Theme.of(context).colorScheme.onSurface),
               textAlign: TextAlign.center,
             ),
           );
@@ -383,7 +383,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     style: Theme.of(context)
                         .textTheme
                         .bodyLarge
-                        ?.copyWith(color: Colors.white),
+                         ?.copyWith(color: Theme.of(context).colorScheme.onSurface),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -408,7 +408,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         style: Theme.of(context)
                             .textTheme
                             .bodyLarge
-                            ?.copyWith(color: Colors.white),
+                             ?.copyWith(color: Theme.of(context).colorScheme.onSurface),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -435,7 +435,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             style: Theme.of(context)
                                 .textTheme
                                 .bodyLarge
-                                ?.copyWith(color: Colors.white),
+                                 ?.copyWith(color: Theme.of(context).colorScheme.onSurface),
                             textAlign: TextAlign.center,
                           ),
                         ),
@@ -541,9 +541,9 @@ class _ReportsContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final totalLabel =
-        '${currencyCode.toUpperCase()} ${totalAmount.toStringAsFixed(2)}';
+  final textTheme = Theme.of(context).textTheme;
+  final surfaceTextColor = Theme.of(context).colorScheme.onSurface;
+    final totalLabel = '${currencyCode.toUpperCase()} ${totalAmount.toStringAsFixed(2)}';
 
     Widget visualization;
     if (loading) {
@@ -562,7 +562,7 @@ class _ReportsContent extends StatelessWidget {
         child: Text(
           message,
           style: textTheme.bodyLarge?.copyWith(
-            color: Colors.white.withOpacity(0.7),
+            color: surfaceTextColor.withOpacity(0.7),
           ),
           textAlign: TextAlign.center,
         ),
@@ -572,12 +572,40 @@ class _ReportsContent extends StatelessWidget {
         builder: (context, constraints) {
           final isStacked = constraints.maxWidth < 720;
 
-          return Flex(
-            direction: isStacked ? Axis.vertical : Axis.horizontal,
+          final legend = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final segment in segments) ...[
+                _LegendRow(segment: segment),
+                if (segment != segments.last) const SizedBox(height: 18),
+              ],
+            ],
+          );
+
+          if (isStacked) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  height: 280,
+                  child: _DonutChart(
+                    segments: segments,
+                    totalLabel: totalLabel,
+                    subtitle: 'Total activity',
+                  ),
+                ),
+                const SizedBox(height: 32),
+                legend,
+              ],
+            );
+          }
+
+          return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(
-                width: isStacked ? double.infinity : 280,
+                width: 280,
                 height: 280,
                 child: _DonutChart(
                   segments: segments,
@@ -585,19 +613,8 @@ class _ReportsContent extends StatelessWidget {
                   subtitle: 'Total activity',
                 ),
               ),
-              SizedBox(height: isStacked ? 32 : 0, width: isStacked ? 0 : 32),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (final segment in segments) ...[
-                      _LegendRow(segment: segment),
-                      if (segment != segments.last)
-                        const SizedBox(height: 18),
-                    ],
-                  ],
-                ),
-              ),
+              const SizedBox(width: 32),
+              Expanded(child: legend),
             ],
           );
         },
@@ -622,7 +639,7 @@ class _ReportsContent extends StatelessWidget {
                   Text(
                     'Financial Reports',
                     style: textTheme.headlineSmall?.copyWith(
-                      color: Colors.white,
+                      color: surfaceTextColor,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -630,7 +647,7 @@ class _ReportsContent extends StatelessWidget {
                   Text(
                     'Real-time insights across your connected wallets.',
                     style: textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withOpacity(0.68),
+                      color: surfaceTextColor.withOpacity(0.68),
                     ),
                   ),
                 ],
@@ -686,7 +703,7 @@ class _ReportsContent extends StatelessWidget {
                         Text(
                           periodLabel,
                           style: textTheme.titleLarge?.copyWith(
-                            color: Colors.white,
+                            color: surfaceTextColor,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -694,7 +711,7 @@ class _ReportsContent extends StatelessWidget {
                         Text(
                           periodSubtitle,
                           style: textTheme.bodySmall?.copyWith(
-                            color: Colors.white.withOpacity(0.6),
+                            color: surfaceTextColor.withOpacity(0.6),
                           ),
                         ),
                       ],
@@ -716,7 +733,7 @@ class _ReportsContent extends StatelessWidget {
                 runSpacing: 12,
                 children: [
                   for (final period in _ReportPeriod.values)
-                    ChoiceChip(
+                      ChoiceChip(
                       showCheckmark: false,
                       selected: selectedPeriod == period,
                       label: Text(
@@ -724,7 +741,7 @@ class _ReportsContent extends StatelessWidget {
                         style: textTheme.labelLarge?.copyWith(
                           color: selectedPeriod == period
                               ? MoneyBaseColors.grey
-                              : Colors.white,
+                              : surfaceTextColor,
                         ),
                       ),
                       labelPadding:
@@ -894,7 +911,12 @@ class _DonutChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    if (oldDelegate is _DonutChartPainter) {
+      return oldDelegate.strokeWidth != strokeWidth || oldDelegate.segments != segments;
+    }
+    return true;
+  }
 }
 
 class _ReportSegment {
