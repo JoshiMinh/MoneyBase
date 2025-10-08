@@ -897,7 +897,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
 
     try {
       _model = GenerativeModel(
-        model: 'gemini-1.5-flash-latest',
+        model: 'gemini-1.5-flash',
         apiKey: apiKey,
         systemInstruction: _systemInstruction,
         generationConfig: _generationConfig,
