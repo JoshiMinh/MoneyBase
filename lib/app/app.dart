@@ -23,7 +23,8 @@ class MoneyBaseApp extends StatefulWidget {
 
 class _MoneyBaseAppState extends State<MoneyBaseApp> {
   late final ThemeController _themeController;
-  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  bool? _lastAuthenticated;
 
   @override
   void initState() {
@@ -78,6 +79,8 @@ class _MoneyBaseAppState extends State<MoneyBaseApp> {
 
               final user = snapshot.data;
               final authenticated = user != null;
+
+              _resetNavigatorIfNeeded(authenticated);
 
               return MaterialApp(
                 key: ValueKey(authenticated),
@@ -188,6 +191,15 @@ class _MoneyBaseAppState extends State<MoneyBaseApp> {
       settings: settings,
       builder: (_) => child,
     );
+  }
+
+  void _resetNavigatorIfNeeded(bool authenticated) {
+    if (_lastAuthenticated == authenticated) {
+      return;
+    }
+
+    _lastAuthenticated = authenticated;
+    _navigatorKey = GlobalKey<NavigatorState>();
   }
 }
 
