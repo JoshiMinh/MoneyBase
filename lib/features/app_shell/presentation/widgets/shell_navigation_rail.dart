@@ -185,25 +185,26 @@ class _RailHeader extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: themeColors.surfaceElevated,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: themeColors.surfaceBorder.withOpacity(0.6),
+        if (extended)
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: themeColors.surfaceElevated,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: themeColors.surfaceBorder.withOpacity(0.6),
+              ),
+            ),
+            child: IconButton(
+              iconSize: 20,
+              splashRadius: 20,
+              onPressed: onToggleExtended,
+              icon: Icon(
+                Icons.chevron_left,
+                color: themeColors.mutedText,
+              ),
+              tooltip: 'Collapse navigation',
             ),
           ),
-          child: IconButton(
-            iconSize: 20,
-            splashRadius: 20,
-            onPressed: onToggleExtended,
-            icon: Icon(
-              extended ? Icons.chevron_left : Icons.chevron_right,
-              color: themeColors.mutedText,
-            ),
-            tooltip: extended ? 'Collapse navigation' : 'Expand navigation',
-          ),
-        ),
       ],
     );
   }
