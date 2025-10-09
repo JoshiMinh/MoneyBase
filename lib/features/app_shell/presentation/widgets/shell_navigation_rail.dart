@@ -7,7 +7,6 @@ class _ResponsiveNavigationRail extends StatelessWidget {
     required this.selected,
     required this.extended,
     required this.onSelect,
-    required this.onToggleExtended,
   });
 
   static const _animationDuration = Duration(milliseconds: 250);
@@ -17,7 +16,6 @@ class _ResponsiveNavigationRail extends StatelessWidget {
   final _NavigationDestination? selected;
   final bool extended;
   final ValueChanged<_NavigationDestination> onSelect;
-  final VoidCallback onToggleExtended;
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +23,7 @@ class _ResponsiveNavigationRail extends StatelessWidget {
     final background = themeColors.surfaceBackground;
     final borderColor = themeColors.surfaceBorder;
 
-    final rail = AnimatedContainer(
+    return AnimatedContainer(
       duration: _animationDuration,
       curve: Curves.easeInOut,
       width: extended ? 260 : 88,
@@ -51,10 +49,7 @@ class _ResponsiveNavigationRail extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: extended ? 20 : 0),
-                  child: _RailHeader(
-                    extended: extended,
-                    onToggleExtended: onToggleExtended,
-                  ),
+                  child: _RailHeader(extended: extended),
                 ),
               ),
               const SizedBox(height: 24),
@@ -106,33 +101,15 @@ class _ResponsiveNavigationRail extends StatelessWidget {
         ),
       ),
     );
-
-    return SizedBox(
-      width: extended ? 260 : 88,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          rail,
-          if (!extended)
-            Positioned(
-              right: -20,
-              top: 36,
-              child: _RailFloatingToggleButton(onPressed: onToggleExtended),
-            ),
-        ],
-      ),
-    );
   }
 }
 
 class _RailHeader extends StatelessWidget {
   const _RailHeader({
     required this.extended,
-    required this.onToggleExtended,
   });
 
   final bool extended;
-  final VoidCallback onToggleExtended;
 
   @override
   Widget build(BuildContext context) {
@@ -184,59 +161,8 @@ class _RailHeader extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: themeColors.surfaceElevated,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: themeColors.surfaceBorder.withOpacity(0.6),
-            ),
-          ),
-          child: IconButton(
-            iconSize: 20,
-            splashRadius: 20,
-            onPressed: onToggleExtended,
-            icon: Icon(
-              extended ? Icons.chevron_left : Icons.chevron_right,
-              color: themeColors.mutedText,
-            ),
-            tooltip: extended ? 'Collapse navigation' : 'Expand navigation',
-          ),
-        ),
+        if (extended) const SizedBox(height: 24),
       ],
-    );
-  }
-}
-
-class _RailFloatingToggleButton extends StatelessWidget {
-  const _RailFloatingToggleButton({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final themeColors = context.themeColors;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: themeColors.surfaceElevated,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color:
-                Colors.black.withOpacity(theme.brightness == Brightness.dark ? 0.4 : 0.18),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: IconButton(
-        icon: Icon(Icons.chevron_right, color: themeColors.primaryAccent),
-        tooltip: 'Expand navigation',
-        onPressed: onPressed,
-      ),
     );
   }
 }

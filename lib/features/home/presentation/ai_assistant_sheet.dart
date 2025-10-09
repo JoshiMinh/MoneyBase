@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:speech_to_text/speech_recognition_error.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
@@ -797,7 +799,10 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
   static final Content _systemInstruction = Content.system(
     'You are MoneyBase Assistant, MoneyBase\'s budgeting copilot. Follow '
     'these rules:\n'
-    '- Always introduce yourself as MoneyBase Assistant.\n'
+    '- Introduce yourself as MoneyBase Assistant in your first reply for a '
+    'new chat only and avoid repeating the introduction afterwards.\n'
+    '- Format every response using Markdown, using tables, lists, and '
+    'headings when they improve clarity.\n'
     '- Parse user messages into potential transactions capturing amount, '
     'currency, category, wallet, note, and date or time.\n'
     '- Ask clarifying questions when any of category, wallet, time, or '
@@ -897,7 +902,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
 
     try {
       _model = GenerativeModel(
-        model: 'gemini-1.5-flash-latest',
+        model: 'models/gemini-2.5-flash',
         apiKey: apiKey,
         systemInstruction: _systemInstruction,
         generationConfig: _generationConfig,
@@ -4226,14 +4231,23 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       );
     }
 
-    Widget buildChatArea(Color panelColor) {
+    Widget buildChatArea(Color panelColor, {required bool isCompact}) {
+      final borderRadius = BorderRadius.circular(isCompact ? 20 : 24);
+      final outlineOpacity = isCompact ? 0.22 : 0.18;
+      final composerSpacing = isCompact ? 12.0 : 16.0;
+
       return Container(
         decoration: BoxDecoration(
           color: panelColor,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: colorScheme.outline.withOpacity(0.18)),
+          borderRadius: borderRadius,
+          border: Border.all(
+            color: colorScheme.outline.withOpacity(outlineOpacity),
+          ),
         ),
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.symmetric(
+          horizontal: isCompact ? 16 : 20,
+          vertical: isCompact ? 16 : 20,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -4252,7 +4266,10 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
                     )
                   : ListView.builder(
                       controller: _scrollController,
-                      padding: EdgeInsets.zero,
+                      padding: EdgeInsets.symmetric(
+                        vertical: isCompact ? 6 : 8,
+                      ),
+                      physics: const BouncingScrollPhysics(),
                       itemCount: _messages.length,
                       itemBuilder: (context, index) {
                         final message = _messages[index];
@@ -4266,7 +4283,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
                       },
                     ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: composerSpacing),
             _Composer(
               controller: _messageController,
               onSend: _handleSend,
@@ -4376,32 +4393,52 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       );
     }
 
-    Widget buildThreadChips() {
+    Widget buildThreadChips({required bool isCompact}) {
       final disabled = _isInitializing || _isLoadingMessages;
+      final containerOpacity = theme.brightness == Brightness.dark
+          ? (isCompact ? 0.32 : 0.26)
+          : (isCompact ? 0.48 : 0.38);
+      final containerPadding = EdgeInsets.symmetric(
+        horizontal: isCompact ? 12 : 16,
+        vertical: isCompact ? 12 : 14,
+      );
       if (_chatThreads.isEmpty) {
-        return Row(
-          children: [
-            Expanded(
-              child: Text(
+        return Container(
+          padding: containerPadding,
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceVariant.withOpacity(containerOpacity),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: colorScheme.outline.withOpacity(isCompact ? 0.22 : 0.18),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
                 'Start a new chat to keep track of your assistant conversations.',
                 style: textTheme.bodySmall?.copyWith(
                   color: mutedOnSurface,
+                  height: 1.4,
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
-            FilledButton.icon(
-              onPressed: disabled ? null : _handleCreateChat,
-              icon: const Icon(Icons.add_comment_outlined),
-              label: const Text('New chat'),
-            ),
-          ],
+              SizedBox(height: isCompact ? 12 : 10),
+              FilledButton.icon(
+                onPressed: disabled ? null : _handleCreateChat,
+                icon: const Icon(Icons.add_comment_outlined),
+                label: const Text('New chat'),
+              ),
+            ],
+          ),
         );
       }
 
       return SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.only(bottom: 4),
+        padding: EdgeInsets.symmetric(
+          horizontal: isCompact ? 4 : 0,
+          vertical: isCompact ? 8 : 4,
+        ),
         child: Row(
           children: [
             for (final thread in _chatThreads) ...[
@@ -4416,7 +4453,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
                     : () => _handleDeleteChat(thread.id),
                 deleteIcon: const Icon(Icons.close, size: 18),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: isCompact ? 8 : 12),
             ],
             FilledButton.icon(
               onPressed: disabled ? null : _handleCreateChat,
@@ -4428,89 +4465,148 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       );
     }
 
-    final panelBackground = colorScheme.surface.withOpacity(
-      theme.brightness == Brightness.dark ? 0.35 : 0.6,
-    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 600;
+        final showSidebar = constraints.maxWidth >= 720;
+        final usesColumnLayout = !showSidebar;
+        final chatIsCompact = isCompact || usesColumnLayout;
+        final heightFactor = isCompact ? 0.96 : (showSidebar ? 0.85 : 0.9);
+        final outerPadding = isCompact
+            ? const EdgeInsets.fromLTRB(12, 12, 12, 16)
+            : const EdgeInsets.fromLTRB(16, 12, 16, 24);
+        final panelPadding = isCompact
+            ? const EdgeInsets.fromLTRB(16, 16, 16, 20)
+            : const EdgeInsets.all(24);
+        final headerSpacing = isCompact ? 12.0 : 16.0;
+        final panelBackground = colorScheme.surface.withOpacity(
+          theme.brightness == Brightness.dark
+              ? (chatIsCompact ? 0.5 : 0.35)
+              : (chatIsCompact ? 0.82 : 0.6),
+        );
+        final titleStyle = textTheme.titleMedium?.copyWith(
+          color: onSurface,
+          fontWeight: FontWeight.w600,
+        );
+        final descriptionStyle = textTheme.bodySmall?.copyWith(
+          color: mutedOnSurface,
+          height: 1.45,
+        );
+        final iconExtent = isCompact ? 44.0 : 48.0;
 
-    return FractionallySizedBox(
-      heightFactor: 0.85,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-        child: MoneyBaseFrostedPanel(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.smart_toy_outlined, color: onSurface),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+        return SafeArea(
+          child: FractionallySizedBox(
+            heightFactor: heightFactor,
+            alignment: Alignment.bottomCenter,
+            child: Padding(
+              padding: outerPadding,
+              child: MoneyBaseFrostedPanel(
+                padding: panelPadding,
+                borderRadius: isCompact ? 24 : 32,
+                backgroundOpacity: isCompact ? 0.16 : 0.1,
+                borderOpacity: isCompact ? 0.24 : 0.12,
+                boxShadow: isCompact
+                    ? [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.18),
+                          blurRadius: 22,
+                          offset: const Offset(0, 14),
+                        ),
+                      ]
+                    : null,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(
-                          'MoneyBase Assistant',
-                          style: textTheme.titleMedium?.copyWith(
-                            color: onSurface,
-                            fontWeight: FontWeight.w600,
+                        Container(
+                          width: iconExtent,
+                          height: iconExtent,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                colorScheme.primary,
+                                colorScheme.secondary.withOpacity(0.85),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: colorScheme.primary.withOpacity(0.35),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.smart_toy_outlined,
+                            color: colorScheme.onPrimary,
+                            size: isCompact ? 24 : 26,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Log expenses, review budgets, and manage wallets with a friendly MoneyBase copilot.',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: mutedOnSurface,
+                        SizedBox(width: isCompact ? 12 : 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('MoneyBase Assistant', style: titleStyle),
+                              SizedBox(height: isCompact ? 6 : 4),
+                              Text(
+                                'Log expenses, review budgets, and manage wallets with a friendly MoneyBase copilot.',
+                                style: descriptionStyle,
+                              ),
+                            ],
                           ),
+                        ),
+                        IconButton(
+                          tooltip: 'Close',
+                          iconSize: isCompact ? 22 : 24,
+                          onPressed: () => Navigator.of(context).maybePop(),
+                          icon: Icon(Icons.close, color: mutedOnSurface),
                         ),
                       ],
                     ),
-                  ),
-                  IconButton(
-                    tooltip: 'Close',
-                    onPressed: () => Navigator.of(context).maybePop(),
-                    icon: Icon(Icons.close, color: mutedOnSurface),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              if (_isInitializing)
-                buildStatusRow('Connecting to MoneyBase Assistant…'),
-              if (_errorMessage != null)
-                buildStatusRow(
-                  _errorMessage!,
-                  leading: Icon(Icons.info_outline, color: colorScheme.error),
-                ),
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final showSidebar = constraints.maxWidth >= 720;
-                    if (showSidebar) {
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          buildSidebar(),
-                          const SizedBox(width: 20),
-                          Expanded(child: buildChatArea(panelBackground)),
-                        ],
-                      );
-                    }
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        buildThreadChips(),
-                        const SizedBox(height: 16),
-                        Expanded(child: buildChatArea(panelBackground)),
-                      ],
-                    );
-                  },
+                    SizedBox(height: headerSpacing),
+                    if (_isInitializing)
+                      buildStatusRow('Connecting to MoneyBase Assistant…'),
+                    if (_errorMessage != null)
+                      buildStatusRow(
+                        _errorMessage!,
+                        leading:
+                            Icon(Icons.info_outline, color: colorScheme.error),
+                      ),
+                    if (!showSidebar) ...[
+                      buildThreadChips(isCompact: chatIsCompact),
+                      SizedBox(height: isCompact ? 12 : 16),
+                    ],
+                    Expanded(
+                      child: showSidebar
+                          ? Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                buildSidebar(),
+                                const SizedBox(width: 20),
+                                Expanded(
+                                  child: buildChatArea(
+                                    panelBackground,
+                                    isCompact: false,
+                                  ),
+                                ),
+                              ],
+                            )
+                          : buildChatArea(
+                              panelBackground,
+                              isCompact: chatIsCompact,
+                            ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -4662,18 +4758,103 @@ class _MessageBubble extends StatelessWidget {
     final preview = message.preview;
     final success = message.successNotice;
     final displayText = message.displayText.trim();
+    final viewportWidth = MediaQuery.sizeOf(context).width;
+    final bubbleMaxWidth = math.min(
+      viewportWidth * (isUser ? 0.82 : 0.88),
+      isUser ? 420.0 : 480.0,
+    );
+
+    MarkdownStyleSheet? markdownStyle;
+    if (!isUser) {
+      final baseStyle = theme.textTheme.bodyMedium?.copyWith(
+        color: textColor,
+        height: 1.45,
+      );
+      markdownStyle = MarkdownStyleSheet.fromTheme(theme).copyWith(
+        p: baseStyle,
+        strong: baseStyle?.copyWith(fontWeight: FontWeight.w700),
+        em: baseStyle?.copyWith(fontStyle: FontStyle.italic),
+        h1: theme.textTheme.titleMedium?.copyWith(
+          color: textColor,
+          fontWeight: FontWeight.w700,
+        ),
+        h2: theme.textTheme.titleSmall?.copyWith(
+          color: textColor,
+          fontWeight: FontWeight.w700,
+        ),
+        h3: theme.textTheme.bodyLarge?.copyWith(
+          color: textColor,
+          fontWeight: FontWeight.w600,
+        ),
+        code: theme.textTheme.bodySmall?.copyWith(
+          color: textColor,
+          fontFamily: 'monospace',
+          backgroundColor: background.withOpacity(0.2),
+        ),
+        blockquoteDecoration: BoxDecoration(
+          color: colorScheme.primary.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border(
+            left: BorderSide(
+              color: colorScheme.primary.withOpacity(0.45),
+              width: 4,
+            ),
+          ),
+        ),
+        codeblockDecoration: BoxDecoration(
+          color: colorScheme.surfaceVariant.withOpacity(0.32),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: colorScheme.outline.withOpacity(0.18),
+          ),
+        ),
+        listBullet: baseStyle,
+        listBulletPadding: const EdgeInsets.only(right: 12),
+        tableBody: baseStyle,
+        tableHead: theme.textTheme.bodyMedium?.copyWith(
+          color: textColor,
+          fontWeight: FontWeight.w700,
+        ),
+        tableBorder: TableBorder(
+          horizontalInside: BorderSide(
+            color: colorScheme.outline.withOpacity(0.2),
+          ),
+          verticalInside: BorderSide(
+            color: colorScheme.outline.withOpacity(0.2),
+          ),
+          top: BorderSide(color: colorScheme.outline.withOpacity(0.24)),
+          bottom: BorderSide(color: colorScheme.outline.withOpacity(0.24)),
+        ),
+        tableCellsPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        a: baseStyle?.copyWith(
+          color: colorScheme.secondary,
+          decoration: TextDecoration.underline,
+        ),
+      );
+    }
 
     final content = <Widget>[];
     if (displayText.isNotEmpty) {
-      content.add(
-        Text(
-          displayText,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: textColor,
-            height: 1.4,
+      if (isUser) {
+        content.add(
+          Text(
+            displayText,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: textColor,
+              height: 1.4,
+            ),
           ),
-        ),
-      );
+        );
+      } else {
+        content.add(
+          MarkdownBody(
+            data: displayText,
+            styleSheet: markdownStyle!,
+            softLineBreak: true,
+          ),
+        );
+      }
     }
     if (preview != null) {
       if (content.isNotEmpty) {
@@ -4689,21 +4870,38 @@ class _MessageBubble extends StatelessWidget {
     }
 
     if (content.isEmpty) {
-      content.add(
-        Text(
-          message.rawText,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: textColor,
-            height: 1.4,
+      if (isUser) {
+        content.add(
+          Text(
+            message.rawText,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: textColor,
+              height: 1.4,
+            ),
           ),
-        ),
-      );
+        );
+      } else {
+        final fallback = markdownStyle == null
+            ? Text(
+                message.rawText,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: textColor,
+                  height: 1.4,
+                ),
+              )
+            : MarkdownBody(
+                data: message.rawText,
+                styleSheet: markdownStyle,
+                softLineBreak: true,
+              );
+        content.add(fallback);
+      }
     }
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      constraints: const BoxConstraints(maxWidth: 420),
+      constraints: BoxConstraints(maxWidth: bubbleMaxWidth),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.only(

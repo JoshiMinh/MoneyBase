@@ -1,8 +1,5 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:moneybase/app/theme/theme.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../home/presentation/ai_assistant_sheet.dart';
 import '../../home/presentation/home_screen.dart';
@@ -32,45 +29,7 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> {
-  static const _railExpandedStorageKey = 'navigation.railExpanded';
-
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  SharedPreferences? _preferences;
-  bool? _railExpanded;
-
-  @override
-  void initState() {
-    super.initState();
-    unawaited(_loadRailExpandedPreference());
-  }
-
-  Future<void> _loadRailExpandedPreference() async {
-    final prefs = await SharedPreferences.getInstance();
-    final storedValue = prefs.getBool(_railExpandedStorageKey);
-    if (!mounted) return;
-
-    setState(() {
-      _preferences = prefs;
-      _railExpanded = storedValue;
-    });
-  }
-
-  Future<void> _saveRailExpanded(bool value) async {
-    final prefs = _preferences ?? await SharedPreferences.getInstance();
-    await prefs.setBool(_railExpandedStorageKey, value);
-    _preferences = prefs;
-  }
-
-  void _updateRailExpanded(bool value) {
-    setState(() {
-      _railExpanded = value;
-    });
-    unawaited(_saveRailExpanded(value));
-  }
-
-  void _toggleRailExpanded(bool current) {
-    _updateRailExpanded(!current);
-  }
 
   void _handleDestinationSelected(
     BuildContext context,
@@ -209,21 +168,13 @@ class _AppShellState extends State<AppShell> {
       centerTitle: true,
       foregroundColor: foregroundColor,
       iconTheme: IconThemeData(color: foregroundColor),
-      leading: IconButton(
-        icon: Icon(
-          isMobile ? Icons.menu : (railExpanded ? Icons.menu_open : Icons.menu),
-        ),
-        tooltip: isMobile
-            ? 'Open navigation menu'
-            : (railExpanded ? 'Collapse navigation' : 'Expand navigation'),
-        onPressed: () {
-          if (isMobile) {
-            _scaffoldKey.currentState?.openDrawer();
-          } else {
-            _toggleRailExpanded(railExpanded);
-          }
-        },
-      ),
+      leading: isMobile
+          ? IconButton(
+              icon: const Icon(Icons.menu),
+              tooltip: 'Open navigation menu',
+              onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+            )
+          : null,
       title: Row(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
@@ -284,7 +235,6 @@ class _AppShellState extends State<AppShell> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 600;
-        final isDesktop = constraints.maxWidth > 1024;
         final theme = Theme.of(context);
         final floatingActions = _buildFloatingActions(
           context,
@@ -292,7 +242,7 @@ class _AppShellState extends State<AppShell> {
           isMobile: isMobile,
         );
         final backgroundColor = theme.scaffoldBackgroundColor;
-        final railExtended = _railExpanded ?? isDesktop;
+        const railExtended = true;
 
         if (isMobile) {
           return Scaffold(
@@ -341,7 +291,6 @@ class _AppShellState extends State<AppShell> {
                     extended: railExtended,
                     onSelect: (destination) =>
                         _handleDestinationSelected(context, destination),
-                    onToggleExtended: () => _toggleRailExpanded(railExtended),
                   ),
                   Expanded(
                     child: AnimatedSwitcher(
@@ -356,7 +305,6 @@ class _AppShellState extends State<AppShell> {
               ),
               if (currentDestination != _NavigationDestination.settings)
                 _DesktopAiAssistantButton(
-                  extendedRail: railExtended,
                   onPressed: () => _openAiAssistant(context),
                 ),
             ],

@@ -14,9 +14,10 @@ class _PremiumDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
-    final colorScheme = theme.colorScheme;
-    final mutedColor =
-        colorScheme.onSurface.withOpacity(theme.brightness == Brightness.dark ? 0.7 : 0.6);
+    final themeColors = context.themeColors;
+    final isDark = theme.brightness == Brightness.dark;
+    final descriptionColor =
+        themeColors.mutedText.withOpacity(isDark ? 0.9 : 0.85);
 
     void handleSelection(String label) {
       final messenger = ScaffoldMessenger.of(context);
@@ -28,109 +29,343 @@ class _PremiumDialog extends StatelessWidget {
       );
     }
 
-    Widget buildOption({
-      required String title,
-      required String price,
-      required String description,
-    }) {
-      return Card(
-        margin: const EdgeInsets.only(top: 12),
-        elevation: 0,
-        color: colorScheme.surfaceVariant
-            .withOpacity(theme.brightness == Brightness.dark ? 0.35 : 0.7),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () => handleSelection(title),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        title,
-                        style: textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: colorScheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        description,
-                        style: textTheme.bodySmall?.copyWith(color: mutedColor),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Text(
-                  price,
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: colorScheme.primary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
+    final plans = <_PremiumPlanOption>[
+      const _PremiumPlanOption(
+        title: 'Monthly',
+        price: r'$2 / month',
+        description: 'Flexible access with a low monthly rate.',
+      ),
+      const _PremiumPlanOption(
+        title: 'Annual',
+        price: r'$20 / year',
+        description: 'Stay on track all year and save more than 15%.',
+      ),
+      const _PremiumPlanOption(
+        title: 'Lifetime',
+        price: r'$25 one-time',
+        description: 'Pay once and enjoy MoneyBase Premium forever.',
+        badge: 'Best value',
+        highlight: true,
+      ),
+    ];
 
-    return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
-      contentPadding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-      title: Row(
-        children: [
-          Icon(Icons.workspace_premium_outlined, color: colorScheme.primary),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'MoneyBase Premium',
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: colorScheme.onSurface,
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(28),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color.lerp(
+                          themeColors.primaryAccent,
+                          themeColors.surfaceElevated,
+                          isDark ? 0.7 : 0.85,
+                        ) ??
+                        themeColors.surfaceElevated,
+                    themeColors.surfaceBackground.withOpacity(isDark ? 0.82 : 0.95),
+                  ],
+                ),
+                border: Border.all(
+                  color: themeColors.surfaceBorder.withOpacity(isDark ? 0.7 : 0.8),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: themeColors.surfaceShadow.withOpacity(isDark ? 0.7 : 0.35),
+                    blurRadius: 36,
+                    offset: const Offset(0, 24),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 64, 24, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'MoneyBase Premium',
+                      style: textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: themeColors.primaryText,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Unlock advanced automations, collaborative tools, and an AI coach tailored to your finances.',
+                      style: textTheme.bodyMedium?.copyWith(color: descriptionColor),
+                    ),
+                    const SizedBox(height: 24),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: const [
+                        _PremiumFeatureChip(
+                          icon: Icons.auto_graph_rounded,
+                          label: 'Predictive cashflow forecasts',
+                        ),
+                        _PremiumFeatureChip(
+                          icon: Icons.bolt_rounded,
+                          label: 'Smart automation recipes',
+                        ),
+                        _PremiumFeatureChip(
+                          icon: Icons.group_work_outlined,
+                          label: 'Shared workspaces & roles',
+                        ),
+                        _PremiumFeatureChip(
+                          icon: Icons.download_done_rounded,
+                          label: 'One-click exports & backups',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    Divider(
+                      height: 1,
+                      color: themeColors.surfaceBorder.withOpacity(isDark ? 0.65 : 0.75),
+                    ),
+                    const SizedBox(height: 24),
+                    for (var i = 0; i < plans.length; i++) ...[
+                      _PremiumPlanTile(
+                        option: plans[i],
+                        onTap: () => handleSelection(plans[i].title),
+                      ),
+                      if (i != plans.length - 1) const SizedBox(height: 16),
+                    ],
+                    const SizedBox(height: 28),
+                    FilledButton.icon(
+                      icon: const Icon(Icons.star_rate_rounded),
+                      label: const Text('Join the Premium waitlist'),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(52),
+                      ),
+                      onPressed: () => handleSelection('Lifetime'),
+                    ),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.center,
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Maybe later'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Unlock deeper insights, advanced planning tools, and personalized coaching with Premium.',
-            style: textTheme.bodyMedium?.copyWith(color: mutedColor),
-          ),
-          buildOption(
-            title: 'Monthly',
-            price: r'$2 / month',
-            description: 'Flexible access with a low monthly rate.',
-          ),
-          buildOption(
-            title: 'Annual',
-            price: r'$20 / year',
-            description: 'Stay on track all year and save more than 15%.',
-          ),
-          buildOption(
-            title: 'Lifetime',
-            price: r'$25 one-time',
-            description: 'Pay once and enjoy MoneyBase Premium forever.',
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Not now'),
+            Positioned(
+              top: -28,
+              left: 32,
+              child: Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      themeColors.primaryAccent,
+                      themeColors.secondaryAccent,
+                    ],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: themeColors.primaryAccent.withOpacity(0.35),
+                      blurRadius: 28,
+                      offset: const Offset(0, 16),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.workspace_premium,
+                  color: Colors.white,
+                  size: 30,
+                ),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                tooltip: 'Close',
+                onPressed: () => Navigator.of(context).pop(),
+                icon: Icon(
+                  Icons.close,
+                  color: themeColors.mutedText,
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
+    );
+  }
+}
+
+class _PremiumFeatureChip extends StatelessWidget {
+  const _PremiumFeatureChip({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final themeColors = context.themeColors;
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: themeColors.surfaceBackground.withOpacity(isDark ? 0.6 : 0.9),
+        border: Border.all(
+          color: themeColors.surfaceBorder.withOpacity(isDark ? 0.7 : 0.85),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18, color: themeColors.primaryAccent),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: themeColors.primaryText,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PremiumPlanOption {
+  const _PremiumPlanOption({
+    required this.title,
+    required this.price,
+    required this.description,
+    this.badge,
+    this.highlight = false,
+  });
+
+  final String title;
+  final String price;
+  final String description;
+  final String? badge;
+  final bool highlight;
+}
+
+class _PremiumPlanTile extends StatelessWidget {
+  const _PremiumPlanTile({
+    required this.option,
+    required this.onTap,
+  });
+
+  final _PremiumPlanOption option;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final themeColors = context.themeColors;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final highlightGradient = option.highlight
+        ? LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              themeColors.primaryAccent.withOpacity(isDark ? 0.32 : 0.18),
+              themeColors.secondaryAccent.withOpacity(isDark ? 0.28 : 0.12),
+            ],
+          )
+        : null;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: highlightGradient,
+          color: highlightGradient == null
+              ? themeColors.surfaceBackground.withOpacity(isDark ? 0.6 : 0.92)
+              : null,
+          border: Border.all(
+            color: option.highlight
+                ? themeColors.primaryAccent.withOpacity(0.65)
+                : themeColors.surfaceBorder.withOpacity(isDark ? 0.7 : 0.85),
+          ),
+          boxShadow: option.highlight
+              ? [
+                  BoxShadow(
+                    color: themeColors.primaryAccent.withOpacity(0.25),
+                    blurRadius: 24,
+                    offset: const Offset(0, 14),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (option.badge != null) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: themeColors.primaryAccent.withOpacity(isDark ? 0.35 : 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  option.badge!.toUpperCase(),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                    color: themeColors.primaryText,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            Text(
+              option.title,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: themeColors.primaryText,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              option.description,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: themeColors.mutedText,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              option.price,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: themeColors.primaryAccent,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
