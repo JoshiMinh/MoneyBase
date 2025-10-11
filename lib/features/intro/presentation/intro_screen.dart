@@ -11,31 +11,32 @@ class IntroScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.extension<MoneyBaseThemeColors>();
-    final gradientColors = colors?.backgroundGradient ??
-        [
-          theme.colorScheme.primary,
-          theme.colorScheme.primaryContainer,
-        ];
+    final lightTheme = MoneyBaseTheme.buildTheme(darkMode: false);
+    final gradientColors = <Color>[
+      lightTheme.colorScheme.primary,
+      lightTheme.colorScheme.secondary,
+    ];
 
-    return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: gradientColors,
+    return Theme(
+      data: lightTheme,
+      child: Scaffold(
+        backgroundColor: lightTheme.colorScheme.background,
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: gradientColors,
+            ),
           ),
-        ),
-        child: Stack(
+          child: Stack(
           children: [
             Positioned(
               top: -140,
               left: -60,
               child: _BlurredOrb(
                 size: 320,
-                color: theme.colorScheme.secondaryContainer.withOpacity(0.45),
+                color: lightTheme.colorScheme.secondaryContainer.withOpacity(0.45),
               ),
             ),
             Positioned(
@@ -43,7 +44,7 @@ class IntroScreen extends StatelessWidget {
               right: -80,
               child: _BlurredOrb(
                 size: 360,
-                color: theme.colorScheme.tertiaryContainer.withOpacity(0.35),
+                color: lightTheme.colorScheme.tertiaryContainer.withOpacity(0.35),
               ),
             ),
             SafeArea(
@@ -74,7 +75,9 @@ class _IntroContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
-    final onSurface = theme.colorScheme.onPrimary;
+    const headingColor = Colors.black;
+    final bodyColor = Colors.black.withOpacity(0.85);
+    final mutedColor = Colors.black.withOpacity(0.65);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -99,7 +102,7 @@ class _IntroContent extends StatelessWidget {
                   'MoneyBase',
                   style: textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: onSurface,
+                    color: headingColor,
                   ),
                 ),
               ],
@@ -110,14 +113,14 @@ class _IntroContent extends StatelessWidget {
               style: textTheme.displaySmall?.copyWith(
                 fontWeight: FontWeight.w700,
                 height: 1.12,
-                color: onSurface,
+                color: headingColor,
               ),
             ),
             const SizedBox(height: 18),
             Text(
               'Launch the dashboard or jump straight into sign-in. Install on Android when you\'re ready to take MoneyBase on the go.',
               style: textTheme.titleMedium?.copyWith(
-                color: onSurface.withOpacity(0.85),
+                color: bodyColor,
                 height: 1.5,
               ),
             ),
@@ -131,6 +134,8 @@ class _IntroContent extends StatelessWidget {
                   icon: const Icon(Icons.dashboard_customize_rounded),
                   label: const Text('Enter MoneyBase'),
                   style: FilledButton.styleFrom(
+                    foregroundColor: headingColor,
+                    backgroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 28,
                       vertical: 20,
@@ -149,8 +154,8 @@ class _IntroContent extends StatelessWidget {
                       horizontal: 24,
                       vertical: 20,
                     ),
-                    side: BorderSide(color: onSurface.withOpacity(0.35)),
-                    foregroundColor: onSurface,
+                    side: BorderSide(color: mutedColor),
+                    foregroundColor: headingColor,
                     textStyle: textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -165,7 +170,7 @@ class _IntroContent extends StatelessWidget {
                       horizontal: 20,
                       vertical: 18,
                     ),
-                    foregroundColor: onSurface,
+                    foregroundColor: headingColor,
                     textStyle: textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -226,7 +231,7 @@ class _IntroBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final onSurface = theme.colorScheme.onPrimary.withOpacity(0.85);
+    final textColor = Colors.black.withOpacity(0.8);
 
     return MoneyBaseFrostedPanel(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
@@ -234,12 +239,12 @@ class _IntroBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: onSurface),
+          Icon(icon, color: textColor),
           const SizedBox(width: 12),
           Text(
             label,
             style: theme.textTheme.titleSmall?.copyWith(
-              color: onSurface,
+              color: textColor,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -258,6 +263,8 @@ class _IntroPreviewPanel extends StatelessWidget {
     final colors = theme.extension<MoneyBaseThemeColors>();
     final surface = colors?.surfaceBackground.withOpacity(0.6) ??
         Colors.white.withOpacity(theme.brightness == Brightness.dark ? 0.08 : 0.18);
+    const headingColor = Colors.black;
+    final bodyColor = Colors.black.withOpacity(0.65);
 
     return Align(
       alignment: Alignment.centerRight,
@@ -274,7 +281,7 @@ class _IntroPreviewPanel extends StatelessWidget {
                 'Plan with clarity',
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: theme.colorScheme.onSurface,
+                  color: headingColor,
                 ),
               ),
               const SizedBox(height: 16),
@@ -295,7 +302,7 @@ class _IntroPreviewPanel extends StatelessWidget {
               Text(
                 'Keep tabs on spending trends, budgets, and shared lists in one workspace.',
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                  color: bodyColor,
                 ),
               ),
             ],
