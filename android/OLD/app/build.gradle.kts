@@ -99,7 +99,6 @@ dependencies {
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.auth.ktx)
-    // (Avoid duplicating firebase-auth; if libs.google.firebase.auth is the same, remove one)
     implementation(libs.play.services.auth)
 
     implementation(libs.androidx.credentials)
@@ -113,7 +112,6 @@ dependencies {
     implementation(libs.cloudinary.core)
 
     implementation(libs.charts.android)
-    // implementation(libs.material3) // likely duplicate of androidx.material3; keep only one
     implementation(libs.androidx.compose.foundation.layout)
 
     testImplementation(libs.junit)
