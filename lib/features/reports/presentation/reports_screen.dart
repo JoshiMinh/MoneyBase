@@ -1,26 +1,26 @@
-import 'dart:math' as math;
-
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../core/models/category.dart';
 import '../../../core/models/wallet.dart';
 import '../../../core/models/transaction.dart';
-import '../../../core/repositories/category_repository.dart';
-import '../../../core/repositories/transaction_repository.dart';
-import '../../../core/repositories/wallet_repository.dart';
+import '../../../core/providers/repository_providers.dart';
 import '../../../core/utils/color_utils.dart';
 import '../../common/presentation/moneybase_shell.dart';
 
-class ReportsScreen extends StatefulWidget {
+class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
 
   @override
-  State<ReportsScreen> createState() => _ReportsScreenState();
+  ConsumerState<ReportsScreen> createState() => _ReportsScreenState();
 }
 
-class _ReportsScreenState extends State<ReportsScreen> {
+class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   static const _uncategorizedKey = '__uncategorized__';
   static const _unassignedWalletKey = '__unassigned_wallet__';
   static const List<Color> _fallbackSegmentColors = [
@@ -46,19 +46,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     'December',
   ];
 
-  late final TransactionRepository _transactionRepository;
-  late final CategoryRepository _categoryRepository;
-  late final WalletRepository _walletRepository;
   _ReportPeriod _selectedPeriod = _ReportPeriod.month;
   _ReportDimension _selectedDimension = _ReportDimension.categories;
-
-  @override
-  void initState() {
-    super.initState();
-    _transactionRepository = TransactionRepository();
-    _categoryRepository = CategoryRepository();
-    _walletRepository = WalletRepository();
-  }
 
   DateTimeRange? _periodRange(_ReportPeriod period) {
     final now = DateTime.now();
@@ -118,12 +107,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return 'USD';
   }
 
+  NumberFormat _currencyFormatter(String currency) {
+    final code = currency.isEmpty ? 'USD' : currency.toUpperCase();
+    return NumberFormat.simpleCurrency(name: code);
+  }
+
   String _formatSegmentAmount(double amount, double ratio, String currency) {
+    final formatter = _currencyFormatter(currency);
     final percent = (ratio * 100).clamp(0, 100);
     final percentText = percent >= 10
         ? percent.toStringAsFixed(0)
         : percent.toStringAsFixed(1);
-    return '$currency ${amount.toStringAsFixed(2)} ($percentText%)';
+    final formattedAmount = formatter.format(amount);
+    return '$formattedAmount ($percentText%)';
   }
 
   _ReportBreakdown _buildCategoryBreakdown(
@@ -349,8 +345,36 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
   }
 
+  Future<void> _shareBreakdown(_ReportBreakdown breakdown) async {
+    final subject =
+        'MoneyBase ${_selectedDimension.label.toLowerCase()} report';
+    final periodLabel = _periodTitle(breakdown.range, _selectedPeriod);
+    if (breakdown.segments.isEmpty) {
+      await Share.share(
+        '$subject for $periodLabel\nNo activity recorded yet.',
+        subject: subject,
+      );
+      return;
+    }
+
+    final formatter = _currencyFormatter(breakdown.currency);
+    final buffer = StringBuffer()
+      ..writeln('$subject for $periodLabel')
+      ..writeln('Total: ${formatter.format(breakdown.total)}')
+      ..writeln('Breakdown:');
+
+    for (final segment in breakdown.segments) {
+      buffer.writeln('- ${segment.label}: ${segment.amount}');
+    }
+
+    await Share.share(buffer.toString(), subject: subject);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final transactionRepository = ref.watch(transactionRepositoryProvider);
+    final categoryRepository = ref.watch(categoryRepositoryProvider);
+    final walletRepository = ref.watch(walletRepositoryProvider);
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       return MoneyBaseScaffold(
@@ -372,7 +396,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return MoneyBaseScaffold(
       builder: (context, layout) {
         return StreamBuilder<List<MoneyBaseTransaction>>(
-          stream: _transactionRepository.watchTransactions(user.uid),
+          stream: transactionRepository.watchTransactions(user.uid),
           builder: (context, transactionSnapshot) {
             if (transactionSnapshot.hasError) {
               return Center(
@@ -397,7 +421,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 transactions.isEmpty;
 
             return StreamBuilder<List<Category>>(
-              stream: _categoryRepository.watchCategories(user.uid),
+              stream: categoryRepository.watchCategories(user.uid),
               builder: (context, categorySnapshot) {
                 if (categorySnapshot.hasError) {
                   return Center(
@@ -424,7 +448,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     categorySnapshot.connectionState == ConnectionState.waiting &&
                         categories.isEmpty;
                 return StreamBuilder<List<Wallet>>(
-                  stream: _walletRepository.watchWallets(user.uid),
+                  stream: walletRepository.watchWallets(user.uid),
                   builder: (context, walletSnapshot) {
                     if (walletSnapshot.hasError) {
                       return Center(
@@ -486,6 +510,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           _periodTitle(breakdown.range, _selectedPeriod),
                       periodSubtitle: _comparisonSubtitle(_selectedPeriod),
                       hasTransactions: transactions.isNotEmpty,
+                      onShare: () => _shareBreakdown(breakdown),
                     );
                   },
                 );
@@ -525,6 +550,7 @@ class _ReportsContent extends StatelessWidget {
     required this.periodLabel,
     required this.periodSubtitle,
     required this.hasTransactions,
+    required this.onShare,
   });
 
   final List<_ReportSegment> segments;
@@ -538,12 +564,16 @@ class _ReportsContent extends StatelessWidget {
   final String periodLabel;
   final String periodSubtitle;
   final bool hasTransactions;
+  final VoidCallback onShare;
 
   @override
   Widget build(BuildContext context) {
-  final textTheme = Theme.of(context).textTheme;
-  final surfaceTextColor = Theme.of(context).colorScheme.onSurface;
-    final totalLabel = '${currencyCode.toUpperCase()} ${totalAmount.toStringAsFixed(2)}';
+    final textTheme = Theme.of(context).textTheme;
+    final surfaceTextColor = Theme.of(context).colorScheme.onSurface;
+    final formatter = NumberFormat.simpleCurrency(
+      name: currencyCode.isEmpty ? 'USD' : currencyCode.toUpperCase(),
+    );
+    final totalLabel = formatter.format(totalAmount);
 
     Widget visualization;
     if (loading) {
@@ -657,7 +687,7 @@ class _ReportsContent extends StatelessWidget {
             MoneyBaseGlassIconButton(
               icon: Icons.ios_share,
               tooltip: 'Share report',
-              onPressed: () {},
+              onPressed: onShare,
             ),
           ],
         ),
@@ -829,15 +859,27 @@ class _DonutChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final sections = [
+      for (final segment in segments)
+        PieChartSectionData(
+          color: segment.color,
+          value: segment.ratio,
+          showTitle: false,
+          radius: 56,
+        ),
+    ];
 
     return Stack(
       alignment: Alignment.center,
       children: [
         SizedBox.expand(
-          child: CustomPaint(
-            painter: _DonutChartPainter(
-              segments: segments,
-              strokeWidth: 28,
+          child: PieChart(
+            PieChartData(
+              sections: sections,
+              startDegreeOffset: -90,
+              sectionsSpace: 3,
+              centerSpaceRadius: 72,
+              borderData: FlBorderData(show: false),
             ),
           ),
         ),
@@ -862,60 +904,6 @@ class _DonutChart extends StatelessWidget {
         ),
       ],
     );
-  }
-}
-
-class _DonutChartPainter extends CustomPainter {
-  const _DonutChartPainter({
-    required this.segments,
-    required this.strokeWidth,
-  });
-
-  final List<_ReportSegment> segments;
-  final double strokeWidth;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (segments.isEmpty) {
-      return;
-    }
-
-    final total = segments.fold<double>(0, (sum, segment) => sum + segment.ratio);
-    if (total == 0) {
-      return;
-    }
-
-    final radius = (math.min(size.width, size.height) - strokeWidth) / 2;
-    final rect = Rect.fromCircle(
-      center: Offset(size.width / 2, size.height / 2),
-      radius: radius,
-    );
-
-    double startAngle = -math.pi / 2;
-    for (final segment in segments) {
-      final sweepAngle = (segment.ratio / total) * 2 * math.pi;
-      final paint = Paint()
-        ..color = segment.color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth
-        ..strokeCap = StrokeCap.round;
-      canvas.drawArc(rect, startAngle, sweepAngle, false, paint);
-      startAngle += sweepAngle;
-    }
-
-    final innerPaint = Paint()
-      ..color = Colors.white.withOpacity(0.05)
-      ..style = PaintingStyle.fill;
-
-    canvas.drawCircle(rect.center, radius - strokeWidth / 2, innerPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    if (oldDelegate is _DonutChartPainter) {
-      return oldDelegate.strokeWidth != strokeWidth || oldDelegate.segments != segments;
-    }
-    return true;
   }
 }
 
