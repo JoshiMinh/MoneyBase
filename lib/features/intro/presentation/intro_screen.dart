@@ -30,41 +30,43 @@ class IntroScreen extends StatelessWidget {
             ),
           ),
           child: Stack(
-          children: [
-            Positioned(
-              top: -140,
-              left: -60,
-              child: _BlurredOrb(
-                size: 320,
-                color: lightTheme.colorScheme.secondaryContainer.withOpacity(0.45),
+            children: [
+              Positioned(
+                top: -140,
+                left: -60,
+                child: _BlurredOrb(
+                  size: 320,
+                  color: lightTheme.colorScheme.secondaryContainer.withOpacity(0.45),
+                ),
               ),
-            ),
-            Positioned(
-              bottom: -160,
-              right: -80,
-              child: _BlurredOrb(
-                size: 360,
-                color: lightTheme.colorScheme.tertiaryContainer.withOpacity(0.35),
+              Positioned(
+                bottom: -160,
+                right: -80,
+                child: _BlurredOrb(
+                  size: 360,
+                  color: lightTheme.colorScheme.tertiaryContainer.withOpacity(0.35),
+                ),
               ),
-            ),
-            SafeArea(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1120),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
-                      vertical: 48,
+              SafeArea(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1120),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 48,
+                      ),
+                      child: const _IntroContent(),
                     ),
-                    child: const _IntroContent(),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    );
+    ),
+  );
   }
 }
 
