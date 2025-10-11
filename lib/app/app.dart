@@ -1,12 +1,14 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../core/models/transaction.dart';
 import '../features/add_transaction/presentation/add_transaction_screen.dart';
 import '../features/app_shell/presentation/app_shell.dart';
-import '../features/auth/presentation/landing_screen.dart';
+import '../features/auth/presentation/auth_screen.dart';
+import '../features/intro/presentation/intro_screen.dart';
 import '../features/shopping_list/presentation/shopping_list_screen.dart';
 import '../features/transactions/presentation/transactions_screen.dart'
     show TransactionsScreen, TransactionEditorArguments,
@@ -88,9 +90,11 @@ class _MoneyBaseAppState extends State<MoneyBaseApp> {
                 title: 'MoneyBase',
                 theme: theme,
                 debugShowCheckedModeBanner: false,
-                home: authenticated
-                    ? AppShell(onLogout: _onLogout)
-                    : const LandingScreen(),
+                initialRoute: kIsWeb
+                    ? null
+                    : authenticated
+                        ? '/home'
+                        : '/auth',
                 onGenerateRoute: (settings) =>
                     _onGenerateRoute(settings, authenticated ? user : null),
               );
@@ -103,52 +107,75 @@ class _MoneyBaseAppState extends State<MoneyBaseApp> {
 
   Route<dynamic> _onGenerateRoute(RouteSettings settings, User? user) {
     final isAuthenticated = user != null;
-    final name = settings.name ?? '/';
+    final isMobileApp = !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS);
+    var name = settings.name ?? '/';
 
-    if (!isAuthenticated && name != '/landing') {
-      return _buildPageRoute(settings, const LandingScreen());
+    if (isMobileApp && name == '/') {
+      name = isAuthenticated ? '/home' : '/auth';
+    } else if (!isAuthenticated && name != '/' && name != '/auth') {
+      name = '/auth';
+    } else if (isAuthenticated && name == '/auth') {
+      name = '/home';
     }
 
+    final routeSettings = RouteSettings(
+      name: name,
+      arguments: settings.arguments,
+    );
+
     switch (name) {
-      case '/landing':
-        return _buildPageRoute(settings, const LandingScreen());
       case '/':
         return _buildPageRoute(
-          settings,
+          routeSettings,
+          const IntroScreen(),
+        );
+      case '/auth':
+        return _buildPageRoute(
+          routeSettings,
+          AuthScreen(
+            onLoginSuccess: () =>
+                _navigatorKey.currentState?.pushReplacementNamed('/home'),
+          ),
+        );
+      case '/home':
+        return _buildPageRoute(
+          routeSettings,
           AppShell(onLogout: _onLogout, page: AppShellPage.home),
         );
       case '/budgets':
         return _buildPageRoute(
-          settings,
+          routeSettings,
           AppShell(onLogout: _onLogout, page: AppShellPage.budgets),
         );
       case '/shopping':
         return _buildPageRoute(
-          settings,
+          routeSettings,
           AppShell(onLogout: _onLogout, page: AppShellPage.shopping),
         );
       case '/settings':
         return _buildPageRoute(
-          settings,
+          routeSettings,
           AppShell(onLogout: _onLogout, page: AppShellPage.settings),
         );
       case '/transactions':
-        return _buildPageRoute(settings, const TransactionsScreen());
+        return _buildPageRoute(routeSettings, const TransactionsScreen());
       case '/add':
-        return _buildPageRoute(settings, const AddTransactionScreen());
+        return _buildPageRoute(routeSettings, const AddTransactionScreen());
       case '/edit':
         final args = settings.arguments as TransactionEditorArguments?;
         final navigatorContext = _navigatorKey.currentContext;
         if (args == null || navigatorContext == null) {
           return _buildPageRoute(
-            settings,
+            routeSettings,
             const _RouteErrorScreen(message: 'Missing transaction data'),
           );
         }
 
         return DialogRoute<MoneyBaseTransaction>(
           context: navigatorContext,
-          settings: settings,
+          settings: routeSettings,
           builder: (_) => TransactionEditorDialog(
             initial: args.transaction,
             wallets: args.wallets,
@@ -158,11 +185,11 @@ class _MoneyBaseAppState extends State<MoneyBaseApp> {
       case '/shopping/list':
         final args = settings.arguments as ShoppingListDetailRouteArgs?;
         if (args == null) {
-          return _buildPageRoute(settings, const ShoppingListScreen());
+          return _buildPageRoute(routeSettings, const ShoppingListScreen());
         }
 
         return _buildPageRoute(
-          settings,
+          routeSettings,
           ShoppingListDetailScreen(
             userId: args.userId,
             repository: args.repository,
@@ -177,7 +204,7 @@ class _MoneyBaseAppState extends State<MoneyBaseApp> {
         );
       default:
         return _buildPageRoute(
-          settings,
+          routeSettings,
           AppShell(onLogout: _onLogout, page: AppShellPage.home),
         );
     }
