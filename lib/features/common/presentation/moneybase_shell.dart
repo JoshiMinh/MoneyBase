@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../../../app/theme/shape_tokens.dart';
 import '../../../app/theme/theme.dart';
 
 /// Layout metadata describing how wide layouts should render within the shell.
@@ -105,7 +106,7 @@ class MoneyBaseSurface extends StatelessWidget {
   const MoneyBaseSurface({
     required this.child,
     this.padding = const EdgeInsets.all(28),
-    this.borderRadius = 32,
+    this.borderRadius = MoneyBaseShapeTokens.cornerLarge,
     this.backgroundColor,
     this.borderColor,
     this.shadow,
@@ -151,7 +152,7 @@ class MoneyBaseFrostedPanel extends StatelessWidget {
   const MoneyBaseFrostedPanel({
     required this.child,
     this.padding,
-    this.borderRadius = 32,
+    this.borderRadius = MoneyBaseShapeTokens.cornerLarge,
     this.blurSigma = 28,
     this.backgroundOpacity = 0.08,
     this.borderOpacity = 0.12,
@@ -199,7 +200,7 @@ class MoneyBaseGlassIconButton extends StatelessWidget {
     required this.tooltip,
     required this.onPressed,
     this.padding = const EdgeInsets.all(12),
-    this.borderRadius = 18,
+    this.borderRadius = MoneyBaseShapeTokens.cornerMedium,
     super.key,
   });
 

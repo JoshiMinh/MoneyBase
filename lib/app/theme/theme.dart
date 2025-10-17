@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app_colors.dart';
+import 'shape_tokens.dart';
 
 @immutable
 class MoneyBaseThemeColors extends ThemeExtension<MoneyBaseThemeColors> {
@@ -43,41 +44,46 @@ class MoneyBaseThemeColors extends ThemeExtension<MoneyBaseThemeColors> {
   factory MoneyBaseThemeColors.fallback({required bool darkMode}) {
     if (darkMode) {
       return MoneyBaseThemeColors(
-        backgroundGradient: const [
-          Color(0xFF0F1117),
-          Color(0xFF131720),
+        backgroundGradient: [
+          const Color(0xFF0B0F1B),
+          const Color(0xFF131C2E),
+          MoneyBaseColors.purple.withOpacity(0.28),
         ],
-        surfaceBackground: const Color(0xFF191F2A),
-        surfaceElevated: const Color(0xFF212734),
-        surfaceBorder: const Color(0x33252C36),
-        surfaceShadow: const Color(0x99000000),
+        surfaceBackground: const Color(0xFF151D2C),
+        surfaceElevated: const Color(0xFF1E2636),
+        surfaceBorder: const Color(0x33263640),
+        surfaceShadow: const Color(0x66000000),
         primaryText: Colors.white,
-        mutedText: const Color(0xB3FFFFFF),
-        primaryAccent: MoneyBaseColors.primary,
-        secondaryAccent: MoneyBaseColors.secondary,
-        tertiaryAccent: MoneyBaseColors.tertiary,
+        mutedText: const Color(0xCCEDF2FF),
+        primaryAccent: MoneyBaseColors.purple,
+        secondaryAccent: MoneyBaseColors.primary,
+        tertiaryAccent: MoneyBaseColors.pink,
         positive: MoneyBaseColors.green,
         negative: MoneyBaseColors.red,
         warning: MoneyBaseColors.yellow,
-        info: MoneyBaseColors.pink,
+        info: MoneyBaseColors.blue,
       );
     }
 
     return MoneyBaseThemeColors(
-      backgroundGradient: const [Colors.white, Color(0xFFF8FAFC)],
+      backgroundGradient: [
+        const Color(0xFFF9FBFF),
+        const Color(0xFFF3F6FF),
+        MoneyBaseColors.secondary.withOpacity(0.16),
+      ],
       surfaceBackground: Colors.white,
-      surfaceElevated: const Color(0xFFF5F7FA),
-      surfaceBorder: const Color(0xFFE2E8F0),
-      surfaceShadow: const Color(0x1A000000),
+      surfaceElevated: const Color(0xFFF1F5FF),
+      surfaceBorder: const Color(0xFFD9E2F2),
+      surfaceShadow: const Color(0x140E1A2F),
       primaryText: MoneyBaseColors.grey,
-      mutedText: const Color(0x9A1F2937),
-      primaryAccent: MoneyBaseColors.primary,
-      secondaryAccent: MoneyBaseColors.secondary,
-      tertiaryAccent: MoneyBaseColors.tertiary,
+      mutedText: const Color(0x991F2937),
+      primaryAccent: MoneyBaseColors.purple,
+      secondaryAccent: MoneyBaseColors.primary,
+      tertiaryAccent: MoneyBaseColors.pink,
       positive: MoneyBaseColors.green,
       negative: MoneyBaseColors.red,
       warning: MoneyBaseColors.yellow,
-      info: MoneyBaseColors.pink,
+      info: MoneyBaseColors.blue,
     );
   }
 
@@ -221,17 +227,17 @@ class MoneyBaseTheme {
     final baseColors = MoneyBaseThemeColors.fallback(darkMode: darkMode);
     return baseColors.copyWith(
       surfaceBackground: darkMode
-          ? const Color(0xFF191F2A)
+          ? const Color(0xFF141B28)
           : Colors.white,
       surfaceElevated: darkMode
-          ? const Color(0xFF212734)
-          : const Color(0xFFF5F7FA),
+          ? const Color(0xFF1C2433)
+          : const Color(0xFFF0F4FF),
       surfaceBorder: darkMode
-          ? const Color(0x33252C36)
-          : const Color(0xFFE2E8F0),
+          ? const Color(0x332B3544)
+          : const Color(0xFFD4DEEF),
       surfaceShadow: darkMode
-          ? const Color(0x99000000)
-          : const Color(0x1A000000),
+          ? const Color(0x55000000)
+          : const Color(0x140E1A2F),
     );
   }
 
@@ -251,18 +257,17 @@ class MoneyBaseTheme {
     return base.copyWith(
       primary: themeColors.primaryAccent,
       onPrimary: Colors.white,
-      primaryContainer: darkMode
-          ? MoneyBaseColors.primary.withOpacity(0.38)
-          : MoneyBaseColors.primary.withOpacity(0.18),
+      primaryContainer: themeColors.primaryAccent.withOpacity(
+        darkMode ? 0.35 : 0.18,
+      ),
       onPrimaryContainer:
           darkMode ? Colors.white : themeColors.primaryText,
       secondary: themeColors.secondaryAccent,
-      onSecondary: darkMode ? Colors.black : Colors.white,
+      onSecondary: Colors.white,
       secondaryContainer: themeColors.secondaryAccent.withOpacity(
         darkMode ? 0.32 : 0.18,
       ),
-      onSecondaryContainer:
-          darkMode ? Colors.black : themeColors.primaryText,
+      onSecondaryContainer: Colors.white,
       tertiary: themeColors.tertiaryAccent,
       onTertiary: Colors.white,
       background: backgroundColor,
@@ -280,7 +285,7 @@ class MoneyBaseTheme {
       shadow: themeColors.surfaceShadow,
       scrim: Colors.black.withOpacity(darkMode ? 0.6 : 0.3),
       inversePrimary: themeColors.primaryAccent.withOpacity(
-        darkMode ? 0.6 : 0.32,
+        darkMode ? 0.5 : 0.26,
       ),
     );
   }
@@ -378,9 +383,11 @@ class MoneyBaseTheme {
     MoneyBaseThemeColors themeColors,
   ) {
     return FloatingActionButtonThemeData(
-      backgroundColor: themeColors.secondaryAccent,
+      backgroundColor: themeColors.primaryAccent,
       foregroundColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: const RoundedRectangleBorder(
+        borderRadius: MoneyBaseShapeTokens.borderRadiusLarge,
+      ),
     );
   }
 
@@ -392,8 +399,8 @@ class MoneyBaseTheme {
         backgroundColor: themeColors.primaryAccent,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
+        shape: const RoundedRectangleBorder(
+          borderRadius: MoneyBaseShapeTokens.borderRadiusMedium,
         ),
       ),
     );
@@ -417,8 +424,8 @@ class MoneyBaseTheme {
       style: OutlinedButton.styleFrom(
         foregroundColor: themeColors.primaryAccent,
         side: BorderSide(color: themeColors.primaryAccent.withOpacity(0.5)),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
+        shape: const RoundedRectangleBorder(
+          borderRadius: MoneyBaseShapeTokens.borderRadiusMedium,
         ),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       ),
@@ -439,15 +446,15 @@ class MoneyBaseTheme {
         vertical: 18,
       ),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: MoneyBaseShapeTokens.borderRadiusLarge,
         borderSide: BorderSide(color: themeColors.surfaceBorder),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: MoneyBaseShapeTokens.borderRadiusLarge,
         borderSide: BorderSide(color: themeColors.surfaceBorder),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: MoneyBaseShapeTokens.borderRadiusLarge,
         borderSide: BorderSide(color: themeColors.primaryAccent),
       ),
       hintStyle: TextStyle(color: themeColors.mutedText),
@@ -461,16 +468,18 @@ class MoneyBaseTheme {
   ) {
     return ChipThemeData(
       backgroundColor: themeColors.secondaryAccent.withOpacity(
-        darkMode ? 0.16 : 0.12,
+        darkMode ? 0.18 : 0.12,
       ),
-      selectedColor: themeColors.secondaryAccent.withOpacity(
-        darkMode ? 0.26 : 0.2,
+      selectedColor: themeColors.primaryAccent.withOpacity(
+        darkMode ? 0.28 : 0.22,
       ),
       disabledColor: themeColors.surfaceBorder.withOpacity(0.4),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       labelStyle: TextStyle(color: themeColors.primaryText),
       secondaryLabelStyle: TextStyle(color: themeColors.primaryText),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: const RoundedRectangleBorder(
+        borderRadius: MoneyBaseShapeTokens.borderRadiusMedium,
+      ),
       brightness: darkMode ? Brightness.dark : Brightness.light,
     );
   }
@@ -481,8 +490,8 @@ class MoneyBaseTheme {
       shadowColor: themeColors.surfaceShadow,
       elevation: 0,
       margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(28),
+      shape: const RoundedRectangleBorder(
+        borderRadius: MoneyBaseShapeTokens.borderRadiusLarge,
         side: BorderSide(color: themeColors.surfaceBorder),
       ),
     );
@@ -492,7 +501,9 @@ class MoneyBaseTheme {
     return DialogThemeData(
       backgroundColor: themeColors.surfaceBackground,
       surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      shape: const RoundedRectangleBorder(
+        borderRadius: MoneyBaseShapeTokens.borderRadiusLarge,
+      ),
     );
   }
 
@@ -524,7 +535,9 @@ class MoneyBaseTheme {
       modalBackgroundColor: themeColors.surfaceBackground,
       surfaceTintColor: Colors.transparent,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(MoneyBaseShapeTokens.cornerExtraLarge),
+        ),
       ),
     );
   }
@@ -536,7 +549,9 @@ class MoneyBaseTheme {
       backgroundColor: themeColors.primaryAccent,
       contentTextStyle: const TextStyle(color: Colors.white),
       behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: const RoundedRectangleBorder(
+        borderRadius: MoneyBaseShapeTokens.borderRadiusMedium,
+      ),
     );
   }
 
