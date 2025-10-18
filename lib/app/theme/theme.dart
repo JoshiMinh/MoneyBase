@@ -486,7 +486,7 @@ class MoneyBaseTheme {
       shadowColor: themeColors.surfaceShadow,
       elevation: 0,
       margin: EdgeInsets.zero,
-      shape: const RoundedRectangleBorder(
+      shape: RoundedRectangleBorder(
         borderRadius: MoneyBaseShapeTokens.borderRadiusLarge,
         side: BorderSide(color: themeColors.surfaceBorder),
       ),
