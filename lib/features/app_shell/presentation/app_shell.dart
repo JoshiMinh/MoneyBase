@@ -320,7 +320,7 @@ enum _NavigationDestination {
     label: 'Home',
     icon: Icons.home_outlined,
     selectedIcon: Icons.home,
-    path: '/',
+    path: '/home',
   ),
   budgets(
     label: 'Budgets',

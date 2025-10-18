@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 class MoneyBaseColors {
   const MoneyBaseColors._();
 
-  static const Color primary = Color(0xFF0071BC);
+  static const Color primary = Color(0xFF1F63B3);
   static const Color secondary = Color(0xFF29ABE2);
   static const Color tertiary = Color(0xFF93278F);
   static const Color red = Color(0xFFE54C4C);
