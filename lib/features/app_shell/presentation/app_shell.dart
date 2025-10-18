@@ -91,12 +91,7 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _openAiAssistant(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const AiAssistantSheet(),
-    );
+    Navigator.of(context).pushNamed(_AppShellRoutes.assistant);
   }
 
   Widget? _buildFloatingActions(
@@ -320,6 +315,7 @@ class _AppShellRoutes {
   static const budgets = '/budgets';
   static const shopping = '/shopping';
   static const settings = '/settings';
+  static const assistant = '/assistant';
 }
 
 enum _NavigationDestination {

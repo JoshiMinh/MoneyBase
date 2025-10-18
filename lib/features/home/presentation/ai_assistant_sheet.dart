@@ -24,6 +24,7 @@ import '../../../core/repositories/category_repository.dart';
 import '../../../core/repositories/shopping_list_repository.dart';
 import '../../../core/repositories/transaction_repository.dart';
 import '../../../core/repositories/wallet_repository.dart';
+import '../../../app/theme/theme.dart';
 import '../../common/presentation/moneybase_shell.dart';
 
 part 'ai_assistant_sheet_tools.dart';
@@ -3421,6 +3422,14 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
     final onSurface = colorScheme.onSurface;
     final mutedOnSurface = onSurface.withOpacity(0.72);
     final composerEnabled = !_isInitializing && _errorMessage == null;
+    final themeColors = context.moneyBaseColors;
+
+    Color tonedSurface(double opacity) {
+      return Color.alphaBlend(
+        themeColors.primaryText.withOpacity(opacity),
+        themeColors.surfaceElevated,
+      );
+    }
 
     Widget buildStatusRow(String message, {Widget? leading}) {
       return Padding(
@@ -3454,16 +3463,19 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
 
     Widget buildChatArea(Color panelColor, {required bool isCompact}) {
       final borderRadius = BorderRadius.circular(isCompact ? 20 : 24);
-      final outlineOpacity = isCompact ? 0.22 : 0.18;
       final composerSpacing = isCompact ? 12.0 : 16.0;
 
       return Container(
         decoration: BoxDecoration(
           color: panelColor,
           borderRadius: borderRadius,
-          border: Border.all(
-            color: colorScheme.outline.withOpacity(outlineOpacity),
-          ),
+          boxShadow: [
+            BoxShadow(
+              color: themeColors.surfaceShadow,
+              blurRadius: isCompact ? 18 : 28,
+              offset: const Offset(0, 16),
+            ),
+          ],
         ),
         padding: EdgeInsets.symmetric(
           horizontal: isCompact ? 16 : 20,
@@ -3521,8 +3533,8 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
 
     Widget buildSidebar() {
       final disabled = _isInitializing || _isLoadingMessages;
-      final sidebarBackground = colorScheme.surfaceVariant.withOpacity(
-        theme.brightness == Brightness.dark ? 0.26 : 0.55,
+      final sidebarBackground = tonedSurface(
+        theme.brightness == Brightness.dark ? 0.18 : 0.08,
       );
 
       return Container(
@@ -3530,7 +3542,13 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         decoration: BoxDecoration(
           color: sidebarBackground,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
+          boxShadow: [
+            BoxShadow(
+              color: themeColors.surfaceShadow,
+              blurRadius: 22,
+              offset: const Offset(0, 14),
+            ),
+          ],
         ),
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -3616,9 +3634,6 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
 
     Widget buildThreadChips({required bool isCompact}) {
       final disabled = _isInitializing || _isLoadingMessages;
-      final containerOpacity = theme.brightness == Brightness.dark
-          ? (isCompact ? 0.32 : 0.26)
-          : (isCompact ? 0.48 : 0.38);
       final containerPadding = EdgeInsets.symmetric(
         horizontal: isCompact ? 12 : 16,
         vertical: isCompact ? 12 : 14,
@@ -3627,11 +3642,12 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
         return Container(
           padding: containerPadding,
           decoration: BoxDecoration(
-            color: colorScheme.surfaceVariant.withOpacity(containerOpacity),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: colorScheme.outline.withOpacity(isCompact ? 0.22 : 0.18),
+            color: tonedSurface(
+              theme.brightness == Brightness.dark
+                  ? (isCompact ? 0.16 : 0.12)
+                  : (isCompact ? 0.08 : 0.06),
             ),
+            borderRadius: BorderRadius.circular(18),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -3686,84 +3702,69 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       );
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isCompact = constraints.maxWidth < 600;
-        final showSidebar = constraints.maxWidth >= 720;
-        final usesColumnLayout = !showSidebar;
-        final chatIsCompact = isCompact || usesColumnLayout;
-        final heightFactor = isCompact ? 0.96 : (showSidebar ? 0.85 : 0.9);
-        final outerPadding = isCompact
-            ? const EdgeInsets.fromLTRB(12, 12, 12, 16)
-            : const EdgeInsets.fromLTRB(16, 12, 16, 24);
-        final panelPadding = isCompact
-            ? const EdgeInsets.fromLTRB(16, 16, 16, 20)
-            : const EdgeInsets.all(24);
-        final headerSpacing = isCompact ? 12.0 : 16.0;
-        final panelBackground = colorScheme.surface.withOpacity(
-          theme.brightness == Brightness.dark
-              ? (chatIsCompact ? 0.5 : 0.35)
-              : (chatIsCompact ? 0.82 : 0.6),
-        );
-        final titleStyle = textTheme.titleMedium?.copyWith(
-          color: onSurface,
-          fontWeight: FontWeight.w600,
-        );
-        final descriptionStyle = textTheme.bodySmall?.copyWith(
-          color: mutedOnSurface,
-          height: 1.45,
-        );
-        final iconExtent = isCompact ? 44.0 : 48.0;
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: AppBar(
+        title: const Text('MoneyBase Assistant'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'New chat',
+            icon: const Icon(Icons.add_comment_outlined),
+            onPressed:
+                (!_isInitializing && !_isLoadingMessages) ? _handleCreateChat : null,
+          ),
+        ],
+      ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isCompact = constraints.maxWidth < 720;
+          final showSidebar = constraints.maxWidth >= 1100;
+          final chatIsCompact = constraints.maxWidth < 900;
+          final padding = EdgeInsets.symmetric(
+            horizontal: isCompact ? 16 : 32,
+            vertical: isCompact ? 16 : 24,
+          );
+          final headerSpacing = isCompact ? 16.0 : 24.0;
+          final titleStyle = textTheme.titleMedium?.copyWith(
+            color: onSurface,
+            fontWeight: FontWeight.w600,
+          );
+          final descriptionStyle = textTheme.bodySmall?.copyWith(
+            color: mutedOnSurface,
+            height: 1.45,
+          );
+          final iconExtent = isCompact ? 44.0 : 52.0;
+          final panelBackground = tonedSurface(
+            theme.brightness == Brightness.dark
+                ? (chatIsCompact ? 0.2 : 0.16)
+                : (chatIsCompact ? 0.08 : 0.06),
+          );
 
-        return SafeArea(
-          child: FractionallySizedBox(
-            heightFactor: heightFactor,
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: outerPadding,
-              child: MoneyBaseFrostedPanel(
-                padding: panelPadding,
-                borderRadius: isCompact ? 24 : 32,
-                backgroundOpacity: isCompact ? 0.16 : 0.1,
-                borderOpacity: isCompact ? 0.24 : 0.12,
-                boxShadow: isCompact
-                    ? [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.18),
-                          blurRadius: 22,
-                          offset: const Offset(0, 14),
-                        ),
-                      ]
-                    : null,
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1200),
+              child: Padding(
+                padding: padding,
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
                           width: iconExtent,
                           height: iconExtent,
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                colorScheme.primary,
-                                colorScheme.secondary.withOpacity(0.85),
-                              ],
-                            ),
+                            color: themeColors.primaryAccent,
                             borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: colorScheme.primary.withOpacity(0.35),
-                                blurRadius: 20,
-                                offset: const Offset(0, 10),
-                              ),
-                            ],
                           ),
-                          child: Icon(
+                          child: const Icon(
                             Icons.smart_toy_outlined,
-                            color: colorScheme.onPrimary,
-                            size: isCompact ? 24 : 26,
+                            color: Colors.white,
                           ),
                         ),
                         SizedBox(width: isCompact ? 12 : 16),
@@ -3772,19 +3773,13 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text('MoneyBase Assistant', style: titleStyle),
-                              SizedBox(height: isCompact ? 6 : 4),
+                              SizedBox(height: isCompact ? 6 : 10),
                               Text(
                                 'Log expenses, review budgets, and manage wallets with a friendly MoneyBase copilot.',
                                 style: descriptionStyle,
                               ),
                             ],
                           ),
-                        ),
-                        IconButton(
-                          tooltip: 'Close',
-                          iconSize: isCompact ? 22 : 24,
-                          onPressed: () => Navigator.of(context).maybePop(),
-                          icon: Icon(Icons.close, color: mutedOnSurface),
                         ),
                       ],
                     ),
@@ -3794,12 +3789,11 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
                     if (_errorMessage != null)
                       buildStatusRow(
                         _errorMessage!,
-                        leading:
-                            Icon(Icons.info_outline, color: colorScheme.error),
+                        leading: Icon(Icons.info_outline, color: colorScheme.error),
                       ),
                     if (!showSidebar) ...[
                       buildThreadChips(isCompact: chatIsCompact),
-                      SizedBox(height: isCompact ? 12 : 16),
+                      SizedBox(height: isCompact ? 12 : 20),
                     ],
                     Expanded(
                       child: showSidebar
@@ -3807,7 +3801,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 buildSidebar(),
-                                const SizedBox(width: 20),
+                                SizedBox(width: isCompact ? 16 : 24),
                                 Expanded(
                                   child: buildChatArea(
                                     panelBackground,
@@ -3825,9 +3819,9 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
                 ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

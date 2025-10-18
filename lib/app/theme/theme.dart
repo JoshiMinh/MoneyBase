@@ -50,8 +50,8 @@ class MoneyBaseThemeColors extends ThemeExtension<MoneyBaseThemeColors> {
         ],
         surfaceBackground: const Color(0xFF1E1E1E),
         surfaceElevated: const Color(0xFF1E1E1E),
-        surfaceBorder: MoneyBaseColors.primary.withOpacity(0.45),
-        surfaceShadow: Colors.black.withOpacity(0.7),
+        surfaceBorder: Colors.white.withOpacity(0.14),
+        surfaceShadow: Colors.black.withOpacity(0.55),
         primaryText: Colors.white,
         mutedText: Colors.white.withOpacity(0.72),
         primaryAccent: MoneyBaseColors.primary,
@@ -71,8 +71,8 @@ class MoneyBaseThemeColors extends ThemeExtension<MoneyBaseThemeColors> {
       ],
       surfaceBackground: Colors.white,
       surfaceElevated: Colors.white,
-      surfaceBorder: MoneyBaseColors.primary.withOpacity(0.2),
-      surfaceShadow: Colors.black.withOpacity(0.05),
+      surfaceBorder: Colors.black.withOpacity(0.08),
+      surfaceShadow: Colors.black.withOpacity(0.08),
       primaryText: Colors.black,
       mutedText: Colors.black.withOpacity(0.72),
       primaryAccent: MoneyBaseColors.primary,
@@ -228,10 +228,7 @@ class MoneyBaseTheme {
           darkMode ? const Color(0xFF1E1E1E) : Colors.white,
       surfaceElevated:
           darkMode ? const Color(0xFF1E1E1E) : Colors.white,
-      surfaceBorder: MoneyBaseColors.primary.withOpacity(
-        darkMode ? 0.5 : 0.18,
-      ),
-      surfaceShadow: Colors.black.withOpacity(darkMode ? 0.7 : 0.06),
+      surfaceShadow: Colors.black.withOpacity(darkMode ? 0.55 : 0.08),
     );
   }
 
@@ -248,6 +245,13 @@ class MoneyBaseTheme {
     Color backgroundColor,
   ) {
     final base = darkMode ? const ColorScheme.dark() : const ColorScheme.light();
+    final outlineColor = themeColors.primaryText.withOpacity(
+      darkMode ? 0.24 : 0.16,
+    );
+    final surfaceVariant = Color.alphaBlend(
+      themeColors.primaryText.withOpacity(darkMode ? 0.1 : 0.05),
+      themeColors.surfaceElevated,
+    );
     return base.copyWith(
       primary: themeColors.primaryAccent,
       onPrimary: Colors.white,
@@ -269,11 +273,12 @@ class MoneyBaseTheme {
       surface: themeColors.surfaceBackground,
       surfaceTint: Colors.transparent,
       onSurface: themeColors.primaryText,
+      surfaceVariant: surfaceVariant,
       onSurfaceVariant: themeColors.mutedText,
       error: themeColors.negative,
       onError: Colors.white,
-      outline: themeColors.surfaceBorder,
-      outlineVariant: themeColors.surfaceBorder,
+      outline: outlineColor,
+      outlineVariant: outlineColor.withOpacity(darkMode ? 0.3 : 0.2),
       surfaceContainerHigh: themeColors.surfaceElevated,
       surfaceContainerHighest: themeColors.surfaceElevated,
       shadow: themeColors.surfaceShadow,
@@ -409,7 +414,7 @@ class MoneyBaseTheme {
     return OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: themeColors.primaryAccent,
-        side: BorderSide(color: themeColors.primaryAccent.withOpacity(0.5)),
+        side: BorderSide(color: themeColors.surfaceBorder),
         shape: const RoundedRectangleBorder(
           borderRadius: MoneyBaseShapeTokens.borderRadiusMedium,
         ),

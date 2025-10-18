@@ -9,6 +9,7 @@ import '../features/add_transaction/presentation/add_transaction_screen.dart';
 import '../features/app_shell/presentation/app_shell.dart';
 import '../features/auth/presentation/auth_screen.dart';
 import '../features/intro/presentation/intro_screen.dart';
+import '../features/home/presentation/ai_assistant_sheet.dart';
 import '../features/shopping_list/presentation/shopping_list_screen.dart';
 import '../features/transactions/presentation/transactions_screen.dart'
     show TransactionsScreen, TransactionEditorArguments,
@@ -163,6 +164,8 @@ class _MoneyBaseAppState extends State<MoneyBaseApp> {
         return _buildPageRoute(routeSettings, const TransactionsScreen());
       case '/add':
         return _buildPageRoute(routeSettings, const AddTransactionScreen());
+      case '/assistant':
+        return _buildPageRoute(routeSettings, const AiAssistantSheet());
       case '/edit':
         final args = settings.arguments as TransactionEditorArguments?;
         final navigatorContext = _navigatorKey.currentContext;
