@@ -473,6 +473,39 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       return;
     }
 
+    _AssistantChatThread? pendingEmptyThread;
+    for (final thread in _chatThreads) {
+      if (thread.id == _defaultChatId) {
+        continue;
+      }
+      final preview = thread.lastMessagePreview;
+      if (preview == null || preview.trim().isEmpty) {
+        pendingEmptyThread = thread;
+        break;
+      }
+    }
+
+    if (pendingEmptyThread != null) {
+      final bool activeHasConversation =
+          pendingEmptyThread.id == _activeChatId &&
+              _messages.any(
+                (message) => !identical(message, _welcomeMessage),
+              );
+
+      if (!activeHasConversation) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Finish your current chat before starting a new one.',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+    }
+
     try {
       final thread = await _createChatThread(userId);
       _upsertChatThread(thread);
