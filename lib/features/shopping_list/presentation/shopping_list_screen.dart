@@ -23,23 +23,23 @@ class ShoppingListDetailRouteArgs {
     required this.userId,
     required this.repository,
     required this.initialList,
-    required this.onAddItem,
-    required this.onEditItem,
-    required this.onDeleteItem,
-    required this.onToggleItem,
-    required this.onEditList,
-    required this.onDeleteList,
+    this.onAddItem,
+    this.onEditItem,
+    this.onDeleteItem,
+    this.onToggleItem,
+    this.onEditList,
+    this.onDeleteList,
   });
 
   final String userId;
   final ShoppingListRepository repository;
   final ShoppingList initialList;
-  final ValueChanged<ShoppingList> onAddItem;
-  final void Function(ShoppingList, ShoppingItem) onEditItem;
-  final void Function(ShoppingList, ShoppingItem) onDeleteItem;
-  final void Function(ShoppingList, ShoppingItem, bool) onToggleItem;
-  final ValueChanged<ShoppingList> onEditList;
-  final ValueChanged<ShoppingList> onDeleteList;
+  final ValueChanged<ShoppingList>? onAddItem;
+  final void Function(ShoppingList, ShoppingItem)? onEditItem;
+  final void Function(ShoppingList, ShoppingItem)? onDeleteItem;
+  final void Function(ShoppingList, ShoppingItem, bool)? onToggleItem;
+  final ValueChanged<ShoppingList>? onEditList;
+  final ValueChanged<ShoppingList>? onDeleteList;
 }
 
 class _ShoppingListScreenState extends State<ShoppingListScreen> {
@@ -566,29 +566,37 @@ class _ListTile extends StatelessWidget {
   }
 }
 
-class ShoppingListDetailScreen extends StatelessWidget {
+class ShoppingListDetailScreen extends StatefulWidget {
   const ShoppingListDetailScreen({
     required this.userId,
     required this.repository,
     required this.initialList,
-    required this.onAddItem,
-    required this.onEditItem,
-    required this.onDeleteItem,
-    required this.onToggleItem,
-    required this.onEditList,
-    required this.onDeleteList,
+    this.onAddItem,
+    this.onEditItem,
+    this.onDeleteItem,
+    this.onToggleItem,
+    this.onEditList,
+    this.onDeleteList,
     super.key,
   });
 
   final String userId;
   final ShoppingListRepository repository;
   final ShoppingList initialList;
-  final ValueChanged<ShoppingList> onAddItem;
-  final void Function(ShoppingList, ShoppingItem) onEditItem;
-  final void Function(ShoppingList, ShoppingItem) onDeleteItem;
-  final void Function(ShoppingList, ShoppingItem, bool) onToggleItem;
-  final ValueChanged<ShoppingList> onEditList;
-  final ValueChanged<ShoppingList> onDeleteList;
+  final ValueChanged<ShoppingList>? onAddItem;
+  final void Function(ShoppingList, ShoppingItem)? onEditItem;
+  final void Function(ShoppingList, ShoppingItem)? onDeleteItem;
+  final void Function(ShoppingList, ShoppingItem, bool)? onToggleItem;
+  final ValueChanged<ShoppingList>? onEditList;
+  final ValueChanged<ShoppingList>? onDeleteList;
+
+  @override
+  State<ShoppingListDetailScreen> createState() =>
+      _ShoppingListDetailScreenState();
+}
+
+class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
+  ShoppingListRepository get _repository => widget.repository;
 
   Future<void> _importItemsFromJson(
     BuildContext context,
@@ -605,8 +613,8 @@ class ShoppingListDetailScreen extends StatelessWidget {
     }
 
     try {
-      final summary = await repository.importItemsFromJson(
-        userId: userId,
+      final summary = await _repository.importItemsFromJson(
+        userId: widget.userId,
         list: list,
         rawJson: rawJson,
       );
@@ -638,11 +646,242 @@ class ShoppingListDetailScreen extends StatelessWidget {
     }
   }
 
+  Future<ShoppingItem?> _showItemDialog({
+    required ShoppingList list,
+    ShoppingItem? initial,
+  }) {
+    return showDialog<ShoppingItem>(
+      context: context,
+      builder: (context) => _ShoppingItemDialog(list: list, initial: initial),
+    );
+  }
+
+  Future<void> _handleAddItem(ShoppingList list) async {
+    final callback = widget.onAddItem;
+    if (callback != null) {
+      callback(list);
+      return;
+    }
+
+    final result = await _showItemDialog(list: list);
+    if (result == null) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      await _repository.addItem(widget.userId, list.id, result);
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            '"${result.title}" added to ${list.name.isEmpty ? 'your list' : list.name}.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to save item: $error')),
+      );
+    }
+  }
+
+  Future<void> _handleEditItem(ShoppingList list, ShoppingItem item) async {
+    final callback = widget.onEditItem;
+    if (callback != null) {
+      callback(list, item);
+      return;
+    }
+
+    final result = await _showItemDialog(list: list, initial: item);
+    if (result == null) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      await _repository.updateItem(widget.userId, list.id, result);
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Shopping item updated.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to save item: $error')),
+      );
+    }
+  }
+
+  Future<void> _handleDeleteItem(ShoppingList list, ShoppingItem item) async {
+    final callback = widget.onDeleteItem;
+    if (callback != null) {
+      callback(list, item);
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove item?'),
+        content: Text(
+          'Delete "${item.title}" from ${list.name.isEmpty ? 'this list' : list.name}?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: context.moneyBaseColors.negative,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      await _repository.deleteItem(widget.userId, list.id, item.id);
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('"${item.title}" removed.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to remove item: $error')),
+      );
+    }
+  }
+
+  Future<void> _handleToggleItem(
+    ShoppingList list,
+    ShoppingItem item,
+    bool bought,
+  ) async {
+    final callback = widget.onToggleItem;
+    if (callback != null) {
+      callback(list, item, bought);
+      return;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      await _repository.setItemBought(widget.userId, list.id, item.id, bought);
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            bought
+                ? 'Marked "${item.title}" as purchased.'
+                : 'Marked "${item.title}" as pending.',
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to update item: $error')),
+      );
+    }
+  }
+
+  Future<void> _handleEditList(ShoppingList list) async {
+    final callback = widget.onEditList;
+    if (callback != null) {
+      callback(list);
+      return;
+    }
+
+    final result = await showDialog<ShoppingList>(
+      context: context,
+      builder: (context) => _ShoppingListDialog(initial: list),
+    );
+
+    if (result == null) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      await _repository.updateShoppingList(widget.userId, result);
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Shopping list updated.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to save shopping list: $error')),
+      );
+    }
+  }
+
+  Future<void> _handleDeleteList(ShoppingList list) async {
+    final callback = widget.onDeleteList;
+    if (callback != null) {
+      callback(list);
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete shopping list?'),
+        content: Text(
+          'This will remove "${list.name.isEmpty ? 'Untitled list' : list.name}" and all of its items.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: context.moneyBaseColors.negative,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      await _repository.deleteShoppingList(widget.userId, list.id);
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Shopping list removed.')),
+      );
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to delete shopping list: $error')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<ShoppingList?>(
-      stream: repository.watchShoppingList(userId, initialList.id),
-      initialData: initialList,
+      stream: _repository.watchShoppingList(widget.userId, widget.initialList.id),
+      initialData: widget.initialList,
       builder: (context, snapshot) {
         final theme = Theme.of(context);
         final colors = context.moneyBaseColors;
@@ -668,23 +907,32 @@ class ShoppingListDetailScreen extends StatelessWidget {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final isWide = constraints.maxWidth >= 900;
-                final padding = EdgeInsets.symmetric(
-                  horizontal: isWide ? 64 : 24,
-                  vertical: isWide ? 40 : 24,
-                );
+                final horizontalPadding = isWide ? 48.0 : 16.0;
+                final verticalPadding = isWide ? 32.0 : 16.0;
 
                 return SingleChildScrollView(
-                  padding: padding.copyWith(bottom: padding.bottom + 96),
+                  padding: EdgeInsets.fromLTRB(
+                    horizontalPadding,
+                    verticalPadding,
+                    horizontalPadding,
+                    verticalPadding + 72,
+                  ),
                   child: Center(
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 900),
+                      constraints: const BoxConstraints(maxWidth: 960),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          MoneyBaseSurface(
-                            padding: const EdgeInsets.all(28),
-                            backgroundColor: colors.surfaceBackground,
-                            borderColor: colors.surfaceBorder,
+                          Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isWide ? 36 : 20,
+                              vertical: isWide ? 28 : 20,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.surfaceBackground,
+                              border: Border.all(color: colors.surfaceBorder),
+                            ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -699,8 +947,8 @@ class ShoppingListDetailScreen extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 12),
                                 Wrap(
-                                  spacing: 12,
-                                  runSpacing: 12,
+                                  spacing: 8,
+                                  runSpacing: 8,
                                   children: [
                                     _ListMetadataChip(
                                       icon: Icons.category_outlined,
@@ -722,6 +970,12 @@ class ShoppingListDetailScreen extends StatelessWidget {
                                 ),
                                 if (notes.isNotEmpty) ...[
                                   const SizedBox(height: 16),
+                                  Divider(
+                                    color: colors.surfaceBorder,
+                                    height: 1,
+                                    thickness: 1,
+                                  ),
+                                  const SizedBox(height: 16),
                                   Text(
                                     notes,
                                     style: textTheme.bodyMedium?.copyWith(
@@ -732,20 +986,21 @@ class ShoppingListDetailScreen extends StatelessWidget {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 24),
-                          MoneyBaseSurface(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 28,
-                              vertical: 24,
+                          const SizedBox(height: 20),
+                          Container(
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: colors.surfaceBackground,
+                              border: Border.all(color: colors.surfaceBorder),
                             ),
                             child: _ShoppingListItemsView(
-                              userId: userId,
+                              userId: widget.userId,
                               list: resolved,
-                              repository: repository,
-                              onAddItem: onAddItem,
-                              onEditItem: onEditItem,
-                              onDeleteItem: onDeleteItem,
-                              onToggleItem: onToggleItem,
+                              repository: _repository,
+                              onAddItem: _handleAddItem,
+                              onEditItem: _handleEditItem,
+                              onDeleteItem: _handleDeleteItem,
+                              onToggleItem: _handleToggleItem,
                             ),
                           ),
                         ],
@@ -789,7 +1044,7 @@ class ShoppingListDetailScreen extends StatelessWidget {
           body = buildContent(list);
         }
 
-        final titleList = list ?? initialList;
+        final titleList = list ?? widget.initialList;
 
         return Container(
           decoration: decoration,
@@ -810,17 +1065,17 @@ class ShoppingListDetailScreen extends StatelessWidget {
                       ),
                       IconButton(
                         tooltip: 'Add item',
-                        onPressed: () => onAddItem(list),
+                        onPressed: () => _handleAddItem(list),
                         icon: const Icon(Icons.add),
                       ),
                       IconButton(
                         tooltip: 'Edit list',
-                        onPressed: () => onEditList(list),
+                        onPressed: () => _handleEditList(list),
                         icon: const Icon(Icons.edit_outlined),
                       ),
                       IconButton(
                         tooltip: 'Delete list',
-                        onPressed: () => onDeleteList(list),
+                        onPressed: () => _handleDeleteList(list),
                         icon: const Icon(Icons.delete_outline),
                       ),
                     ],
@@ -847,11 +1102,11 @@ class _ListMetadataChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.4)),
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withOpacity(0.28)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -892,7 +1147,10 @@ class _ShoppingListItemsView extends StatelessWidget {
   final void Function(ShoppingList, ShoppingItem) onDeleteItem;
   final void Function(ShoppingList, ShoppingItem, bool) onToggleItem;
 
-  List<Widget> _buildGroceryItems(List<ShoppingItem> items, ShoppingList list) {
+  List<Widget> _buildGroceryItems(
+    List<ShoppingItem> items,
+    ShoppingList list,
+  ) {
     final widgets = <Widget>[];
 
     for (var index = 0; index < items.length; index++) {
@@ -904,18 +1162,18 @@ class _ShoppingListItemsView extends StatelessWidget {
           onEdit: () => onEditItem(list, item),
           onDelete: () => onDeleteItem(list, item),
           onToggle: (value) => onToggleItem(list, item, value),
+          showDividerBelow: index != items.length - 1,
         ),
       );
-
-      if (index != items.length - 1) {
-        widgets.add(const Divider(height: 28));
-      }
     }
 
     return widgets;
   }
 
-  List<Widget> _buildShoppingItems(List<ShoppingItem> items, ShoppingList list) {
+  List<Widget> _buildShoppingItems(
+    List<ShoppingItem> items,
+    ShoppingList list,
+  ) {
     if (items.isEmpty) return const [];
 
     final itemsById = {for (final item in items) item.id: item};
@@ -931,40 +1189,34 @@ class _ShoppingListItemsView extends StatelessWidget {
       }
     }
 
-    Widget buildNode(ShoppingItem item, int depth) {
+    Widget buildNode(ShoppingItem item, int depth, bool isLastSibling) {
       final children = childrenMap[item.id] ?? const <ShoppingItem>[];
       final nested = <Widget>[];
 
       for (var index = 0; index < children.length; index++) {
-        nested.add(buildNode(children[index], depth + 1));
-        if (index != children.length - 1) {
-          nested.add(const SizedBox(height: 12));
-        }
+        nested.add(buildNode(children[index], depth + 1, index == children.length - 1));
       }
 
       return _ItemTile(
         list: list,
         item: item,
-        indent: depth * 28.0,
+        indent: depth * 24.0,
         onEdit: () => onEditItem(list, item),
         onDelete: () => onDeleteItem(list, item),
         onToggle: (value) => onToggleItem(list, item, value),
         children: nested,
+        showDividerBelow: !isLastSibling,
       );
     }
 
     if (roots.isEmpty) {
-      // Avoid an empty root set when all items reference missing parents.
       roots.addAll(items);
     }
 
     final widgets = <Widget>[];
 
     for (var index = 0; index < roots.length; index++) {
-      widgets.add(buildNode(roots[index], 0));
-      if (index != roots.length - 1) {
-        widgets.add(const Divider(height: 28));
-      }
+      widgets.add(buildNode(roots[index], 0, index == roots.length - 1));
     }
 
     return widgets;
@@ -981,18 +1233,25 @@ class _ShoppingListItemsView extends StatelessWidget {
       stream: repository.watchItems(userId, list.id),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _ItemsHeader(onSurface: onSurface, textTheme: textTheme, onAddItem: () => onAddItem(list)),
-              const SizedBox(height: 16),
-              Text(
-                'Unable to load items: ${snapshot.error}',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colors.mutedText,
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _ItemsHeader(
+                  onSurface: onSurface,
+                  textTheme: textTheme,
+                  onAddItem: () => onAddItem(list),
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                Text(
+                  'Unable to load items: ${snapshot.error}',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: colors.mutedText,
+                  ),
+                ),
+              ],
+            ),
           );
         }
 
@@ -1000,29 +1259,83 @@ class _ShoppingListItemsView extends StatelessWidget {
         final currentList = list;
         final listType = currentList.type;
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _ItemsHeader(
-              onSurface: onSurface,
-              textTheme: textTheme,
-              onAddItem: () => onAddItem(currentList),
-            ),
-            const SizedBox(height: 16),
-            if (items.isEmpty)
-              Text(
-                'Add essentials, plan meals, and track quantities in one place.',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colors.mutedText,
+        final header = _ItemsHeader(
+          onSurface: onSurface,
+          textTheme: textTheme,
+          onAddItem: () => onAddItem(currentList),
+        );
+
+        if (items.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                header,
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+                  decoration: BoxDecoration(
+                    color: colors.surfaceBackground.withOpacity(0.6),
+                    border: Border.all(color: colors.surfaceBorder),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        listType == ShoppingListType.shopping
+                            ? Icons.shopping_bag_outlined
+                            : Icons.local_grocery_store_outlined,
+                        size: 32,
+                        color: colors.mutedText,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No items yet',
+                        style: textTheme.titleMedium?.copyWith(color: onSurface),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        listType == ShoppingListType.shopping
+                            ? 'Add products you want to keep an eye on.'
+                            : 'Keep track of groceries you need to restock.',
+                        style: textTheme.bodyMedium?.copyWith(color: colors.mutedText),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 20),
+                      FilledButton.icon(
+                        onPressed: () => onAddItem(currentList),
+                        icon: const Icon(Icons.add_shopping_cart_outlined),
+                        label: const Text('Start adding items'),
+                      ),
+                    ],
+                  ),
                 ),
-              )
-            else
-              Column(
-                children: listType == ShoppingListType.shopping
-                    ? _buildShoppingItems(items, currentList)
-                    : _buildGroceryItems(items, currentList),
+              ],
+            ),
+          );
+        }
+
+        final itemWidgets = listType == ShoppingListType.shopping
+            ? _buildShoppingItems(items, currentList)
+            : _buildGroceryItems(items, currentList);
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              header,
+              const SizedBox(height: 16),
+              Divider(
+                color: colors.surfaceBorder,
+                height: 1,
+                thickness: 1,
               ),
-          ],
+              ...itemWidgets,
+            ],
+          ),
         );
       },
     );
@@ -1072,6 +1385,7 @@ class _ItemTile extends StatelessWidget {
     required this.onToggle,
     this.children = const <Widget>[],
     this.indent = 0,
+    this.showDividerBelow = false,
   });
 
   final ShoppingList list;
@@ -1081,6 +1395,7 @@ class _ItemTile extends StatelessWidget {
   final ValueChanged<bool> onToggle;
   final List<Widget> children;
   final double indent;
+  final bool showDividerBelow;
 
   Color _priorityColor(BuildContext context) {
     final colors = context.moneyBaseColors;
@@ -1166,7 +1481,7 @@ class _ItemTile extends StatelessWidget {
 
     Widget buildIcon() {
       if (hasIconUrl) {
-        final radius = BorderRadius.circular(14);
+        final radius = BorderRadius.circular(4);
         final sanitizedUrl = iconUrl!.trim();
         return Material(
           color: Colors.transparent,
@@ -1203,7 +1518,7 @@ class _ItemTile extends StatelessWidget {
         height: 44,
         decoration: BoxDecoration(
           color: colors.primaryAccent.withOpacity(0.18),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(4),
         ),
         alignment: Alignment.center,
         child: hasEmoji
@@ -1215,122 +1530,143 @@ class _ItemTile extends StatelessWidget {
       );
     }
 
-    final content = Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Transform.scale(
-          scale: 1.2,
-          child: Checkbox(
-            value: item.bought,
-            onChanged: (value) => onToggle(value ?? false),
-          ),
-        ),
-        const SizedBox(width: 12),
-        buildIcon(),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(
-                      item.title,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: onSurface,
-                        fontWeight: FontWeight.w600,
-                        decoration:
-                            item.bought ? TextDecoration.lineThrough : TextDecoration.none,
-                      ),
-                    ),
-                  ),
-                  PopupMenuButton<_ItemAction>(
-                    onSelected: (action) {
-                      switch (action) {
-                        case _ItemAction.edit:
-                          onEdit();
-                          break;
-                        case _ItemAction.delete:
-                          onDelete();
-                          break;
-                      }
-                    },
-                    itemBuilder: (context) => const [
-                      PopupMenuItem(
-                        value: _ItemAction.edit,
-                        child: Text('Edit'),
-                      ),
-                      PopupMenuItem(
-                        value: _ItemAction.delete,
-                        child: Text('Delete'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  _MetadataChip(
-                    icon: Icons.flag_outlined,
-                    label: '${item.priority.label} priority',
-                    color: _priorityColor(context),
-                  ),
-                  if (item.price > 0)
-                    _MetadataChip(
-                      icon: Icons.attach_money,
-                      label:
-                          '${item.currency.toUpperCase()} ${item.price.toStringAsFixed(2)}',
-                      color: colors.primaryAccent,
-                    ),
-                  if (item.purchaseDate != null)
-                    _MetadataChip(
-                      icon: Icons.schedule_outlined,
-                      label: 'Needed ${_formatDate(item.purchaseDate!)}',
-                      color: colors.secondaryAccent,
-                    ),
-                  if (item.expiryDate != null && list.type == ShoppingListType.shopping)
-                    _MetadataChip(
-                      icon: Icons.hourglass_bottom,
-                      label: 'Expires ${_formatDate(item.expiryDate!)}',
-                      color: colors.info,
-                    ),
-                  if (item.bought)
-                    _MetadataChip(
-                      icon: Icons.check_circle_outline,
-                      label: 'Purchased',
-                      color: colors.positive,
-                    ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                metadataSummary,
-                style: theme.textTheme.bodySmall?.copyWith(color: subtitleColor),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
+    final priceLabel = item.price > 0
+        ? '${item.currency.toUpperCase()} ${item.price.toStringAsFixed(2)}'
+        : null;
 
-    return Padding(
-      padding: EdgeInsets.only(left: indent),
+    final content = Container(
+      margin: EdgeInsets.only(left: indent),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: showDividerBelow
+              ? BorderSide(color: colors.surfaceBorder)
+              : BorderSide.none,
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          content,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Checkbox(
+                value: item.bought,
+                onChanged: (value) => onToggle(value ?? false),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              const SizedBox(width: 12),
+              buildIcon(),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.title,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: onSurface,
+                              fontWeight: FontWeight.w600,
+                              decoration: item.bought
+                                  ? TextDecoration.lineThrough
+                                  : TextDecoration.none,
+                            ),
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            if (priceLabel != null)
+                              Text(
+                                priceLabel,
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  color: onSurface,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            PopupMenuButton<_ItemAction>(
+                              padding: EdgeInsets.zero,
+                              onSelected: (action) {
+                                switch (action) {
+                                  case _ItemAction.edit:
+                                    onEdit();
+                                    break;
+                                  case _ItemAction.delete:
+                                    onDelete();
+                                    break;
+                                }
+                              },
+                              itemBuilder: (context) => const [
+                                PopupMenuItem(
+                                  value: _ItemAction.edit,
+                                  child: Text('Edit'),
+                                ),
+                                PopupMenuItem(
+                                  value: _ItemAction.delete,
+                                  child: Text('Delete'),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _MetadataChip(
+                          icon: Icons.flag_outlined,
+                          label: '${item.priority.label} priority',
+                          color: _priorityColor(context),
+                        ),
+                        if (item.purchaseDate != null)
+                          _MetadataChip(
+                            icon: Icons.schedule_outlined,
+                            label: 'Needed ${_formatDate(item.purchaseDate!)}',
+                            color: colors.secondaryAccent,
+                          ),
+                        if (item.expiryDate != null &&
+                            list.type == ShoppingListType.shopping)
+                          _MetadataChip(
+                            icon: Icons.hourglass_bottom,
+                            label: 'Expires ${_formatDate(item.expiryDate!)}',
+                            color: colors.info,
+                          ),
+                        if (item.bought)
+                          _MetadataChip(
+                            icon: Icons.check_circle_outline,
+                            label: 'Purchased',
+                            color: colors.positive,
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      metadataSummary,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: subtitleColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
           if (children.isNotEmpty) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             ...children,
           ],
         ],
       ),
     );
+
+    return content;
   }
 }
 
@@ -1350,11 +1686,11 @@ class _MetadataChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.16),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.32)),
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withOpacity(0.28)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

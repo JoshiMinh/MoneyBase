@@ -4,7 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../core/models/shopping_list.dart';
 import '../core/models/transaction.dart';
+import '../core/repositories/shopping_list_repository.dart';
 import '../features/add_transaction/presentation/add_transaction_screen.dart';
 import '../features/app_shell/presentation/app_shell.dart';
 import '../features/auth/presentation/auth_screen.dart';
@@ -119,6 +121,30 @@ class _MoneyBaseAppState extends State<MoneyBaseApp> {
       name = '/auth';
     } else if (isAuthenticated && name == '/auth') {
       name = '/home';
+    }
+
+    if (isAuthenticated && name.startsWith('/shopping/list/')) {
+      final listId = name.substring('/shopping/list/'.length);
+      if (listId.isNotEmpty) {
+        final decodedId = Uri.decodeComponent(listId);
+        final placeholder = ShoppingList(
+          id: decodedId,
+          userId: user!.uid,
+        );
+        final repository = ShoppingListRepository();
+
+        return _buildPageRoute(
+          RouteSettings(
+            name: name,
+            arguments: settings.arguments,
+          ),
+          ShoppingListDetailScreen(
+            userId: user.uid,
+            repository: repository,
+            initialList: placeholder,
+          ),
+        );
+      }
     }
 
     final routeSettings = RouteSettings(

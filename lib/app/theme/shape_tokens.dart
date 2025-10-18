@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 class MoneyBaseShapeTokens {
   const MoneyBaseShapeTokens._();
 
-  static const double cornerSmall = 8;
-  static const double cornerMedium = 12;
-  static const double cornerLarge = 16;
-  static const double cornerExtraLarge = 20;
+  static const double cornerSmall = 4;
+  static const double cornerMedium = 6;
+  static const double cornerLarge = 8;
+  static const double cornerExtraLarge = 10;
 
   static const BorderRadius borderRadiusSmall =
       BorderRadius.all(Radius.circular(cornerSmall));
