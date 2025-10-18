@@ -315,30 +315,37 @@ class _AppShellState extends State<AppShell> {
   }
 }
 
+class _AppShellRoutes {
+  static const home = '/home';
+  static const budgets = '/budgets';
+  static const shopping = '/shopping';
+  static const settings = '/settings';
+}
+
 enum _NavigationDestination {
   home(
     label: 'Home',
     icon: Icons.home_outlined,
     selectedIcon: Icons.home,
-    path: '/home',
+    path: _AppShellRoutes.home,
   ),
   budgets(
     label: 'Budgets',
     icon: Icons.account_balance_wallet_outlined,
     selectedIcon: Icons.account_balance_wallet,
-    path: '/budgets',
+    path: _AppShellRoutes.budgets,
   ),
   shoppingList(
     label: 'Shopping',
     icon: Icons.shopping_cart_outlined,
     selectedIcon: Icons.shopping_cart,
-    path: '/shopping',
+    path: _AppShellRoutes.shopping,
   ),
   settings(
     label: 'Settings',
     icon: Icons.settings_outlined,
     selectedIcon: Icons.settings,
-    path: '/settings',
+    path: _AppShellRoutes.settings,
     isSecondary: true,
   );
 
