@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:moneybase/app/theme/theme.dart';
 
@@ -91,12 +93,7 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _openAiAssistant(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const AiAssistantSheet(),
-    );
+    Navigator.of(context).pushNamed(_AppShellRoutes.assistant);
   }
 
   Widget? _buildFloatingActions(
@@ -315,30 +312,38 @@ class _AppShellState extends State<AppShell> {
   }
 }
 
+class _AppShellRoutes {
+  static const home = '/home';
+  static const budgets = '/budgets';
+  static const shopping = '/shopping';
+  static const settings = '/settings';
+  static const assistant = '/assistant';
+}
+
 enum _NavigationDestination {
   home(
     label: 'Home',
     icon: Icons.home_outlined,
     selectedIcon: Icons.home,
-    path: '/',
+    path: _AppShellRoutes.home,
   ),
   budgets(
     label: 'Budgets',
     icon: Icons.account_balance_wallet_outlined,
     selectedIcon: Icons.account_balance_wallet,
-    path: '/budgets',
+    path: _AppShellRoutes.budgets,
   ),
   shoppingList(
     label: 'Shopping',
     icon: Icons.shopping_cart_outlined,
     selectedIcon: Icons.shopping_cart,
-    path: '/shopping',
+    path: _AppShellRoutes.shopping,
   ),
   settings(
     label: 'Settings',
     icon: Icons.settings_outlined,
     selectedIcon: Icons.settings,
-    path: '/settings',
+    path: _AppShellRoutes.settings,
     isSecondary: true,
   );
 

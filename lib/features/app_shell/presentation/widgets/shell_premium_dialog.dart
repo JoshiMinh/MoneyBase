@@ -49,15 +49,28 @@ class _PremiumDialog extends StatelessWidget {
       ),
     ];
 
+    final mediaSize = MediaQuery.sizeOf(context);
+    final isCompactWidth = mediaSize.width < 720;
+    final isCompactHeight = mediaSize.height < 720;
+    final horizontalInset = isCompactWidth ? 12.0 : 32.0;
+    final verticalInset = isCompactHeight ? 12.0 : 32.0;
+    final horizontalPadding = isCompactWidth ? 20.0 : 28.0;
+    final topPadding = isCompactWidth ? 24.0 : 36.0;
+    final bottomPadding = isCompactWidth ? 20.0 : 28.0;
+    final badgeSize = isCompactWidth ? 48.0 : 56.0;
+
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 520),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Container(
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: horizontalInset,
+        vertical: verticalInset,
+      ),
+      child: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final maxWidth = math.min(constraints.maxWidth, 720.0);
+            final content = Container(
+              width: double.infinity,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(28),
                 gradient: LinearGradient(
@@ -70,37 +83,96 @@ class _PremiumDialog extends StatelessWidget {
                           isDark ? 0.7 : 0.85,
                         ) ??
                         themeColors.surfaceElevated,
-                    themeColors.surfaceBackground.withOpacity(isDark ? 0.82 : 0.95),
+                    themeColors.surfaceBackground.withOpacity(
+                      isDark ? 0.82 : 0.95,
+                    ),
                   ],
                 ),
                 border: Border.all(
-                  color: themeColors.surfaceBorder.withOpacity(isDark ? 0.7 : 0.8),
+                  color: themeColors.surfaceBorder.withOpacity(
+                    isDark ? 0.6 : 0.75,
+                  ),
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: themeColors.surfaceShadow.withOpacity(isDark ? 0.7 : 0.35),
+                    color: themeColors.surfaceShadow.withOpacity(
+                      isDark ? 0.7 : 0.35,
+                    ),
                     blurRadius: 36,
                     offset: const Offset(0, 24),
                   ),
                 ],
               ),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 64, 24, 24),
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  topPadding,
+                  horizontalPadding,
+                  bottomPadding,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'MoneyBase Premium',
-                      style: textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: themeColors.primaryText,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Unlock advanced automations, collaborative tools, and an AI coach tailored to your finances.',
-                      style: textTheme.bodyMedium?.copyWith(color: descriptionColor),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: badgeSize,
+                          height: badgeSize,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: [
+                                themeColors.primaryAccent,
+                                themeColors.secondaryAccent,
+                              ],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: themeColors.primaryAccent.withOpacity(0.35),
+                                blurRadius: 28,
+                                offset: const Offset(0, 16),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.workspace_premium,
+                            color: Colors.white,
+                            size: isCompactWidth ? 26 : 30,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'MoneyBase Premium',
+                                style: textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: themeColors.primaryText,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Unlock advanced automations, collaborative tools, and an AI coach tailored to your finances.',
+                                style: textTheme.bodyMedium?.copyWith(
+                                  color: descriptionColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Close',
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: Icon(
+                            Icons.close,
+                            color: themeColors.mutedText,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 24),
                     Wrap(
@@ -128,7 +200,9 @@ class _PremiumDialog extends StatelessWidget {
                     const SizedBox(height: 24),
                     Divider(
                       height: 1,
-                      color: themeColors.surfaceBorder.withOpacity(isDark ? 0.65 : 0.75),
+                      color: themeColors.surfaceBorder.withOpacity(
+                        isDark ? 0.6 : 0.7,
+                      ),
                     ),
                     const SizedBox(height: 24),
                     for (var i = 0; i < plans.length; i++) ...[
@@ -158,49 +232,28 @@ class _PremiumDialog extends StatelessWidget {
                   ],
                 ),
               ),
-            ),
-            Positioned(
-              top: -28,
-              left: 32,
-              child: Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [
-                      themeColors.primaryAccent,
-                      themeColors.secondaryAccent,
-                    ],
+            );
+
+            final scrollable = SingleChildScrollView(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: maxWidth,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: themeColors.primaryAccent.withOpacity(0.35),
-                      blurRadius: 28,
-                      offset: const Offset(0, 16),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.workspace_premium,
-                  color: Colors.white,
-                  size: 30,
+                  child: content,
                 ),
               ),
-            ),
-            Positioned(
-              top: 8,
-              right: 8,
-              child: IconButton(
-                tooltip: 'Close',
-                onPressed: () => Navigator.of(context).pop(),
-                icon: Icon(
-                  Icons.close,
-                  color: themeColors.mutedText,
-                ),
-              ),
-            ),
-          ],
+            );
+
+            if (!isCompactHeight) {
+              return scrollable;
+            }
+
+            return SizedBox(
+              height: constraints.maxHeight,
+              child: scrollable,
+            );
+          },
         ),
       ),
     );

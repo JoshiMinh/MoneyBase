@@ -27,12 +27,39 @@ class _Composer extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final onSurface = theme.colorScheme.onSurface;
+    final viewportWidth = MediaQuery.sizeOf(context).width;
+    final isCompactWidth = viewportWidth < 560;
     final micTooltip = isListening ? 'Stop listening' : 'Voice input';
     final micIcon = isListening ? Icons.stop : Icons.mic_none;
     final micHandler = (!isEnabled || onMicPressed == null)
         ? null
         : onMicPressed;
     final canSend = isEnabled && !isSending;
+
+    final Widget sendButton;
+    if (isCompactWidth) {
+      sendButton = FilledButton(
+        onPressed: canSend ? onSend : null,
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.all(16),
+          minimumSize: const Size.square(48),
+          backgroundColor: theme.colorScheme.primary,
+          foregroundColor: theme.colorScheme.onPrimary,
+        ),
+        child: const Icon(Icons.send),
+      );
+    } else {
+      sendButton = FilledButton.icon(
+        onPressed: canSend ? onSend : null,
+        icon: const Icon(Icons.send),
+        label: const Text('Send'),
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          backgroundColor: theme.colorScheme.primary,
+          foregroundColor: theme.colorScheme.onPrimary,
+        ),
+      );
+    }
 
     final row = Row(
       children: [
@@ -70,16 +97,7 @@ class _Composer extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        FilledButton.icon(
-          onPressed: canSend ? onSend : null,
-          icon: const Icon(Icons.send),
-          label: const Text('Send'),
-          style: FilledButton.styleFrom(
-            backgroundColor: theme.colorScheme.primary,
-            foregroundColor: theme.colorScheme.onPrimary,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          ),
-        ),
+        sendButton,
       ],
     );
 
