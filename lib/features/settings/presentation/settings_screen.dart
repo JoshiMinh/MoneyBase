@@ -432,10 +432,10 @@ class _ProfileHeader extends StatelessWidget {
         photoUrl!,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) =>
-            Image.asset('icon.png', fit: BoxFit.cover),
+            Image.asset('assets/icon.png', fit: BoxFit.cover),
       );
     } else {
-      avatar = Image.asset('icon.png', fit: BoxFit.cover);
+      avatar = Image.asset('assets/icon.png', fit: BoxFit.cover);
     }
 
     return Row(

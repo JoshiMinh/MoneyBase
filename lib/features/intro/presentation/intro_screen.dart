@@ -115,7 +115,7 @@ class _IntroContent extends StatelessWidget {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(18),
                     child: Image.asset(
-                      'icon.png',
+                      'assets/icon.png',
                       height: 64,
                       width: 64,
                       fit: BoxFit.cover,

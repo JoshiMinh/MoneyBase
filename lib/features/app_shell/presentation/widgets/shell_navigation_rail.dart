@@ -127,7 +127,7 @@ class _RailHeader extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Image.asset(
-                'icon.png',
+                'assets/icon.png',
                 width: 40,
                 height: 40,
                 fit: BoxFit.cover,
