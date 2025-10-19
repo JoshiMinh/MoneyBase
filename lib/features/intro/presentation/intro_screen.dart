@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/theme.dart';
 import '../../common/presentation/moneybase_shell.dart';
 
@@ -12,9 +13,18 @@ class IntroScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final lightTheme = MoneyBaseTheme.buildTheme(darkMode: false);
+    final themeColors = lightTheme.extension<MoneyBaseThemeColors>();
+    final primaryAccent = themeColors?.primaryAccent ?? lightTheme.colorScheme.primary;
+    final secondaryAccent =
+        themeColors?.secondaryAccent ?? lightTheme.colorScheme.secondary;
+    final tertiaryAccent =
+        themeColors?.tertiaryAccent ?? MoneyBaseColors.tertiary;
+
     final gradientColors = <Color>[
-      lightTheme.colorScheme.primary,
-      lightTheme.colorScheme.secondary,
+      primaryAccent,
+      Color.lerp(primaryAccent, secondaryAccent, 0.35) ?? secondaryAccent,
+      secondaryAccent,
+      Color.lerp(secondaryAccent, tertiaryAccent, 0.5) ?? tertiaryAccent,
     ];
 
     return Theme(
@@ -32,19 +42,27 @@ class IntroScreen extends StatelessWidget {
           child: Stack(
             children: [
               Positioned(
-                top: -140,
-                left: -60,
+                top: -120,
+                left: -70,
                 child: _BlurredOrb(
                   size: 320,
-                  color: lightTheme.colorScheme.secondaryContainer.withOpacity(0.45),
+                  color: secondaryAccent.withOpacity(0.4),
                 ),
               ),
               Positioned(
                 bottom: -160,
-                right: -80,
+                right: -60,
                 child: _BlurredOrb(
                   size: 360,
-                  color: lightTheme.colorScheme.tertiaryContainer.withOpacity(0.35),
+                  color: tertiaryAccent.withOpacity(0.32),
+                ),
+              ),
+              Positioned(
+                top: 220,
+                right: -100,
+                child: _BlurredOrb(
+                  size: 220,
+                  color: primaryAccent.withOpacity(0.28),
                 ),
               ),
               SafeArea(
@@ -76,9 +94,9 @@ class _IntroContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
-    const headingColor = Colors.black;
-    final bodyColor = Colors.black.withOpacity(0.85);
-    final mutedColor = Colors.black.withOpacity(0.65);
+    const headingColor = Colors.white;
+    final bodyColor = Colors.white.withOpacity(0.88);
+    final badgesColor = Colors.white.withOpacity(0.94);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -86,27 +104,47 @@ class _IntroContent extends StatelessWidget {
         final column = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(18),
-                  child: Image.asset(
-                    'icon.png',
-                    height: 72,
-                    width: 72,
-                    fit: BoxFit.cover,
+            MoneyBaseFrostedPanel(
+              backgroundOpacity: 0.18,
+              borderOpacity: 0.22,
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+              borderRadius: 26,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(18),
+                    child: Image.asset(
+                      'icon.png',
+                      height: 64,
+                      width: 64,
+                      fit: BoxFit.cover,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 18),
-                Text(
-                  'MoneyBase',
-                  style: textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: headingColor,
+                  const SizedBox(width: 18),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'MoneyBase',
+                        style: textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: headingColor,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                      Text(
+                        'Personal finance without the noise',
+                        style: textTheme.labelLarge?.copyWith(
+                          color: bodyColor,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             const SizedBox(height: 40),
             Text(
@@ -119,7 +157,7 @@ class _IntroContent extends StatelessWidget {
             ),
             const SizedBox(height: 18),
             Text(
-              'Launch the dashboard or jump straight into sign-in. Install on Android when you\'re ready to take MoneyBase on the go.',
+              'Launch the dashboard or jump straight into sign-in. MoneyBase keeps budgets, shared shopping lists, and analytics aligned with your goals.',
               style: textTheme.titleMedium?.copyWith(
                 color: bodyColor,
                 height: 1.5,
@@ -135,8 +173,10 @@ class _IntroContent extends StatelessWidget {
                   icon: const Icon(Icons.dashboard_customize_rounded),
                   label: const Text('Enter MoneyBase'),
                   style: FilledButton.styleFrom(
-                    foregroundColor: headingColor,
-                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.white,
+                    backgroundColor:
+                        theme.extension<MoneyBaseThemeColors>()?.primaryAccent ??
+                            theme.colorScheme.primary,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 28,
                       vertical: 20,
@@ -155,8 +195,8 @@ class _IntroContent extends StatelessWidget {
                       horizontal: 24,
                       vertical: 20,
                     ),
-                    side: BorderSide(color: mutedColor),
-                    foregroundColor: headingColor,
+                    side: BorderSide(color: Colors.white.withOpacity(0.65)),
+                    foregroundColor: Colors.white,
                     textStyle: textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -171,7 +211,7 @@ class _IntroContent extends StatelessWidget {
                       horizontal: 20,
                       vertical: 18,
                     ),
-                    foregroundColor: headingColor,
+                    foregroundColor: badgesColor,
                     textStyle: textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -184,8 +224,8 @@ class _IntroContent extends StatelessWidget {
               spacing: 18,
               runSpacing: 18,
               children: const [
-                _IntroBadge(icon: Icons.insights_outlined, label: 'Live analytics'),
-                _IntroBadge(icon: Icons.hub_outlined, label: 'Unified wallets'),
+                _IntroBadge(icon: Icons.insights_outlined, label: 'Live analytics dashboards'),
+                _IntroBadge(icon: Icons.hub_outlined, label: 'Unified wallets & lists'),
                 _IntroBadge(icon: Icons.verified_user_outlined, label: 'Backed by Firebase Auth'),
               ],
             ),
@@ -232,11 +272,13 @@ class _IntroBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final textColor = Colors.black.withOpacity(0.8);
+    final textColor = Colors.white;
 
     return MoneyBaseFrostedPanel(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       borderRadius: 20,
+      backgroundOpacity: 0.22,
+      borderOpacity: 0.24,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -262,10 +304,11 @@ class _IntroPreviewPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.extension<MoneyBaseThemeColors>();
-    final surface = colors?.surfaceBackground.withOpacity(0.6) ??
-        Colors.white.withOpacity(theme.brightness == Brightness.dark ? 0.08 : 0.18);
-    const headingColor = Colors.black;
-    final bodyColor = Colors.black.withOpacity(0.65);
+    final surface = colors?.surfaceBackground.withOpacity(0.18) ??
+        Colors.white.withOpacity(0.14);
+    final headingColor = Colors.white;
+    final bodyColor = Colors.white.withOpacity(0.78);
+    final accent = colors?.primaryAccent ?? theme.colorScheme.primary;
 
     return Align(
       alignment: Alignment.centerRight,
@@ -274,6 +317,8 @@ class _IntroPreviewPanel extends StatelessWidget {
         child: MoneyBaseFrostedPanel(
           borderRadius: 36,
           padding: const EdgeInsets.all(28),
+          backgroundOpacity: 0.2,
+          borderOpacity: 0.24,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -293,7 +338,7 @@ class _IntroPreviewPanel extends StatelessWidget {
                   gradient: LinearGradient(
                     colors: [
                       surface,
-                      surface.withOpacity(0.75),
+                      Color.lerp(surface, accent.withOpacity(0.22), 0.5) ?? surface,
                     ],
                   ),
                 ),
@@ -319,7 +364,9 @@ class _PreviewSparkline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.primary;
+    final theme = Theme.of(context);
+    final colors = theme.extension<MoneyBaseThemeColors>();
+    final color = colors?.secondaryAccent ?? theme.colorScheme.primary;
 
     return CustomPaint(
       painter: _SparklinePainter(color),
