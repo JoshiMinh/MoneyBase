@@ -10,6 +10,7 @@ import '../../../core/repositories/category_repository.dart';
 import '../../../core/repositories/transaction_repository.dart';
 import '../../../core/repositories/wallet_repository.dart';
 import '../../../core/utils/color_utils.dart';
+import '../../common/presentation/moneybase_shell.dart';
 
 class TransactionEditorArguments {
   TransactionEditorArguments({
@@ -30,10 +31,20 @@ class TransactionsScreen extends StatefulWidget {
   State<TransactionsScreen> createState() => _TransactionsScreenState();
 }
 
+enum _TransactionTypeFilter { all, expenses, income }
+
 class _TransactionsScreenState extends State<TransactionsScreen> {
   late final TransactionRepository _transactionRepository;
   late final WalletRepository _walletRepository;
   late final CategoryRepository _categoryRepository;
+
+  static const String _kAllFilterValue = '__all__';
+
+  final TextEditingController _searchController = TextEditingController();
+  _TransactionTypeFilter _typeFilter = _TransactionTypeFilter.all;
+  String _walletFilter = _kAllFilterValue;
+  String _categoryFilter = _kAllFilterValue;
+  String _searchTerm = '';
 
   static const _months = [
     'Jan',
@@ -58,6 +69,12 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     _categoryRepository = CategoryRepository();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   String _formatDate(DateTime date) {
     final month = _months[date.month - 1];
     final day = date.day.toString().padLeft(2, '0');
@@ -70,6 +87,319 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     final currency =
         transaction.currencyCode.isEmpty ? 'USD' : transaction.currencyCode;
     return '$prefix${currency.toUpperCase()} ${transaction.amount.toStringAsFixed(2)}';
+  }
+
+  void _resetFilters() {
+    setState(() {
+      _typeFilter = _TransactionTypeFilter.all;
+      _walletFilter = _kAllFilterValue;
+      _categoryFilter = _kAllFilterValue;
+      _searchTerm = '';
+    });
+    _searchController.clear();
+  }
+
+  void _clearSearch() {
+    setState(() {
+      _searchTerm = '';
+    });
+    _searchController.clear();
+  }
+
+  List<MoneyBaseTransaction> _applyFilters(
+    List<MoneyBaseTransaction> transactions,
+    Map<String, Wallet> walletById,
+    Map<String, Category> categoryById,
+  ) {
+    final query = _searchTerm.trim().toLowerCase();
+
+    return transactions.where((transaction) {
+      if (_typeFilter == _TransactionTypeFilter.expenses &&
+          transaction.isIncome) {
+        return false;
+      }
+      if (_typeFilter == _TransactionTypeFilter.income &&
+          !transaction.isIncome) {
+        return false;
+      }
+      if (_walletFilter != _kAllFilterValue &&
+          transaction.walletId != _walletFilter) {
+        return false;
+      }
+      if (_categoryFilter != _kAllFilterValue &&
+          transaction.categoryId != _categoryFilter) {
+        return false;
+      }
+
+      if (query.isNotEmpty) {
+        final walletName = walletById[transaction.walletId]?.name ?? '';
+        final categoryName = categoryById[transaction.categoryId]?.name ?? '';
+        final haystack =
+            '${transaction.description} $walletName $categoryName'.toLowerCase();
+        if (!haystack.contains(query)) {
+          return false;
+        }
+      }
+
+      return true;
+    }).toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+  }
+
+  String _resolveCurrencyCode(MoneyBaseTransaction transaction) {
+    final code = transaction.currencyCode.trim();
+    if (code.isEmpty) {
+      return 'USD';
+    }
+    return code.toUpperCase();
+  }
+
+  String _formatSummaryAmount(
+    double amount,
+    Set<String> currencies, {
+    bool signed = false,
+  }) {
+    final sign = signed && amount != 0
+        ? (amount >= 0 ? '+' : '-')
+        : '';
+    final magnitude = amount.abs().toStringAsFixed(2);
+    if (currencies.isEmpty) {
+      return '$sign$magnitude';
+    }
+    if (currencies.length == 1) {
+      final currency = currencies.first;
+      return '$sign$currency $magnitude';
+    }
+    return '$sign$magnitude';
+  }
+
+  String _walletNameFor(List<Wallet> wallets, String walletId) {
+    for (final wallet in wallets) {
+      if (wallet.id == walletId) {
+        final name = wallet.name?.trim();
+        if (name != null && name.isNotEmpty) {
+          return name;
+        }
+        break;
+      }
+    }
+    return 'Wallet';
+  }
+
+  String _categoryNameFor(List<Category> categories, String categoryId) {
+    for (final category in categories) {
+      if (category.id == categoryId) {
+        final name = category.name?.trim();
+        if (name != null && name.isNotEmpty) {
+          return name;
+        }
+        break;
+      }
+    }
+    return 'Category';
+  }
+
+  Widget _buildFilterPanel(
+    BuildContext context,
+    MoneyBaseLayout layout,
+    List<Wallet> wallets,
+    List<Category> categories,
+  ) {
+    final textTheme = Theme.of(context).textTheme;
+    final colors = context.moneyBaseColors;
+    final hasActiveFilters = _typeFilter != _TransactionTypeFilter.all ||
+        _walletFilter != _kAllFilterValue ||
+        _categoryFilter != _kAllFilterValue ||
+        _searchTerm.isNotEmpty;
+
+    Widget buildSearchField() {
+      return TextField(
+        controller: _searchController,
+        onChanged: (value) => setState(() => _searchTerm = value),
+        decoration: InputDecoration(
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: _searchTerm.isNotEmpty
+              ? IconButton(
+                  tooltip: 'Clear search',
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: _clearSearch,
+                )
+              : null,
+          hintText: 'Search description, wallet, or category',
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
+      );
+    }
+
+    Widget buildWalletDropdown() {
+      return DropdownButtonFormField<String>(
+        value: _walletFilter,
+        onChanged: (value) {
+          if (value == null) {
+            return;
+          }
+          setState(() => _walletFilter = value);
+        },
+        decoration: InputDecoration(
+          labelText: 'Wallet',
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
+        items: [
+          const DropdownMenuItem(
+            value: _kAllFilterValue,
+            child: Text('All wallets'),
+          ),
+          ...wallets.map(
+            (wallet) => DropdownMenuItem(
+              value: wallet.id,
+              child: Text(_walletNameFor(wallets, wallet.id)),
+            ),
+          ),
+        ],
+      );
+    }
+
+    Widget buildCategoryDropdown() {
+      return DropdownButtonFormField<String>(
+        value: _categoryFilter,
+        onChanged: (value) {
+          if (value == null) {
+            return;
+          }
+          setState(() => _categoryFilter = value);
+        },
+        decoration: InputDecoration(
+          labelText: 'Category',
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
+        items: [
+          const DropdownMenuItem(
+            value: _kAllFilterValue,
+            child: Text('All categories'),
+          ),
+          ...categories.map(
+            (category) => DropdownMenuItem(
+              value: category.id,
+              child: Text(_categoryNameFor(categories, category.id)),
+            ),
+          ),
+        ],
+      );
+    }
+
+    final filterControls = layout.isWide
+        ? Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: buildSearchField()),
+              const SizedBox(width: 16),
+              SizedBox(width: 220, child: buildWalletDropdown()),
+              const SizedBox(width: 16),
+              SizedBox(width: 220, child: buildCategoryDropdown()),
+            ],
+          )
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              buildSearchField(),
+              const SizedBox(height: 12),
+              buildWalletDropdown(),
+              const SizedBox(height: 12),
+              buildCategoryDropdown(),
+            ],
+          );
+
+    final activeFilterChips = <Widget>[];
+    if (_walletFilter != _kAllFilterValue) {
+      activeFilterChips.add(
+        Chip(
+          label: Text(_walletNameFor(wallets, _walletFilter)),
+          onDeleted: () => setState(() => _walletFilter = _kAllFilterValue),
+        ),
+      );
+    }
+    if (_categoryFilter != _kAllFilterValue) {
+      activeFilterChips.add(
+        Chip(
+          label: Text(_categoryNameFor(categories, _categoryFilter)),
+          onDeleted: () => setState(() => _categoryFilter = _kAllFilterValue),
+        ),
+      );
+    }
+    if (_searchTerm.isNotEmpty) {
+      activeFilterChips.add(
+        Chip(
+          label: Text('“$_searchTerm”'),
+          onDeleted: _clearSearch,
+        ),
+      );
+    }
+
+    return MoneyBaseFrostedPanel(
+      padding: EdgeInsets.symmetric(
+        horizontal: layout.isWide ? 32 : 22,
+        vertical: layout.isWide ? 32 : 22,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Filter transactions',
+            style: textTheme.titleMedium?.copyWith(
+              color: colors.primaryText,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 16),
+          filterControls,
+          const SizedBox(height: 16),
+          SegmentedButton<_TransactionTypeFilter>(
+            segments: const [
+              ButtonSegment(
+                value: _TransactionTypeFilter.all,
+                icon: Icon(Icons.all_inclusive),
+                label: Text('All'),
+              ),
+              ButtonSegment(
+                value: _TransactionTypeFilter.expenses,
+                icon: Icon(Icons.trending_down),
+                label: Text('Expenses'),
+              ),
+              ButtonSegment(
+                value: _TransactionTypeFilter.income,
+                icon: Icon(Icons.trending_up),
+                label: Text('Income'),
+              ),
+            ],
+            style: ButtonStyle(
+              backgroundColor: MaterialStateProperty.resolveWith(
+                (states) => states.contains(MaterialState.selected)
+                    ? colors.secondaryAccent.withOpacity(0.18)
+                    : colors.surfaceBackground.withOpacity(0.6),
+              ),
+            ),
+            selected: <_TransactionTypeFilter>{_typeFilter},
+            showSelectedIcon: false,
+            onSelectionChanged: (selection) =>
+                setState(() => _typeFilter = selection.first),
+          ),
+          if (hasActiveFilters && activeFilterChips.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              children: activeFilterChips,
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   Future<void> _deleteTransaction(
@@ -162,205 +492,777 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Transactions')),
-        body: const _CenteredMessage(
-          message: 'Sign in to review your MoneyBase transactions.',
-        ),
+      return MoneyBaseScaffold(
+        builder: (context, layout) {
+          final textTheme = Theme.of(context).textTheme;
+          final colors = context.moneyBaseColors;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Transactions',
+                style: textTheme.headlineMedium?.copyWith(
+                  color: colors.primaryText,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Sign in to review your MoneyBase transactions.',
+                style: textTheme.bodyLarge?.copyWith(color: colors.mutedText),
+              ),
+              const SizedBox(height: 24),
+              const _TransactionsMessagePanel(
+                icon: Icons.lock_outline,
+                title: 'Sign in required',
+                message: 'Sign in to review your MoneyBase transactions.',
+              ),
+            ],
+          );
+        },
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Transactions'),
-        actions: [
-          IconButton(
-            tooltip: 'Add transaction',
-            onPressed: _openAddTransaction,
-            icon: const Icon(Icons.add),
-          ),
-        ],
+    return MoneyBaseScaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openAddTransaction,
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('Add transaction'),
       ),
-      body: StreamBuilder<List<Wallet>>(
-        stream: _walletRepository.watchWallets(user.uid),
-        builder: (context, walletSnapshot) {
-          if (walletSnapshot.hasError) {
-            return _CenteredMessage(
-              message: 'Unable to load wallets: ${walletSnapshot.error}',
-              isError: true,
-            );
-          }
+      builder: (context, layout) {
+        final textTheme = Theme.of(context).textTheme;
+        final colors = context.moneyBaseColors;
 
-          final wallets = walletSnapshot.data ?? const <Wallet>[];
+        Widget buildHeader() {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Transactions',
+                      style: textTheme.headlineMedium?.copyWith(
+                        color: colors.primaryText,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Review and manage your MoneyBase history with responsive filters.',
+                      style: textTheme.bodyLarge?.copyWith(
+                        color: colors.mutedText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (layout.isWide) ...[
+                const SizedBox(width: 16),
+                MoneyBaseGlassIconButton(
+                  icon: Icons.add,
+                  tooltip: 'Add transaction',
+                  onPressed: _openAddTransaction,
+                ),
+              ],
+            ],
+          );
+        }
 
-          return StreamBuilder<List<Category>>(
-            stream: _categoryRepository.watchCategories(user.uid),
-            builder: (context, categorySnapshot) {
-              if (categorySnapshot.hasError) {
-                return _CenteredMessage(
-                  message: 'Unable to load categories: ${categorySnapshot.error}',
-                  isError: true,
-                );
-              }
+        return StreamBuilder<List<Wallet>>(
+          stream: _walletRepository.watchWallets(user.uid),
+          builder: (context, walletSnapshot) {
+            if (walletSnapshot.hasError) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  buildHeader(),
+                  const SizedBox(height: 24),
+                  _TransactionsMessagePanel(
+                    icon: Icons.account_balance_wallet_outlined,
+                    title: 'Wallets unavailable',
+                    message: 'Unable to load wallets: ${walletSnapshot.error}',
+                    isError: true,
+                  ),
+                ],
+              );
+            }
 
-              final categories = categorySnapshot.data ?? const <Category>[];
+            final wallets = walletSnapshot.data ?? const <Wallet>[];
 
-              return StreamBuilder<List<MoneyBaseTransaction>>(
-                stream: _transactionRepository.watchTransactions(user.uid),
-                builder: (context, transactionSnapshot) {
-                  if (transactionSnapshot.hasError) {
-                    return _CenteredMessage(
-                      message: 'Unable to load transactions: ${transactionSnapshot.error}',
-                      isError: true,
+            return StreamBuilder<List<Category>>(
+              stream: _categoryRepository.watchCategories(user.uid),
+              builder: (context, categorySnapshot) {
+                if (categorySnapshot.hasError) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      buildHeader(),
+                      const SizedBox(height: 24),
+                      _TransactionsMessagePanel(
+                        icon: Icons.category_outlined,
+                        title: 'Categories unavailable',
+                        message:
+                            'Unable to load categories: ${categorySnapshot.error}',
+                        isError: true,
+                      ),
+                    ],
+                  );
+                }
+
+                final categories = categorySnapshot.data ?? const <Category>[];
+                final walletById = {for (final wallet in wallets) wallet.id: wallet};
+                final categoryById = {
+                  for (final category in categories) category.id: category
+                };
+
+                return StreamBuilder<List<MoneyBaseTransaction>>(
+                  stream: _transactionRepository.watchTransactions(user.uid),
+                  builder: (context, transactionSnapshot) {
+                    if (transactionSnapshot.hasError) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          buildHeader(),
+                          const SizedBox(height: 24),
+                          _TransactionsMessagePanel(
+                            icon: Icons.error_outline,
+                            title: 'Transactions unavailable',
+                            message:
+                                'Unable to load transactions: ${transactionSnapshot.error}',
+                            isError: true,
+                          ),
+                        ],
+                      );
+                    }
+
+                    final transactions =
+                        transactionSnapshot.data ?? const <MoneyBaseTransaction>[];
+                    final loading = transactionSnapshot.connectionState ==
+                            ConnectionState.waiting &&
+                        transactions.isEmpty;
+
+                    final filteredTransactions =
+                        _applyFilters(transactions, walletById, categoryById);
+                    final hasActiveFilters =
+                        _typeFilter != _TransactionTypeFilter.all ||
+                            _walletFilter != _kAllFilterValue ||
+                            _categoryFilter != _kAllFilterValue ||
+                            _searchTerm.isNotEmpty;
+                    final currencySet = (filteredTransactions.isEmpty &&
+                            transactions.isNotEmpty)
+                        ? transactions.map(_resolveCurrencyCode).toSet()
+                        : filteredTransactions.map(_resolveCurrencyCode).toSet();
+                    final incomeTransactions = filteredTransactions
+                        .where((transaction) => transaction.isIncome)
+                        .toList();
+                    final expenseTransactions = filteredTransactions
+                        .where((transaction) => !transaction.isIncome)
+                        .toList();
+                    final totalIncome = incomeTransactions.fold<double>(
+                      0,
+                      (sum, transaction) => sum + transaction.amount,
                     );
-                  }
+                    final totalExpense = expenseTransactions.fold<double>(
+                      0,
+                      (sum, transaction) => sum + transaction.amount,
+                    );
+                    final net = totalIncome - totalExpense;
 
-                  final transactions = transactionSnapshot.data ?? const <MoneyBaseTransaction>[];
-                  final loading = transactionSnapshot.connectionState == ConnectionState.waiting && transactions.isEmpty;
+                    final summaryBadges = <Widget>[
+                      _SummaryBadge(
+                        icon: Icons.receipt_long_outlined,
+                        label: 'Transactions',
+                        value: filteredTransactions.length.toString(),
+                        detail:
+                            hasActiveFilters ? 'Filtered view' : 'Showing full history',
+                        accent: colors.primaryAccent,
+                      ),
+                      _SummaryBadge(
+                        icon: Icons.trending_up,
+                        label: 'Income',
+                        value: _formatSummaryAmount(
+                          totalIncome,
+                          currencySet,
+                          signed: true,
+                        ),
+                        detail: incomeTransactions.isEmpty
+                            ? 'No income recorded'
+                            : '${incomeTransactions.length} entr${incomeTransactions.length == 1 ? 'y' : 'ies'}',
+                        accent: Colors.teal,
+                      ),
+                      _SummaryBadge(
+                        icon: Icons.trending_down,
+                        label: 'Expenses',
+                        value: _formatSummaryAmount(
+                          -totalExpense,
+                          currencySet,
+                          signed: true,
+                        ),
+                        detail: expenseTransactions.isEmpty
+                            ? 'No expenses recorded'
+                            : '${expenseTransactions.length} entr${expenseTransactions.length == 1 ? 'y' : 'ies'}',
+                        accent: MoneyBaseColors.red,
+                      ),
+                      _SummaryBadge(
+                        icon: Icons.ssid_chart_outlined,
+                        label: net >= 0 ? 'Net inflow' : 'Net outflow',
+                        value: _formatSummaryAmount(
+                          net,
+                          currencySet,
+                          signed: true,
+                        ),
+                        detail: '${transactions.length} total records',
+                        accent:
+                            net >= 0 ? colors.secondaryAccent : MoneyBaseColors.red,
+                      ),
+                    ];
 
-                  if (loading) return const Center(child: CircularProgressIndicator());
-                  if (transactions.isEmpty) return const _CenteredMessage(message: 'No transactions yet. Capture a purchase to see it listed here.');
+                    final children = <Widget>[
+                      buildHeader(),
+                      const SizedBox(height: 16),
+                      Wrap(
+                        spacing: 16,
+                        runSpacing: 16,
+                        children: summaryBadges,
+                      ),
+                      const SizedBox(height: 24),
+                      _buildFilterPanel(context, layout, wallets, categories),
+                      const SizedBox(height: 24),
+                    ];
 
-                  final walletById = { for (final w in wallets) w.id: w };
-                  final categoryById = { for (final c in categories) c.id: c };
+                    if (loading) {
+                      children.add(
+                        MoneyBaseFrostedPanel(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 48,
+                          ),
+                          child: const Center(child: CircularProgressIndicator()),
+                        ),
+                      );
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: children,
+                      );
+                    }
 
-                  return LayoutBuilder(
-                    builder: (context, constraints) {
-                      final isWide = constraints.maxWidth >= 900;
-                      final padding = EdgeInsets.symmetric(horizontal: isWide ? 48 : 24, vertical: 32);
+                    if (transactions.isEmpty) {
+                      children.add(
+                        _TransactionsMessagePanel(
+                          icon: Icons.inbox_outlined,
+                          title: 'No transactions yet',
+                          message:
+                              'Capture a purchase or income entry to see it listed here.',
+                          action: FilledButton.icon(
+                            onPressed: _openAddTransaction,
+                            icon: const Icon(Icons.add_rounded),
+                            label: const Text('Add your first transaction'),
+                          ),
+                        ),
+                      );
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: children,
+                      );
+                    }
 
-                      if (isWide) {
-                        return Center(
+                    if (filteredTransactions.isEmpty) {
+                      children.add(
+                        _TransactionsMessagePanel(
+                          icon: Icons.filter_alt_off_outlined,
+                          title: 'No results match the current filters',
+                          message:
+                              'Adjust your filters or clear them to see your transactions again.',
+                          action: TextButton.icon(
+                            onPressed: _resetFilters,
+                            icon: const Icon(Icons.refresh_rounded),
+                            label: const Text('Clear filters'),
+                          ),
+                        ),
+                      );
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: children,
+                      );
+                    }
+
+                    if (layout.isWide) {
+                      children.add(
+                        MoneyBaseFrostedPanel(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 20,
+                          ),
                           child: SingleChildScrollView(
-                            padding: padding,
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 1100),
-                              child: Card(
-                                clipBehavior: Clip.antiAlias,
-                                child: DataTable(
-                                  headingRowColor: WidgetStateProperty.resolveWith<Color?>((_) => Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.4)),
-                                  columns: const [
-                                    DataColumn(label: Text('Date')),
-                                    DataColumn(label: Text('Description')),
-                                    DataColumn(label: Text('Category')),
-                                    DataColumn(label: Text('Wallet')),
-                                    DataColumn(label: Text('Amount'), numeric: true),
-                                    DataColumn(label: Text('Actions')),
-                                  ],
-                                  rows: transactions.map((transaction) {
-                                    final rawCategoryName = categoryById[transaction.categoryId]?.name;
-                                    final displayCategoryName = (rawCategoryName?.trim().isNotEmpty ?? false) ? rawCategoryName! : 'Uncategorised';
-                                    final rawWalletName = walletById[transaction.walletId]?.name;
-                                    final displayWalletName = (rawWalletName?.trim().isNotEmpty ?? false) ? rawWalletName! : 'Unknown wallet';
-
-                                    return DataRow(cells: [
-                                      DataCell(Text(_formatDate(transaction.date))),
-                                      DataCell(Text(transaction.description)),
-                                      DataCell(Text(displayCategoryName)),
-                                      DataCell(Text(displayWalletName)),
-                                      DataCell(Align(alignment: Alignment.centerRight, child: Text(_formatAmount(transaction), style: TextStyle(color: transaction.isIncome ? Colors.teal : Theme.of(context).colorScheme.error, fontWeight: FontWeight.w600)))),
-                                      DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
-                                        IconButton(icon: const Icon(Icons.edit_outlined), tooltip: 'Edit', onPressed: () => _editTransaction(context, user.uid, transaction, wallets, categories)),
-                                        IconButton(icon: const Icon(Icons.delete_outline), tooltip: 'Delete', onPressed: () => _deleteTransaction(context, user.uid, transaction)),
-                                      ])),
-                                    ]);
-                                  }).toList(),
-                                ),
+                            scrollDirection: Axis.horizontal,
+                            child: DataTable(
+                              headingRowColor: MaterialStateProperty.resolveWith(
+                                (states) => Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerHighest
+                                    .withOpacity(0.4),
                               ),
+                              columnSpacing: 28,
+                              dataRowMinHeight: 60,
+                              columns: const [
+                                DataColumn(label: Text('Date')),
+                                DataColumn(label: Text('Description')),
+                                DataColumn(label: Text('Category')),
+                                DataColumn(label: Text('Wallet')),
+                                DataColumn(label: Text('Amount'), numeric: true),
+                                DataColumn(label: Text('Actions')),
+                              ],
+                              rows: filteredTransactions.map((transaction) {
+                                final amountColor = transaction.isIncome
+                                    ? Colors.teal
+                                    : Theme.of(context).colorScheme.error;
+
+                                return DataRow(
+                                  cells: [
+                                    DataCell(Text(_formatDate(transaction.date))),
+                                    DataCell(Text(transaction.description)),
+                                    DataCell(Text(
+                                      _categoryNameFor(
+                                        categories,
+                                        transaction.categoryId,
+                                      ),
+                                    )),
+                                    DataCell(Text(
+                                      _walletNameFor(
+                                        wallets,
+                                        transaction.walletId,
+                                      ),
+                                    )),
+                                    DataCell(
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: Text(
+                                          _formatAmount(transaction),
+                                          style: TextStyle(
+                                            color: amountColor,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    DataCell(
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          MoneyBaseGlassIconButton(
+                                            icon: Icons.edit_outlined,
+                                            tooltip: 'Edit transaction',
+                                            onPressed: () => _editTransaction(
+                                              context,
+                                              user.uid,
+                                              transaction,
+                                              wallets,
+                                              categories,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          MoneyBaseGlassIconButton(
+                                            icon: Icons.delete_outline,
+                                            tooltip: 'Delete transaction',
+                                            onPressed: () => _deleteTransaction(
+                                              context,
+                                              user.uid,
+                                              transaction,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }).toList(),
                             ),
                           ),
-                        );
-                      }
-
-                      return ListView.separated(
-                        padding: padding,
-                        itemCount: transactions.length,
-                        separatorBuilder: (_, __) => const Divider(),
-                        itemBuilder: (context, index) {
-                          final transaction = transactions[index];
-                          final category = categoryById[transaction.categoryId];
-                          final wallet = walletById[transaction.walletId];
-                          final displayCategoryName = (category?.name?.trim().isNotEmpty ?? false) ? category!.name : 'Uncategorised';
-                          final displayWalletName = (wallet?.name?.trim().isNotEmpty ?? false) ? wallet!.name : 'Unknown wallet';
-                          final amountColor = transaction.isIncome ? Colors.teal : Theme.of(context).colorScheme.error;
-                          final icon = IconLibrary.iconForCategory(category?.iconName);
-                          final accent = parseHexColor(category?.color) ?? amountColor;
-
-                          return Container(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Container(
-                                  width: 56,
-                                  height: 56,
-                                  decoration: BoxDecoration(color: accent.withOpacity(0.18), borderRadius: BorderRadius.circular(28)),
-                                  child: Icon(icon, color: accent),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(transaction.description, maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600)),
-                                      const SizedBox(height: 6),
-                                      Text('${_formatDate(transaction.date)} • $displayWalletName • $displayCategoryName', maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7))),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                SizedBox(
-                                  width: 120,
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Text(_formatAmount(transaction), maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: amountColor, fontWeight: FontWeight.w700)),
-                                      const SizedBox(height: 6),
-                                      Row(mainAxisSize: MainAxisSize.min, children: [
-                                        GestureDetector(onTap: () => _editTransaction(context, user.uid, transaction, wallets, categories), child: Padding(padding: const EdgeInsets.all(6.0), child: Icon(Icons.edit_outlined, size: 18, color: Theme.of(context).colorScheme.onSurface))),
-                                        GestureDetector(onTap: () => _deleteTransaction(context, user.uid, transaction), child: Padding(padding: const EdgeInsets.all(6.0), child: Icon(Icons.delete_outline, size: 18, color: Theme.of(context).colorScheme.onSurface))),
-                                      ]),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
+                        ),
                       );
-                    },
-                  );
-                },
-              );
-            },
-          );
-        },
+                    } else {
+                      children.add(
+                        ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: filteredTransactions.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 16),
+                          itemBuilder: (context, index) {
+                            final transaction = filteredTransactions[index];
+                            final category = categoryById[transaction.categoryId];
+                            final wallet = walletById[transaction.walletId];
+
+                            return _TransactionTile(
+                              transaction: transaction,
+                              category: category,
+                              wallet: wallet,
+                              dateLabel: _formatDate(transaction.date),
+                              amountLabel: _formatAmount(transaction),
+                              onEdit: () => _editTransaction(
+                                context,
+                                user.uid,
+                                transaction,
+                                wallets,
+                                categories,
+                              ),
+                              onDelete: () => _deleteTransaction(
+                                context,
+                                user.uid,
+                                transaction,
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    }
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: children,
+                    );
+                  },
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _TransactionsMessagePanel extends StatelessWidget {
+  const _TransactionsMessagePanel({
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.isError = false,
+    this.action,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+  final bool isError;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.moneyBaseColors;
+    final textTheme = Theme.of(context).textTheme;
+    final accent = isError ? MoneyBaseColors.red : colors.primaryAccent;
+
+    return MoneyBaseFrostedPanel(
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  color: accent.withOpacity(0.16),
+                  border: Border.all(color: accent.withOpacity(0.3)),
+                ),
+                child: Icon(icon, color: accent),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: textTheme.titleMedium?.copyWith(
+                        color: colors.primaryText,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      message,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colors.mutedText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (action != null) ...[
+            const SizedBox(height: 20),
+            action!,
+          ],
+        ],
       ),
     );
   }
 }
 
-class _CenteredMessage extends StatelessWidget {
-  const _CenteredMessage({required this.message, this.isError = false});
+class _SummaryBadge extends StatelessWidget {
+  const _SummaryBadge({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.detail,
+    this.accent,
+  });
 
-  final String message;
-  final bool isError;
+  final IconData icon;
+  final String label;
+  final String value;
+  final String? detail;
+  final Color? accent;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Text(
-          message,
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color:
-                    isError ? Theme.of(context).colorScheme.error : Colors.white,
-              ),
+    final colors = context.moneyBaseColors;
+    final textTheme = Theme.of(context).textTheme;
+    final resolvedAccent = accent ?? colors.primaryAccent;
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 200),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              resolvedAccent.withOpacity(0.22),
+              resolvedAccent.withOpacity(0.1),
+            ],
+          ),
+          border: Border.all(color: resolvedAccent.withOpacity(0.36)),
         ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: resolvedAccent),
+            const SizedBox(height: 12),
+            Text(
+              label,
+              style: textTheme.labelLarge?.copyWith(
+                color: colors.mutedText,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: textTheme.titleMedium?.copyWith(
+                color: colors.primaryText,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            if (detail != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                detail!,
+                style: textTheme.bodySmall?.copyWith(color: colors.mutedText),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TransactionTile extends StatelessWidget {
+  const _TransactionTile({
+    required this.transaction,
+    required this.category,
+    required this.wallet,
+    required this.dateLabel,
+    required this.amountLabel,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final MoneyBaseTransaction transaction;
+  final Category? category;
+  final Wallet? wallet;
+  final String dateLabel;
+  final String amountLabel;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.moneyBaseColors;
+    final textTheme = Theme.of(context).textTheme;
+    final categoryName = () {
+      final raw = category?.name;
+      if (raw is String && raw.trim().isNotEmpty) {
+        return raw.trim();
+      }
+      return 'Uncategorised';
+    }();
+    final walletName = () {
+      final raw = wallet?.name;
+      if (raw is String && raw.trim().isNotEmpty) {
+        return raw.trim();
+      }
+      return 'Unknown wallet';
+    }();
+    final accent = parseHexColor(category?.color) ??
+        (transaction.isIncome
+            ? Colors.teal
+            : Theme.of(context).colorScheme.error);
+    final amountColor = transaction.isIncome
+        ? Colors.teal
+        : Theme.of(context).colorScheme.error;
+    final icon = IconLibrary.iconForCategory(category?.iconName);
+
+    return MoneyBaseFrostedPanel(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(28),
+                  color: accent.withOpacity(0.18),
+                ),
+                child: Icon(icon, color: accent),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      transaction.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.titleMedium?.copyWith(
+                        color: colors.primaryText,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      dateLabel,
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colors.mutedText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    amountLabel,
+                    style: textTheme.titleMedium?.copyWith(
+                      color: amountColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      MoneyBaseGlassIconButton(
+                        icon: Icons.edit_outlined,
+                        tooltip: 'Edit transaction',
+                        onPressed: onEdit,
+                      ),
+                      const SizedBox(width: 8),
+                      MoneyBaseGlassIconButton(
+                        icon: Icons.delete_outline,
+                        tooltip: 'Delete transaction',
+                        onPressed: onDelete,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 12,
+            runSpacing: 10,
+            children: [
+              _TransactionTag(
+                icon: icon,
+                label: categoryName,
+                color: accent,
+              ),
+              _TransactionTag(
+                icon: Icons.account_balance_wallet_outlined,
+                label: walletName,
+                color: colors.secondaryAccent,
+              ),
+              _TransactionTag(
+                icon: transaction.isIncome
+                    ? Icons.arrow_upward_rounded
+                    : Icons.arrow_downward_rounded,
+                label: transaction.isIncome ? 'Income' : 'Expense',
+                color: transaction.isIncome ? Colors.teal : MoneyBaseColors.red,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TransactionTag extends StatelessWidget {
+  const _TransactionTag({
+    required this.icon,
+    required this.label,
+    this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.moneyBaseColors;
+    final textTheme = Theme.of(context).textTheme;
+    final accent = color ?? colors.primaryAccent;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: accent.withOpacity(0.12),
+        border: Border.all(color: accent.withOpacity(0.28)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: accent, size: 16),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: textTheme.labelMedium?.copyWith(
+              color: colors.primaryText,
+            ),
+          ),
+        ],
       ),
     );
   }
