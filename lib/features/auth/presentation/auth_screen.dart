@@ -206,7 +206,7 @@ class _AuthShowcase extends StatelessWidget {
                           children: const [
                             _AuthHighlightCard(
                               title: 'Insights snapshot',
-                              value: '+$1,420',
+                              value: '+\$1,420',
                               subtitle: 'projected surplus this month',
                               icon: Icons.auto_graph_rounded,
                             ),
@@ -226,7 +226,7 @@ class _AuthShowcase extends StatelessWidget {
                           Expanded(
                             child: _AuthHighlightCard(
                               title: 'Insights snapshot',
-                              value: '+$1,420',
+                              value: '+\$1,420',
                               subtitle: 'projected surplus this month',
                               icon: Icons.auto_graph_rounded,
                             ),

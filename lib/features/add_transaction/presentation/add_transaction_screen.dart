@@ -954,7 +954,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         submitRow,
                       ],
                     );
-                  }
+                }
 
                 final content = Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
