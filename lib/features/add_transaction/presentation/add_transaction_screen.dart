@@ -53,13 +53,22 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     _walletRepository = WalletRepository();
     _categoryRepository = CategoryRepository();
     _transactionRepository = TransactionRepository();
+    _amountController.addListener(_handleAmountChanged);
   }
 
   @override
   void dispose() {
+    _amountController.removeListener(_handleAmountChanged);
     _noteController.dispose();
     _amountController.dispose();
     super.dispose();
+  }
+
+  void _handleAmountChanged() {
+    if (!mounted) {
+      return;
+    }
+    setState(() {});
   }
 
   Future<void> _pickDate(BuildContext context) async {
@@ -529,22 +538,31 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   final missingCategories = categories.isEmpty;
                   final canSubmit = !missingWallets && !missingCategories;
 
-                  final selectedWallet = !missingWallets
+                  final Wallet? selectedWallet = !missingWallets
                       ? wallets.firstWhere(
                           (wallet) => wallet.id == _selectedWalletId,
                           orElse: () => wallets.first,
                         )
-                      : const Wallet();
+                      : null;
                   final selectedCategory = !missingCategories
                       ? categories.firstWhere(
                           (category) => category.id == _selectedCategoryId,
                           orElse: () => categories.first,
                         )
                       : null;
-                  final currencyPrefix = selectedWallet.currencyCode.isEmpty
+                  final currencyPrefix = (selectedWallet == null ||
+                          selectedWallet.currencyCode.isEmpty)
                       ? 'USD'
                       : selectedWallet.currencyCode.toUpperCase();
-                  final heroWallet = missingWallets ? null : selectedWallet;
+                  final sanitizedAmount =
+                      _amountController.text.replaceAll(',', '').trim();
+                  final parsedAmount = sanitizedAmount.isEmpty
+                      ? null
+                      : double.tryParse(sanitizedAmount);
+                  final pendingAmount = parsedAmount != null
+                      ? parsedAmount.abs()
+                      : null;
+                  final heroWallet = selectedWallet;
                   final heroCategory =
                       missingCategories ? null : selectedCategory;
 
@@ -683,6 +701,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           ),
                         ],
                       ),
+                    ),
+                    const SizedBox(height: 16),
+                    _PendingImpactCard(
+                      wallet: selectedWallet,
+                      category: selectedCategory,
+                      amount: pendingAmount,
+                      currencyCode: currencyPrefix,
+                      isIncome: _type == _TransactionType.income,
                     ),
                     const SizedBox(height: 28),
                   ];
@@ -1041,6 +1067,304 @@ class _GlassField extends StatelessWidget {
             ),
             child: child,
           ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PendingImpactCard extends StatelessWidget {
+  const _PendingImpactCard({
+    required this.wallet,
+    required this.category,
+    required this.amount,
+    required this.currencyCode,
+    required this.isIncome,
+  });
+
+  final Wallet? wallet;
+  final Category? category;
+  final double? amount;
+  final String currencyCode;
+  final bool isIncome;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+    final hasWallet = wallet != null;
+    final hasCategory = category != null;
+    final walletName = hasWallet && wallet!.name.isNotEmpty
+        ? wallet!.name
+        : hasWallet
+            ? 'Selected wallet'
+            : 'No wallet selected';
+    final categoryName = hasCategory && category!.name.isNotEmpty
+        ? category!.name
+        : hasCategory
+            ? 'Selected category'
+            : 'No category selected';
+    final headerSubtitle = [
+      if (hasWallet) walletName,
+      if (hasCategory) categoryName,
+    ].join(' • ');
+    final displayCurrency =
+        currencyCode.isNotEmpty ? currencyCode.toUpperCase() : 'USD';
+    final currentBalance = wallet?.balance ?? 0;
+    final projectedBalance =
+        (hasWallet && amount != null && amount != 0)
+            ? (isIncome
+                ? currentBalance + amount!
+                : currentBalance - amount!)
+            : (hasWallet && amount == 0)
+                ? currentBalance
+                : null;
+    final delta = projectedBalance != null
+        ? projectedBalance - currentBalance
+        : null;
+    final impactColor = delta == null
+        ? Colors.white.withOpacity(0.85)
+        : delta >= 0
+            ? MoneyBaseColors.green
+            : MoneyBaseColors.red;
+    final accent = hasCategory
+        ? (parseHexColor(category!.color) ?? MoneyBaseColors.purple)
+        : MoneyBaseColors.purple;
+    final categoryIcon = hasCategory
+        ? IconLibrary.iconForCategory(category!.iconName)
+        : Icons.auto_graph_rounded;
+    final projectedLabel = projectedBalance != null
+        ? '$displayCurrency ${projectedBalance.toStringAsFixed(2)}'
+        : hasWallet
+            ? 'Enter an amount to preview impact.'
+            : 'Select a wallet to preview impact.';
+    final currentLabel = hasWallet
+        ? '$displayCurrency ${currentBalance.toStringAsFixed(2)}'
+        : 'Wallet balance preview unavailable.';
+    final deltaLabel = delta != null
+        ? '${delta >= 0 ? '+' : '-'}$displayCurrency ${delta.abs().toStringAsFixed(2)}'
+        : null;
+    final helperText = !hasWallet
+        ? 'Choose a wallet so MoneyBase can reflect the balance change before saving.'
+        : amount == null
+            ? 'Add an amount to understand how this entry shifts your balance.'
+            : null;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withOpacity(0.14),
+            Colors.white.withOpacity(0.05),
+          ],
+        ),
+        border: Border.all(color: Colors.white.withOpacity(0.16)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1F000000),
+            blurRadius: 28,
+            offset: Offset(0, 18),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      accent.withOpacity(0.9),
+                      accent.withOpacity(0.55),
+                    ],
+                  ),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.24),
+                  ),
+                ),
+                child: Icon(
+                  categoryIcon,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 18),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Balance preview',
+                      style: textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      headerSubtitle.isEmpty
+                          ? 'Select a wallet and category to tailor insights.'
+                          : headerSubtitle,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: Colors.white.withOpacity(0.76),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (deltaLabel != null)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: impactColor.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: impactColor.withOpacity(0.45),
+                    ),
+                  ),
+                  child: Text(
+                    deltaLabel,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: impactColor,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _PendingImpactStatRow(
+            label: 'Current balance',
+            value: currentLabel,
+            emphasize: hasWallet,
+          ),
+          const SizedBox(height: 12),
+          _PendingImpactStatRow(
+            label: 'After this entry',
+            value: projectedLabel,
+            emphasize: projectedBalance != null,
+          ),
+          if (helperText != null) ...[
+            const SizedBox(height: 16),
+            Text(
+              helperText,
+              style: textTheme.bodySmall?.copyWith(
+                color: Colors.white.withOpacity(0.72),
+                height: 1.4,
+              ),
+            ),
+          ],
+          if (hasCategory) ...[
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: accent.withOpacity(0.16),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: accent.withOpacity(0.4),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      categoryIcon,
+                      size: 18,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          categoryName,
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'This colour will tint reports and trends for matching entries.',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: Colors.white.withOpacity(0.75),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PendingImpactStatRow extends StatelessWidget {
+  const _PendingImpactStatRow({
+    required this.label,
+    required this.value,
+    this.emphasize = false,
+  });
+
+  final String label;
+  final String value;
+  final bool emphasize;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: textTheme.bodySmall?.copyWith(
+            color: Colors.white.withOpacity(0.7),
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.2,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: (emphasize
+                  ? textTheme.titleMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    )
+                  : textTheme.bodyLarge?.copyWith(
+                      color: Colors.white.withOpacity(0.85),
+                      fontWeight: FontWeight.w600,
+                    )) ??
+              TextStyle(
+                color: Colors.white.withOpacity(emphasize ? 1 : 0.85),
+                fontWeight: emphasize ? FontWeight.w700 : FontWeight.w600,
+              ),
         ),
       ],
     );
