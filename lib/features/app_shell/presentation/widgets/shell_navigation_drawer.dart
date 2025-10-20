@@ -36,7 +36,7 @@ class _ShellNavigationDrawer extends StatelessWidget {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: Image.asset(
-                      'icon.png',
+                      'assets/icon.png',
                       width: 44,
                       height: 44,
                       fit: BoxFit.cover,
