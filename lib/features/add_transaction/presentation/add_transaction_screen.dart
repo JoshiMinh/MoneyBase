@@ -544,6 +544,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   final currencyPrefix = selectedWallet.currencyCode.isEmpty
                       ? 'USD'
                       : selectedWallet.currencyCode.toUpperCase();
+                  final heroWallet = missingWallets ? null : selectedWallet;
+                  final heroCategory =
+                      missingCategories ? null : selectedCategory;
 
                   submitAction = canSubmit && !_submitting
                       ? () => _handleSubmit(
@@ -896,40 +899,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 final content = Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        IconButton(
-                          tooltip: 'Back',
-                          onPressed: () => Navigator.of(context).maybePop(),
-                          icon: const Icon(Icons.arrow_back),
-                          color: Colors.white,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Add transaction',
-                                style: textTheme.headlineMedium?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Capture new spending in the refreshed MoneyBase glass surface shared between Android and web.',
-                                style: textTheme.bodyLarge?.copyWith(
-                                  color: Colors.white.withOpacity(0.7),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    _AddTransactionHero(
+                      isWide: layout.isWide,
+                      onBack: () => Navigator.of(context).maybePop(),
+                      selectedWallet: heroWallet,
+                      selectedCategory: heroCategory,
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 28),
                     MoneyBaseFrostedPanel(
                       padding: EdgeInsets.symmetric(
                         horizontal: layout.isWide ? 36 : 28,
@@ -1177,6 +1153,378 @@ class _CategorySummaryChip extends StatelessWidget {
           Icon(
             Icons.chevron_right,
             color: foreground.withOpacity(0.85),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AddTransactionHero extends StatelessWidget {
+  const _AddTransactionHero({
+    required this.isWide,
+    required this.onBack,
+    this.selectedWallet,
+    this.selectedCategory,
+  });
+
+  final bool isWide;
+  final VoidCallback onBack;
+  final Wallet? selectedWallet;
+  final Category? selectedCategory;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+    final radius = BorderRadius.circular(isWide ? 40 : 32);
+    final gradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        MoneyBaseColors.purple.withOpacity(0.96),
+        MoneyBaseColors.blue.withOpacity(0.9),
+        MoneyBaseColors.secondary.withOpacity(0.88),
+      ],
+    );
+
+    final hasWallet = selectedWallet != null;
+    final walletTitle = hasWallet && (selectedWallet!.name.isNotEmpty)
+        ? selectedWallet!.name
+        : 'Wallet focus';
+    final walletCurrency = hasWallet &&
+            (selectedWallet!.currencyCode.isNotEmpty)
+        ? selectedWallet!.currencyCode.toUpperCase()
+        : 'USD';
+    final walletValue = !hasWallet
+        ? 'Choose a wallet to preview balance impact.'
+        : selectedWallet!.balance == 0
+            ? 'Balance updates after first entry.'
+            : '$walletCurrency ${selectedWallet!.balance.toStringAsFixed(2)}';
+    final walletCaption = !hasWallet
+        ? 'Assign a wallet before submitting so insights stay accurate.'
+        : 'Next entry updates this balance instantly.';
+    final walletAccent = hasWallet
+        ? (parseHexColor(selectedWallet!.color) ?? MoneyBaseColors.blue)
+            .withOpacity(0.9)
+        : MoneyBaseColors.blue.withOpacity(0.9);
+
+    final hasCategory = selectedCategory != null;
+    final categoryTitle = hasCategory && (selectedCategory!.name.isNotEmpty)
+        ? selectedCategory!.name
+        : 'Categorise transactions';
+    final categoryValue = hasCategory
+        ? 'Organise spend with $categoryTitle.'
+        : 'Quick tip: long-press to add a new category.';
+    final categoryCaption = hasCategory
+        ? 'Edit colours & icons to mirror your budgeting system.'
+        : 'Categories unlock budgeting, exports, and smart filters.';
+    final categoryAccent = hasCategory
+        ? (parseHexColor(selectedCategory!.color) ?? Colors.white)
+            .withOpacity(0.9)
+        : Colors.white.withOpacity(0.85);
+    final categoryIcon = hasCategory
+        ? IconLibrary.iconForCategory(selectedCategory!.iconName)
+        : Icons.auto_awesome_rounded;
+
+    final heroCards = <_AddHeroCardData>[
+      const _AddHeroCardData(
+        icon: Icons.trending_up_rounded,
+        title: 'Recent spending',
+        value: '\$1,284',
+        caption: 'Past 7 days • -3.2% vs previous period across wallets.',
+        accent: MoneyBaseColors.orange,
+      ),
+      _AddHeroCardData(
+        icon: Icons.account_balance_wallet_rounded,
+        title: walletTitle,
+        value: walletValue,
+        caption: walletCaption,
+        accent: walletAccent,
+      ),
+      _AddHeroCardData(
+        icon: categoryIcon,
+        title: categoryTitle,
+        value: categoryValue,
+        caption: categoryCaption,
+        accent: categoryAccent,
+      ),
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x4D000000),
+            blurRadius: 48,
+            offset: Offset(0, 32),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: radius,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: gradient,
+                  border: Border.all(color: Colors.white.withOpacity(0.22)),
+                ),
+              ),
+            ),
+            Positioned(
+              top: -100,
+              right: -40,
+              child: _AddHeroOrb(
+                size: isWide ? 220 : 180,
+                color: Colors.white.withOpacity(0.18),
+              ),
+            ),
+            Positioned(
+              bottom: -120,
+              left: -60,
+              child: _AddHeroOrb(
+                size: isWide ? 260 : 210,
+                color: Colors.white.withOpacity(0.14),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: isWide ? 40 : 28,
+                vertical: isWide ? 40 : 32,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                MoneyBaseGlassIconButton(
+                                  icon: Icons.arrow_back_rounded,
+                                  tooltip: 'Back',
+                                  onPressed: onBack,
+                                  borderRadius: 24,
+                                  padding: const EdgeInsets.all(14),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Add transaction',
+                                        style: textTheme.headlineMedium?.copyWith(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: 0.4,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        'Log new income or expenses inside the refreshed MoneyBase workspace with live previews and synced wallets.',
+                                        style: textTheme.bodyLarge?.copyWith(
+                                          color: Colors.white.withOpacity(0.82),
+                                          height: 1.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 22),
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 12,
+                              children: const [
+                                _AddHeroBadge(
+                                  icon: Icons.bolt_rounded,
+                                  label: 'Real-time sync',
+                                ),
+                                _AddHeroBadge(
+                                  icon: Icons.layers_rounded,
+                                  label: 'Glass workspace',
+                                ),
+                                _AddHeroBadge(
+                                  icon: Icons.security_rounded,
+                                  label: 'Backed by Firebase Auth',
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (isWide) ...[
+                        const SizedBox(width: 32),
+                        SizedBox(
+                          width: 280,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              for (var i = 0; i < heroCards.length; i++) ...[
+                                _AddHeroStatCard(data: heroCards[i]),
+                                if (i < heroCards.length - 1)
+                                  const SizedBox(height: 18),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AddHeroBadge extends StatelessWidget {
+  const _AddHeroBadge({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        color: Colors.white.withOpacity(0.18),
+        border: Border.all(color: Colors.white.withOpacity(0.28)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white, size: 18),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: textTheme.labelLarge?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AddHeroCardData {
+  const _AddHeroCardData({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.caption,
+    required this.accent,
+  });
+
+  final IconData icon;
+  final String title;
+  final String value;
+  final String caption;
+  final Color accent;
+}
+
+class _AddHeroStatCard extends StatelessWidget {
+  const _AddHeroStatCard({required this.data});
+
+  final _AddHeroCardData data;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return MoneyBaseFrostedPanel(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+      borderRadius: 28,
+      backgroundOpacity: 0.2,
+      borderOpacity: 0.28,
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x26000000),
+          blurRadius: 26,
+          offset: Offset(0, 18),
+        ),
+      ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: data.accent.withOpacity(0.24),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.white.withOpacity(0.32)),
+            ),
+            padding: const EdgeInsets.all(12),
+            child: Icon(data.icon, color: Colors.white, size: 22),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            data.title,
+            style: textTheme.labelLarge?.copyWith(
+              color: Colors.white.withOpacity(0.85),
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.2,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            data.value,
+            style: textTheme.titleLarge?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            data.caption,
+            style: textTheme.bodyMedium?.copyWith(
+              color: Colors.white.withOpacity(0.78),
+              height: 1.45,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AddHeroOrb extends StatelessWidget {
+  const _AddHeroOrb({required this.size, required this.color});
+
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color,
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.45),
+            blurRadius: size / 3,
+            spreadRadius: size / 10,
           ),
         ],
       ),
