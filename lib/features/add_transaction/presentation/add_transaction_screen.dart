@@ -956,7 +956,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     );
                   }
 
-                    final content = Column(
+                  final content = Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _AddTransactionHero(
