@@ -108,7 +108,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     String? walletId = _selectedWalletId;
     if (walletId == null && wallets.isNotEmpty) {
       walletId = wallets.first.id;
-    } else if (walletId != null && wallets.every((wallet) => wallet.id != walletId)) {
+    } else if (walletId != null &&
+        wallets.every((wallet) => wallet.id != walletId)) {
       walletId = wallets.isNotEmpty ? wallets.first.id : null;
     }
 
@@ -137,16 +138,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     };
     final children = <String?, List<Category>>{};
     for (final category in categories) {
-      final parentKey =
-          (category.parentCategoryId?.isNotEmpty ?? false)
-              ? category.parentCategoryId
-              : null;
+      final parentKey = (category.parentCategoryId?.isNotEmpty ?? false)
+          ? category.parentCategoryId
+          : null;
       children.putIfAbsent(parentKey, () => <Category>[]).add(category);
     }
 
     void sortByName(List<Category> list) {
-      list.sort((a, b) =>
-          a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     }
 
     for (final list in children.values) {
@@ -172,7 +171,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
     final roots = categories.where((category) {
       final parentId = category.parentCategoryId;
-      return parentId == null || parentId.isEmpty || !byId.containsKey(parentId);
+      return parentId == null ||
+          parentId.isEmpty ||
+          !byId.containsKey(parentId);
     }).toList();
     sortByName(roots);
     for (final root in roots) {
@@ -233,17 +234,15 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
     setState(() => _reorderedWallets = positioned);
 
-    _walletRepository.reorderWallets(userId, positioned).catchError(
-      (error, _) {
-        if (!mounted) {
-          return;
-        }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to reorder wallets: $error')),
-        );
-        setState(() => _reorderedWallets = null);
-      },
-    );
+    _walletRepository.reorderWallets(userId, positioned).catchError((error, _) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to reorder wallets: $error')),
+      );
+      setState(() => _reorderedWallets = null);
+    });
   }
 
   Future<void> _openWalletDialog(
@@ -268,9 +267,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       try {
         await _walletRepository.deleteWallet(userId, wallet.id);
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Wallet removed.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Wallet removed.')));
       } catch (error) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -302,9 +301,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       }
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save wallet: $error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to save wallet: $error')));
     }
   }
 
@@ -316,10 +315,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }) async {
     final result = await showDialog<_CategoryDialogResult>(
       context: context,
-      builder: (context) => _CategoryDialog(
-        initial: category,
-        categories: categories,
-      ),
+      builder: (context) =>
+          _CategoryDialog(initial: category, categories: categories),
     );
 
     if (result == null) {
@@ -334,9 +331,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       try {
         await _categoryRepository.deleteCategory(userId, category.id);
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Category removed.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Category removed.')));
       } catch (error) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -388,7 +385,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     final amount = double.tryParse(amountText);
     if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a valid amount greater than zero.')),
+        const SnackBar(
+          content: Text('Enter a valid amount greater than zero.'),
+        ),
       );
       return;
     }
@@ -431,9 +430,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         _type = _TransactionType.expense;
         _selectedDate = DateTime.now();
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Transaction saved.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Transaction saved.')));
     } catch (error) {
       if (!mounted) return;
       setState(() => _submitting = false);
@@ -472,16 +471,19 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             final loadedWallets = walletSnapshot.data ?? const <Wallet>[];
             final walletLoading =
                 walletSnapshot.connectionState == ConnectionState.waiting &&
-                    loadedWallets.isEmpty;
+                loadedWallets.isEmpty;
             final walletError = walletSnapshot.error;
 
             var wallets = loadedWallets;
             final override = _reorderedWallets;
             if (override != null && override.isNotEmpty) {
               if (override.length == loadedWallets.length) {
-                final overrideIds = override.map((wallet) => wallet.id).toList();
-                final snapshotIds =
-                    loadedWallets.map((wallet) => wallet.id).toList();
+                final overrideIds = override
+                    .map((wallet) => wallet.id)
+                    .toList();
+                final snapshotIds = loadedWallets
+                    .map((wallet) => wallet.id)
+                    .toList();
                 if (listEquals(overrideIds, snapshotIds)) {
                   wallets = override;
                   WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -513,8 +515,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               builder: (context, categorySnapshot) {
                 final categories = categorySnapshot.data ?? const <Category>[];
                 final categoryLoading =
-                    categorySnapshot.connectionState == ConnectionState.waiting &&
-                        categories.isEmpty;
+                    categorySnapshot.connectionState ==
+                        ConnectionState.waiting &&
+                    categories.isEmpty;
                 final categoryError = categorySnapshot.error;
 
                 final loading = walletLoading || categoryLoading;
@@ -550,12 +553,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           orElse: () => categories.first,
                         )
                       : null;
-                  final currencyPrefix = (selectedWallet == null ||
+                  final currencyPrefix =
+                      (selectedWallet == null ||
                           selectedWallet.currencyCode.isEmpty)
                       ? 'USD'
                       : selectedWallet.currencyCode.toUpperCase();
-                  final sanitizedAmount =
-                      _amountController.text.replaceAll(',', '').trim();
+                  final sanitizedAmount = _amountController.text
+                      .replaceAll(',', '')
+                      .trim();
                   final parsedAmount = sanitizedAmount.isEmpty
                       ? null
                       : double.tryParse(sanitizedAmount);
@@ -563,18 +568,18 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       ? parsedAmount.abs()
                       : null;
                   final heroWallet = selectedWallet;
-                  final heroCategory =
-                      missingCategories ? null : selectedCategory;
+                  final heroCategory = missingCategories
+                      ? null
+                      : selectedCategory;
 
                   submitAction = canSubmit && !_submitting
                       ? () => _handleSubmit(
-                            context,
-                            user.uid,
-                            wallets,
-                            categories,
-                          )
+                          context,
+                          user.uid,
+                          wallets,
+                          categories,
+                        )
                       : null;
-
 
                   final formColumnChildren = <Widget>[
                     Text(
@@ -606,8 +611,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         backgroundColor: Colors.white.withOpacity(0.08),
                         foregroundColor: Colors.white.withOpacity(0.72),
                         selectedForegroundColor: Colors.white,
-                        selectedBackgroundColor:
-                            MoneyBaseColors.purple.withOpacity(0.65),
+                        selectedBackgroundColor: MoneyBaseColors.purple
+                            .withOpacity(0.65),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 14,
@@ -684,8 +689,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                               controller: _amountController,
                               keyboardType:
                                   const TextInputType.numberWithOptions(
-                                decimal: true,
-                              ),
+                                    decimal: true,
+                                  ),
                               style: textTheme.headlineSmall?.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
@@ -730,10 +735,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     if (!missingCategories) ...[
                       _GlassField(
                         label: 'Choose category',
-                        onTap: () => _showCategoryPicker(
-                          context,
-                          categories,
-                        ),
+                        onTap: () => _showCategoryPicker(context, categories),
                         backgroundColor: selectedCategory != null
                             ? Colors.transparent
                             : null,
@@ -852,14 +854,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           if (index == wallets.length) {
                             return Padding(
                               key: const ValueKey('__add_wallet__'),
-                              padding: EdgeInsets.only(
-                                right: 0,
-                              ),
+                              padding: EdgeInsets.only(right: 0),
                               child: _AddWalletCard(
-                                onTap: () => _openWalletDialog(
-                                  context,
-                                  user.uid,
-                                ),
+                                onTap: () =>
+                                    _openWalletDialog(context, user.uid),
                               ),
                             );
                           }
@@ -867,9 +865,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           final wallet = wallets[index];
                           return Padding(
                             key: ValueKey(wallet.id),
-                            padding: EdgeInsets.only(
-                              right: 16,
-                            ),
+                            padding: EdgeInsets.only(right: 16),
                             child: _WalletCard(
                               wallet: wallet,
                               selected: wallet.id == _selectedWalletId,
@@ -1008,10 +1004,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         },
                       ),
                     },
-                    child: Focus(
-                      autofocus: true,
-                      child: content,
-                    ),
+                    child: Focus(autofocus: true, child: content),
                   ),
                 );
               },
@@ -1098,36 +1091,34 @@ class _PendingImpactCard extends StatelessWidget {
     final walletName = hasWallet && wallet!.name.isNotEmpty
         ? wallet!.name
         : hasWallet
-            ? 'Selected wallet'
-            : 'No wallet selected';
+        ? 'Selected wallet'
+        : 'No wallet selected';
     final categoryName = hasCategory && category!.name.isNotEmpty
         ? category!.name
         : hasCategory
-            ? 'Selected category'
-            : 'No category selected';
+        ? 'Selected category'
+        : 'No category selected';
     final headerSubtitle = [
       if (hasWallet) walletName,
       if (hasCategory) categoryName,
     ].join(' • ');
-    final displayCurrency =
-        currencyCode.isNotEmpty ? currencyCode.toUpperCase() : 'USD';
+    final displayCurrency = currencyCode.isNotEmpty
+        ? currencyCode.toUpperCase()
+        : 'USD';
     final currentBalance = wallet?.balance ?? 0;
-    final projectedBalance =
-        (hasWallet && amount != null && amount != 0)
-            ? (isIncome
-                ? currentBalance + amount!
-                : currentBalance - amount!)
-            : (hasWallet && amount == 0)
-                ? currentBalance
-                : null;
+    final projectedBalance = (hasWallet && amount != null && amount != 0)
+        ? (isIncome ? currentBalance + amount! : currentBalance - amount!)
+        : (hasWallet && amount == 0)
+        ? currentBalance
+        : null;
     final delta = projectedBalance != null
         ? projectedBalance - currentBalance
         : null;
     final impactColor = delta == null
         ? Colors.white.withOpacity(0.85)
         : delta >= 0
-            ? MoneyBaseColors.green
-            : MoneyBaseColors.red;
+        ? MoneyBaseColors.green
+        : MoneyBaseColors.red;
     final accent = hasCategory
         ? (parseHexColor(category!.color) ?? MoneyBaseColors.purple)
         : MoneyBaseColors.purple;
@@ -1137,8 +1128,8 @@ class _PendingImpactCard extends StatelessWidget {
     final projectedLabel = projectedBalance != null
         ? '$displayCurrency ${projectedBalance.toStringAsFixed(2)}'
         : hasWallet
-            ? 'Enter an amount to preview impact.'
-            : 'Select a wallet to preview impact.';
+        ? 'Enter an amount to preview impact.'
+        : 'Select a wallet to preview impact.';
     final currentLabel = hasWallet
         ? '$displayCurrency ${currentBalance.toStringAsFixed(2)}'
         : 'Wallet balance preview unavailable.';
@@ -1148,8 +1139,8 @@ class _PendingImpactCard extends StatelessWidget {
     final helperText = !hasWallet
         ? 'Choose a wallet so MoneyBase can reflect the balance change before saving.'
         : amount == null
-            ? 'Add an amount to understand how this entry shifts your balance.'
-            : null;
+        ? 'Add an amount to understand how this entry shifts your balance.'
+        : null;
 
     return Container(
       decoration: BoxDecoration(
@@ -1186,19 +1177,11 @@ class _PendingImpactCard extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [
-                      accent.withOpacity(0.9),
-                      accent.withOpacity(0.55),
-                    ],
+                    colors: [accent.withOpacity(0.9), accent.withOpacity(0.55)],
                   ),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.24),
-                  ),
+                  border: Border.all(color: Colors.white.withOpacity(0.24)),
                 ),
-                child: Icon(
-                  categoryIcon,
-                  color: Colors.white,
-                ),
+                child: Icon(categoryIcon, color: Colors.white),
               ),
               const SizedBox(width: 18),
               Expanded(
@@ -1226,14 +1209,14 @@ class _PendingImpactCard extends StatelessWidget {
               ),
               if (deltaLabel != null)
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: impactColor.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: impactColor.withOpacity(0.45),
-                    ),
+                    border: Border.all(color: impactColor.withOpacity(0.45)),
                   ),
                   child: Text(
                     deltaLabel,
@@ -1274,9 +1257,7 @@ class _PendingImpactCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: accent.withOpacity(0.16),
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: accent.withOpacity(0.4),
-                ),
+                border: Border.all(color: accent.withOpacity(0.4)),
               ),
               child: Row(
                 children: [
@@ -1287,11 +1268,7 @@ class _PendingImpactCard extends StatelessWidget {
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(
-                      categoryIcon,
-                      size: 18,
-                      color: Colors.white,
-                    ),
+                    child: Icon(categoryIcon, size: 18, color: Colors.white),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -1353,7 +1330,8 @@ class _PendingImpactStatRow extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           value,
-          style: (emphasize
+          style:
+              (emphasize
                   ? textTheme.titleMedium?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
@@ -1390,15 +1368,17 @@ class _WalletCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final accent = parseHexColor(wallet.color) ?? MoneyBaseColors.purple;
     final brightness = ThemeData.estimateBrightnessForColor(accent);
-    final contrastColor =
-        brightness == Brightness.dark ? Colors.white : Colors.black.withOpacity(0.85);
+    final contrastColor = brightness == Brightness.dark
+        ? Colors.white
+        : Colors.black.withOpacity(0.85);
     final borderColor = selected
         ? contrastColor.withOpacity(0.7)
         : contrastColor.withOpacity(0.3);
     final iconBackground = contrastColor.withOpacity(0.18);
     final iconColor = contrastColor;
-    final primaryTextColor =
-        brightness == Brightness.dark ? Colors.white : Colors.black.withOpacity(0.9);
+    final primaryTextColor = brightness == Brightness.dark
+        ? Colors.white
+        : Colors.black.withOpacity(0.9);
     final secondaryTextColor = brightness == Brightness.dark
         ? Colors.white.withOpacity(0.85)
         : Colors.black.withOpacity(0.7);
@@ -1419,10 +1399,7 @@ class _WalletCard extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(28),
           color: accent,
-          border: Border.all(
-            color: borderColor,
-            width: selected ? 2 : 1,
-          ),
+          border: Border.all(color: borderColor, width: selected ? 2 : 1),
           boxShadow: const [
             BoxShadow(
               color: Color(0x33000000),
@@ -1454,9 +1431,7 @@ class _WalletCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               balanceText,
-              style: textTheme.bodyMedium?.copyWith(
-                color: secondaryTextColor,
-              ),
+              style: textTheme.bodyMedium?.copyWith(color: secondaryTextColor),
             ),
           ],
         ),
@@ -1473,14 +1448,13 @@ class _CategorySummaryChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final accent =
-        parseHexColor(category.color) ?? theme.colorScheme.primary;
+    final accent = parseHexColor(category.color) ?? theme.colorScheme.primary;
     final brightness = ThemeData.estimateBrightnessForColor(accent);
-    final foreground =
-        brightness == Brightness.dark ? Colors.white : Colors.black87;
+    final foreground = brightness == Brightness.dark
+        ? Colors.white
+        : Colors.black87;
     final icon = IconLibrary.iconForCategory(category.iconName);
-    final name =
-        category.name.isNotEmpty ? category.name : 'Untitled category';
+    final name = category.name.isNotEmpty ? category.name : 'Untitled category';
 
     return Container(
       decoration: BoxDecoration(
@@ -1509,10 +1483,7 @@ class _CategorySummaryChip extends StatelessWidget {
               ),
             ),
           ),
-          Icon(
-            Icons.chevron_right,
-            color: foreground.withOpacity(0.85),
-          ),
+          Icon(Icons.chevron_right, color: foreground.withOpacity(0.85)),
         ],
       ),
     );
@@ -1551,21 +1522,19 @@ class _AddTransactionHero extends StatelessWidget {
     final walletTitle = hasWallet && (selectedWallet!.name.isNotEmpty)
         ? selectedWallet!.name
         : 'Wallet focus';
-    final walletCurrency = hasWallet &&
-            (selectedWallet!.currencyCode.isNotEmpty)
+    final walletCurrency =
+        hasWallet && (selectedWallet!.currencyCode.isNotEmpty)
         ? selectedWallet!.currencyCode.toUpperCase()
         : 'USD';
     final walletValue = !hasWallet
         ? 'Choose a wallet to preview balance impact.'
-        : selectedWallet!.balance == 0
-            ? 'Balance updates after first entry.'
-            : '$walletCurrency ${selectedWallet!.balance.toStringAsFixed(2)}';
+        : '$walletCurrency ${selectedWallet!.balance.toStringAsFixed(2)}';
     final walletCaption = !hasWallet
         ? 'Assign a wallet before submitting so insights stay accurate.'
         : 'Next entry updates this balance instantly.';
     final walletAccent = hasWallet
         ? (parseHexColor(selectedWallet!.color) ?? MoneyBaseColors.blue)
-            .withOpacity(0.9)
+              .withOpacity(0.9)
         : MoneyBaseColors.blue.withOpacity(0.9);
 
     final hasCategory = selectedCategory != null;
@@ -1579,8 +1548,9 @@ class _AddTransactionHero extends StatelessWidget {
         ? 'Edit colours & icons to mirror your budgeting system.'
         : 'Categories unlock budgeting, exports, and smart filters.';
     final categoryAccent = hasCategory
-        ? (parseHexColor(selectedCategory!.color) ?? Colors.white)
-            .withOpacity(0.9)
+        ? (parseHexColor(selectedCategory!.color) ?? Colors.white).withOpacity(
+            0.9,
+          )
         : Colors.white.withOpacity(0.85);
     final categoryIcon = hasCategory
         ? IconLibrary.iconForCategory(selectedCategory!.iconName)
@@ -1677,15 +1647,17 @@ class _AddTransactionHero extends StatelessWidget {
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'Add transaction',
-                                        style: textTheme.headlineMedium?.copyWith(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w700,
-                                          letterSpacing: 0.4,
-                                        ),
+                                        style: textTheme.headlineMedium
+                                            ?.copyWith(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w700,
+                                              letterSpacing: 0.4,
+                                            ),
                                       ),
                                       const SizedBox(height: 10),
                                       Text(
@@ -1892,10 +1864,7 @@ class _AddHeroOrb extends StatelessWidget {
 }
 
 class _CategoryPickerDialog extends StatelessWidget {
-  const _CategoryPickerDialog({
-    required this.options,
-    this.initialSelectedId,
-  });
+  const _CategoryPickerDialog({required this.options, this.initialSelectedId});
 
   final List<_CategoryOption> options;
   final String? initialSelectedId;
@@ -1920,16 +1889,17 @@ class _CategoryPickerDialog extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final option = options[index];
                     final category = option.category;
-                    final accent = parseHexColor(category.color) ??
+                    final accent =
+                        parseHexColor(category.color) ??
                         theme.colorScheme.primary;
-                    final brightness =
-                        ThemeData.estimateBrightnessForColor(accent);
+                    final brightness = ThemeData.estimateBrightnessForColor(
+                      accent,
+                    );
                     final foreground = brightness == Brightness.dark
                         ? Colors.white
                         : Colors.black87;
                     final isSelected = initialSelectedId == category.id;
-                    final icon =
-                        IconLibrary.iconForCategory(category.iconName);
+                    final icon = IconLibrary.iconForCategory(category.iconName);
                     final name = category.name.isNotEmpty
                         ? category.name
                         : 'Untitled category';
@@ -1940,8 +1910,7 @@ class _CategoryPickerDialog extends StatelessWidget {
                         color: Colors.transparent,
                         child: InkWell(
                           borderRadius: BorderRadius.circular(20),
-                          onTap: () =>
-                              Navigator.of(context).pop(category.id),
+                          onTap: () => Navigator.of(context).pop(category.id),
                           child: Container(
                             decoration: BoxDecoration(
                               color: accent,
@@ -1979,18 +1948,14 @@ class _CategoryPickerDialog extends StatelessWidget {
                                 Expanded(
                                   child: Text(
                                     name,
-                                    style:
-                                        textTheme.titleMedium?.copyWith(
+                                    style: textTheme.titleMedium?.copyWith(
                                       color: foreground,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ),
                                 if (isSelected)
-                                  Icon(
-                                    Icons.check_circle,
-                                    color: foreground,
-                                  ),
+                                  Icon(Icons.check_circle, color: foreground),
                               ],
                             ),
                           ),
@@ -2048,10 +2013,7 @@ class _AddWalletCard extends StatelessWidget {
                 color: Colors.white.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Icon(
-                Icons.add_outlined,
-                color: Colors.white70,
-              ),
+              child: const Icon(Icons.add_outlined, color: Colors.white70),
             ),
             const SizedBox(height: 20),
             Text(
@@ -2089,8 +2051,7 @@ class _InlineNotice extends StatelessWidget {
     final borderColor = isError
         ? MoneyBaseColors.red.withOpacity(0.4)
         : Colors.white.withOpacity(0.12);
-    final textColor =
-        isError ? Colors.white : Colors.white.withOpacity(0.78);
+    final textColor = isError ? Colors.white : Colors.white.withOpacity(0.78);
 
     return Container(
       width: double.infinity,
@@ -2102,9 +2063,9 @@ class _InlineNotice extends StatelessWidget {
       ),
       child: Text(
         message,
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: textColor,
-            ),
+        style: Theme.of(
+          context,
+        ).textTheme.bodyMedium?.copyWith(color: textColor),
       ),
     );
   }
@@ -2189,7 +2150,8 @@ class _WalletDialogState extends State<_WalletDialog> {
     final parsed = parseHexColor(_colorController.text);
     final current = _selectedColor;
     if ((parsed == null && current != null) ||
-        (parsed != null && (current == null || parsed.value != current.value))) {
+        (parsed != null &&
+            (current == null || parsed.value != current.value))) {
       setState(() => _selectedColor = parsed);
     }
   }
@@ -2267,7 +2229,9 @@ class _WalletDialogState extends State<_WalletDialog> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _balanceController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: const InputDecoration(
                   labelText: 'Balance (optional)',
                 ),
@@ -2286,7 +2250,8 @@ class _WalletDialogState extends State<_WalletDialog> {
                 label: 'Icon',
                 options: IconLibrary.walletOptions(),
                 selected: _selectedIconName,
-                onSelected: (value) => setState(() => _selectedIconName = value),
+                onSelected: (value) =>
+                    setState(() => _selectedIconName = value),
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -2364,13 +2329,10 @@ class _WalletDialogState extends State<_WalletDialog> {
               );
 
               if (confirmed == true && mounted) {
-                Navigator.of(context)
-                    .pop(_WalletDialogResult.delete());
+                Navigator.of(context).pop(_WalletDialogResult.delete());
               }
             },
-            style: TextButton.styleFrom(
-              foregroundColor: MoneyBaseColors.red,
-            ),
+            style: TextButton.styleFrom(foregroundColor: MoneyBaseColors.red),
             child: const Text('Delete'),
           ),
         TextButton(
@@ -2443,7 +2405,8 @@ class _CategoryDialogState extends State<_CategoryDialog> {
     final parsed = parseHexColor(_colorController.text);
     final current = _selectedColor;
     if ((parsed == null && current != null) ||
-        (parsed != null && (current == null || parsed.value != current.value))) {
+        (parsed != null &&
+            (current == null || parsed.value != current.value))) {
       setState(() => _selectedColor = parsed);
     }
   }
@@ -2471,10 +2434,11 @@ class _CategoryDialogState extends State<_CategoryDialog> {
   Widget build(BuildContext context) {
     final isEditing = widget.initial != null;
 
-    final parentOptions = widget.categories
-        .where((category) => category.id != widget.initial?.id)
-        .toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
+    final parentOptions =
+        widget.categories
+            .where((category) => category.id != widget.initial?.id)
+            .toList()
+          ..sort((a, b) => a.name.compareTo(b.name));
 
     return AlertDialog(
       title: Text(isEditing ? 'Edit category' : 'New category'),
@@ -2500,7 +2464,8 @@ class _CategoryDialogState extends State<_CategoryDialog> {
                 label: 'Icon',
                 options: IconLibrary.categoryOptions(),
                 selected: _selectedIconName,
-                onSelected: (value) => setState(() => _selectedIconName = value),
+                onSelected: (value) =>
+                    setState(() => _selectedIconName = value),
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -2601,13 +2566,10 @@ class _CategoryDialogState extends State<_CategoryDialog> {
               );
 
               if (confirmed == true && mounted) {
-                Navigator.of(context)
-                    .pop(_CategoryDialogResult.delete());
+                Navigator.of(context).pop(_CategoryDialogResult.delete());
               }
             },
-            style: TextButton.styleFrom(
-              foregroundColor: MoneyBaseColors.red,
-            ),
+            style: TextButton.styleFrom(foregroundColor: MoneyBaseColors.red),
             child: const Text('Delete'),
           ),
         TextButton(
