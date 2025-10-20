@@ -175,6 +175,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _copyUserIdToClipboard(BuildContext context, String userId) async {
+    await Clipboard.setData(ClipboardData(text: userId));
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Account ID copied to clipboard.')),
+    );
+  }
+
+  Future<void> _copySupportEmail(BuildContext context) async {
+    const supportEmail = 'support@moneybase.app';
+    await Clipboard.setData(const ClipboardData(text: supportEmail));
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Support email copied to clipboard.')),
+    );
+  }
+
+  void _showAboutMoneyBase() {
+    showAboutDialog(
+      context: context,
+      applicationName: 'MoneyBase',
+      applicationVersion: 'Web preview',
+      applicationIcon: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.asset(
+          'assets/icon.png',
+          width: 48,
+          height: 48,
+          fit: BoxFit.cover,
+        ),
+      ),
+      applicationLegalese: 'Crafted for the MoneyBase budgeting suite.',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = ThemeControllerProvider.of(context);
@@ -226,6 +265,290 @@ class _SettingsScreenState extends State<SettingsScreen> {
           );
         }
 
+        final quickStats = <Widget>[
+          _QuickStatPill(
+            icon:
+                _remindersEnabled ? Icons.notifications_active : Icons.notifications_off_outlined,
+            label: 'Reminders',
+            value:
+                _remindersEnabled ? 'Daily at $reminderLabel' : 'Disabled on web',
+            accent: colors.secondaryAccent,
+          ),
+          _QuickStatPill(
+            icon: controller.darkMode
+                ? Icons.dark_mode_rounded
+                : Icons.light_mode_outlined,
+            label: 'Theme',
+            value: controller.darkMode ? 'Dark mode' : 'Light mode',
+            accent: colors.primaryAccent,
+          ),
+        ];
+        if (user != null) {
+          quickStats.add(
+            const _QuickStatPill(
+              icon: Icons.cloud_done_outlined,
+              label: 'Sync',
+              value: 'Cloud backup active',
+              accent: MoneyBaseColors.blue,
+            ),
+          );
+        }
+
+        final headerActions = <Widget>[];
+        if (widget.onLogout != null && user != null) {
+          headerActions.add(
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                backgroundColor: MoneyBaseColors.red,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                await FirebaseAuth.instance.signOut();
+                await googleSignInService.signOut();
+                widget.onLogout?.call();
+              },
+              icon: const Icon(Icons.logout_rounded),
+              label: const Text('Log out'),
+            ),
+          );
+        }
+
+        final heroPanel = MoneyBaseFrostedPanel(
+          padding: EdgeInsets.symmetric(
+            horizontal: layout.isWide ? 40 : 28,
+            vertical: layout.isWide ? 36 : 24,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Profile overview',
+                style: textTheme.titleMedium?.copyWith(
+                  color: colors.primaryText,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 20),
+              profileHeader,
+              if (quickStats.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: quickStats,
+                ),
+              ],
+              if (headerActions.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: headerActions,
+                ),
+              ],
+            ],
+          ),
+        );
+
+        final preferencesPanel = MoneyBaseFrostedPanel(
+          padding: EdgeInsets.symmetric(
+            horizontal: layout.isWide ? 32 : 24,
+            vertical: layout.isWide ? 32 : 24,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _SettingsSectionHeader(
+                icon: Icons.tune_rounded,
+                title: 'Personal preferences',
+                subtitle:
+                    'Tailor reminders and appearance so the web experience mirrors Android.',
+              ),
+              const SizedBox(height: 24),
+              _SettingsToggleTile(
+                title: 'Expense reminder',
+                subtitle:
+                    'Keep the nightly spend nudge aligned across every MoneyBase surface.',
+                value: _remindersEnabled,
+                onChanged: (value) => setState(() => _remindersEnabled = value),
+                footer: Row(
+                  children: [
+                    Text(
+                      'Reminder time',
+                      style: textTheme.titleSmall?.copyWith(
+                        color: colors.primaryText,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed:
+                          _remindersEnabled ? () => _pickReminderTime(context) : null,
+                      icon: const Icon(Icons.schedule_outlined),
+                      label: Text(reminderLabel),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                        foregroundColor: colors.primaryText,
+                        disabledForegroundColor: colors.mutedText,
+                        backgroundColor: _remindersEnabled
+                            ? colors.secondaryAccent.withOpacity(0.16)
+                            : colors.surfaceBorder.withOpacity(0.4),
+                        disabledBackgroundColor:
+                            colors.surfaceBorder.withOpacity(0.2),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              _SettingsToggleTile(
+                title: 'Dark mode',
+                subtitle:
+                    'Switch to MoneyBase\'s amethyst dark finish instantly.',
+                value: controller.darkMode,
+                onChanged: controller.setDarkMode,
+              ),
+            ],
+          ),
+        );
+
+        final bool signedIn = user != null;
+        final dataToolsPanel = MoneyBaseFrostedPanel(
+          padding: EdgeInsets.symmetric(
+            horizontal: layout.isWide ? 32 : 24,
+            vertical: layout.isWide ? 32 : 24,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SettingsSectionHeader(
+                icon: Icons.table_view_outlined,
+                title: 'Data tools & CSV',
+                subtitle: signedIn
+                    ? 'Export a backup or paste in CSV rows to migrate data between installs.'
+                    : 'Sign in to unlock CSV exports and imports for your transactions.',
+              ),
+              if (!signedIn) ...[
+                const SizedBox(height: 16),
+                const _SettingsHintBanner(
+                  message: 'CSV workflows become available once you sign in.',
+                ),
+              ],
+              const SizedBox(height: 24),
+              _DataActionTile(
+                icon: Icons.download_outlined,
+                title: 'Export transactions to CSV',
+                subtitle:
+                    'Download your latest transactions so you can archive a snapshot.',
+                buttonLabel: 'Export CSV',
+                onPressed: signedIn && !_isExportingCsv
+                    ? () => _exportTransactionsCsv(context, user!.uid)
+                    : null,
+                loading: signedIn && _isExportingCsv,
+              ),
+              const SizedBox(height: 16),
+              _DataActionTile(
+                icon: Icons.upload_file_outlined,
+                title: 'Import transactions from CSV',
+                subtitle:
+                    'Paste CSV rows exported from MoneyBase or another budgeting tool to bulk add entries.',
+                buttonLabel: 'Import CSV',
+                onPressed: signedIn && !_isImportingCsv
+                    ? () => _importTransactionsCsv(context, user!.uid)
+                    : null,
+                loading: signedIn && _isImportingCsv,
+              ),
+            ],
+          ),
+        );
+
+        final supportPanel = MoneyBaseFrostedPanel(
+          padding: EdgeInsets.symmetric(
+            horizontal: layout.isWide ? 32 : 24,
+            vertical: layout.isWide ? 32 : 24,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _SettingsSectionHeader(
+                icon: Icons.support_agent_outlined,
+                title: 'Support & extras',
+                subtitle: 'Get help and learn more about the MoneyBase experience.',
+              ),
+              const SizedBox(height: 24),
+              _SupportActionTile(
+                icon: Icons.email_outlined,
+                title: 'Contact support',
+                subtitle: 'Copy support@moneybase.app and share details with the team.',
+                onTap: () => _copySupportEmail(context),
+              ),
+              const SizedBox(height: 12),
+              _SupportActionTile(
+                icon: Icons.info_outline,
+                title: 'About MoneyBase',
+                subtitle: 'Review the project story and licences.',
+                onTap: _showAboutMoneyBase,
+              ),
+              if (user != null) ...[
+                const SizedBox(height: 12),
+                _SupportActionTile(
+                  icon: Icons.copy_all_outlined,
+                  title: 'Copy account ID',
+                  subtitle: 'Share this identifier when contacting support about sync issues.',
+                  onTap: () => _copyUserIdToClipboard(context, user.uid),
+                ),
+              ],
+            ],
+          ),
+        );
+
+        if (layout.isWide) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Settings',
+                style: textTheme.headlineMedium?.copyWith(
+                  color: colors.primaryText,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Personalise MoneyBase on the web so it mirrors the Android build.',
+                style: textTheme.bodyLarge?.copyWith(color: colors.mutedText),
+              ),
+              const SizedBox(height: 32),
+              heroPanel,
+              const SizedBox(height: 32),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        preferencesPanel,
+                        const SizedBox(height: 24),
+                        dataToolsPanel,
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 24),
+                  Expanded(child: supportPanel),
+                ],
+              ),
+            ],
+          );
+        }
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -238,151 +561,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Personalise reminders to mirror the Android build across web.',
+              'Personalise MoneyBase on the web so it mirrors the Android build.',
               style: textTheme.bodyLarge?.copyWith(color: colors.mutedText),
             ),
             const SizedBox(height: 32),
-            MoneyBaseFrostedPanel(
-              padding: EdgeInsets.symmetric(
-                horizontal: layout.isWide ? 36 : 28,
-                vertical: layout.isWide ? 36 : 28,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  profileHeader,
-                  const SizedBox(height: 32),
-                  _SettingsToggleTile(
-                    title: 'Expense Reminder',
-                    subtitle:
-                        'Keep the nightly spend nudge in sync across MoneyBase surfaces.',
-                    value: _remindersEnabled,
-                    onChanged: (value) =>
-                        setState(() => _remindersEnabled = value),
-                    footer: Row(
-                      children: [
-                        Text(
-                          'Reminder Time',
-                          style: textTheme.titleSmall?.copyWith(
-                            color: colors.primaryText,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const Spacer(),
-                        TextButton.icon(
-                          onPressed: _remindersEnabled
-                              ? () => _pickReminderTime(context)
-                              : null,
-                          icon: const Icon(Icons.schedule_outlined),
-                          label: Text(reminderLabel),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 12,
-                            ),
-                            foregroundColor: colors.primaryText,
-                            disabledForegroundColor: colors.mutedText,
-                            backgroundColor: _remindersEnabled
-                                ? colors.secondaryAccent.withOpacity(0.16)
-                                : colors.surfaceBorder.withOpacity(0.4),
-                            disabledBackgroundColor: colors.surfaceBorder
-                                .withOpacity(0.2),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  _SettingsToggleTile(
-                    title: 'Dark Mode',
-                    subtitle:
-                        'Match Android\'s amethyst dark finish instantly.',
-                    value: controller.darkMode,
-                    onChanged: controller.setDarkMode,
-                  ),
-                  const SizedBox(height: 32),
-                  Wrap(
-                    spacing: 16,
-                    runSpacing: 16,
-                    children: [
-                      if (widget.onLogout != null)
-                        FilledButton.icon(
-                          style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 16,
-                            ),
-                            backgroundColor: MoneyBaseColors.red,
-                            foregroundColor: Colors.white,
-                          ),
-                          onPressed: () async {
-                            await FirebaseAuth.instance.signOut();
-                            await googleSignInService.signOut();
-                            widget.onLogout?.call();
-                          },
-                          icon: const Icon(Icons.logout_rounded),
-                          label: const Text('Log out'),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            if (user != null) ...[
-              const SizedBox(height: 24),
-              MoneyBaseFrostedPanel(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 28,
-                  vertical: 32,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Data tools',
-                      style: textTheme.titleMedium?.copyWith(
-                        color: colors.primaryText,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Export a backup or paste in CSV rows to migrate data between MoneyBase installs.',
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: colors.mutedText,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    _DataActionTile(
-                      icon: Icons.download_outlined,
-                      title: 'Export transactions to CSV',
-                      subtitle:
-                          'Exports your latest transactions so you can download a CSV snapshot.',
-                      buttonLabel: 'Export CSV',
-                      onPressed: _isExportingCsv
-                          ? null
-                          : () => _exportTransactionsCsv(context, user.uid),
-                      loading: _isExportingCsv,
-                    ),
-                    const SizedBox(height: 16),
-                    _DataActionTile(
-                      icon: Icons.upload_file_outlined,
-                      title: 'Import transactions from CSV',
-                      subtitle:
-                          'Paste CSV rows exported from MoneyBase or another budgeting tool to bulk add entries.',
-                      buttonLabel: 'Import CSV',
-                      onPressed: _isImportingCsv
-                          ? null
-                          : () => _importTransactionsCsv(context, user.uid),
-                      loading: _isImportingCsv,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            heroPanel,
+            const SizedBox(height: 24),
+            preferencesPanel,
+            const SizedBox(height: 24),
+            dataToolsPanel,
+            const SizedBox(height: 24),
+            supportPanel,
           ],
         );
       },
@@ -432,10 +621,10 @@ class _ProfileHeader extends StatelessWidget {
         photoUrl!,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) =>
-            Image.asset('icon.png', fit: BoxFit.cover),
+            Image.asset('assets/icon.png', fit: BoxFit.cover),
       );
     } else {
-      avatar = Image.asset('icon.png', fit: BoxFit.cover);
+      avatar = Image.asset('assets/icon.png', fit: BoxFit.cover);
     }
 
     return Row(
@@ -505,23 +694,49 @@ class _DataActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final isDisabled = onPressed == null;
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
     final colors = context.moneyBaseColors;
     final accent = colors.primaryAccent;
+    final isDisabled = onPressed == null;
+    final effectiveOnPressed = (loading || onPressed == null) ? null : onPressed;
 
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 260),
       decoration: BoxDecoration(
-        color: accent.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: accent.withOpacity(0.24)),
+        borderRadius: BorderRadius.circular(28),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            colors.surfaceBackground.withOpacity(0.9),
+            colors.surfaceBackground.withOpacity(0.72),
+          ],
+        ),
+        border: Border.all(color: accent.withOpacity(isDisabled ? 0.18 : 0.32)),
+        boxShadow: [
+          BoxShadow(
+            color: colors.surfaceShadow,
+            blurRadius: 28,
+            offset: const Offset(0, 18),
+          ),
+        ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: accent, size: 28),
-          const SizedBox(width: 16),
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: accent.withOpacity(0.16),
+              border: Border.all(color: accent.withOpacity(0.32)),
+            ),
+            child: Icon(icon, color: accent, size: 26),
+          ),
+          const SizedBox(width: 18),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -536,33 +751,43 @@ class _DataActionTile extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   subtitle,
-                  style: textTheme.bodySmall?.copyWith(color: colors.mutedText),
+                  style: textTheme.bodyMedium?.copyWith(color: colors.mutedText),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 18),
           FilledButton(
-            onPressed: onPressed,
+            onPressed: effectiveOnPressed,
             style: FilledButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-              backgroundColor: (loading || !isDisabled)
-                  ? accent
-                  : colors.surfaceBorder.withOpacity(0.6),
-              foregroundColor: (loading || !isDisabled)
-                  ? Colors.white
-                  : colors.mutedText,
+              backgroundColor: accent,
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: colors.surfaceBorder.withOpacity(0.6),
+              disabledForegroundColor: colors.mutedText,
             ),
-            child: loading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.4,
-                      color: Colors.white,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: loading
+                  ? const SizedBox(
+                      key: ValueKey('loading'),
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.4,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Row(
+                      key: const ValueKey('label'),
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(buttonLabel),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.arrow_outward_rounded, size: 18),
+                      ],
                     ),
-                  )
-                : Text(buttonLabel),
+            ),
           ),
         ],
       ),
@@ -722,17 +947,50 @@ class _SettingsToggleTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
     final colors = context.moneyBaseColors;
     final accent = colors.secondaryAccent;
 
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 240),
       decoration: BoxDecoration(
-        color: accent.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: accent.withOpacity(0.2)),
+        borderRadius: BorderRadius.circular(28),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: value
+              ? [
+                  accent.withOpacity(0.28),
+                  accent.withOpacity(0.12),
+                ]
+              : [
+                  colors.surfaceBackground.withOpacity(0.88),
+                  colors.surfaceBackground.withOpacity(0.72),
+                ],
+        ),
+        border: Border.all(
+          color: value
+              ? accent.withOpacity(0.45)
+              : colors.surfaceBorder.withOpacity(0.8),
+        ),
+        boxShadow: value
+            ? [
+                BoxShadow(
+                  color: accent.withOpacity(0.22),
+                  blurRadius: 28,
+                  offset: const Offset(0, 18),
+                ),
+              ]
+            : [
+                BoxShadow(
+                  color: colors.surfaceShadow,
+                  blurRadius: 20,
+                  offset: const Offset(0, 12),
+                ),
+              ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -765,11 +1023,244 @@ class _SettingsToggleTile extends StatelessWidget {
                 value: value,
                 onChanged: onChanged,
                 activeColor: accent,
+                trackColor: MaterialStateProperty.resolveWith<Color?>(
+                  (states) => states.contains(MaterialState.selected)
+                      ? accent.withOpacity(0.35)
+                      : colors.surfaceBorder.withOpacity(0.6),
+                ),
               ),
             ],
           ),
-          if (footer != null) ...[const SizedBox(height: 18), footer!],
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child: footer == null
+                ? const SizedBox.shrink()
+                : Padding(
+                    key: const ValueKey('footer'),
+                    padding: const EdgeInsets.only(top: 18),
+                    child: footer,
+                  ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _SettingsSectionHeader extends StatelessWidget {
+  const _SettingsSectionHeader({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.moneyBaseColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                colors.primaryAccent.withOpacity(0.32),
+                colors.secondaryAccent.withOpacity(0.18),
+              ],
+            ),
+            border: Border.all(color: colors.primaryAccent.withOpacity(0.4)),
+          ),
+          child: Icon(icon, color: colors.primaryAccent),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: textTheme.titleMedium?.copyWith(
+                  color: colors.primaryText,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: textTheme.bodyMedium?.copyWith(color: colors.mutedText),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickStatPill extends StatelessWidget {
+  const _QuickStatPill({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.accent,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color? accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.moneyBaseColors;
+    final textTheme = Theme.of(context).textTheme;
+    final resolvedAccent = accent ?? colors.primaryAccent;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            resolvedAccent.withOpacity(0.26),
+            resolvedAccent.withOpacity(0.12),
+          ],
+        ),
+        border: Border.all(color: resolvedAccent.withOpacity(0.36)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: resolvedAccent, size: 20),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: textTheme.labelMedium?.copyWith(
+                  color: colors.mutedText,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                value,
+                style: textTheme.titleSmall?.copyWith(
+                  color: colors.primaryText,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SupportActionTile extends StatelessWidget {
+  const _SupportActionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.moneyBaseColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  color: colors.surfaceBackground.withOpacity(0.6),
+                  border: Border.all(color: colors.surfaceBorder.withOpacity(0.8)),
+                ),
+                child: Icon(icon, color: colors.primaryAccent),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: textTheme.titleMedium?.copyWith(
+                        color: colors.primaryText,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colors.mutedText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: colors.mutedText),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsHintBanner extends StatelessWidget {
+  const _SettingsHintBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.moneyBaseColors;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: colors.surfaceBackground.withOpacity(0.72),
+        border: Border.all(color: colors.surfaceBorder.withOpacity(0.9)),
+      ),
+      child: Text(
+        message,
+        style: textTheme.bodyMedium?.copyWith(color: colors.mutedText),
       ),
     );
   }

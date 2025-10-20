@@ -180,7 +180,7 @@ class _AppShellState extends State<AppShell> {
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Image.asset(
-              'icon.png',
+              'assets/icon.png',
               width: 28,
               height: 28,
               fit: BoxFit.cover,
