@@ -954,65 +954,65 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         submitRow,
                       ],
                     );
-                }
+                  }
 
-                final content = Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _AddTransactionHero(
-                      isWide: layout.isWide,
-                      onBack: () => Navigator.of(context).maybePop(),
-                      selectedWallet: heroWallet,
-                      selectedCategory: heroCategory,
-                    ),
-                    const SizedBox(height: 28),
-                    MoneyBaseFrostedPanel(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: layout.isWide ? 36 : 28,
-                        vertical: layout.isWide ? 36 : 28,
-                      ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x33000000),
-                          blurRadius: 32,
-                          offset: Offset(0, 24),
+                    final content = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _AddTransactionHero(
+                          isWide: layout.isWide,
+                          onBack: () => Navigator.of(context).maybePop(),
+                          selectedWallet: heroWallet,
+                          selectedCategory: heroCategory,
+                        ),
+                        const SizedBox(height: 28),
+                        MoneyBaseFrostedPanel(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: layout.isWide ? 36 : 28,
+                            vertical: layout.isWide ? 36 : 28,
+                          ),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x33000000),
+                              blurRadius: 32,
+                              offset: Offset(0, 24),
+                            ),
+                          ],
+                          child: panelChild,
                         ),
                       ],
-                      child: panelChild,
-                    ),
-                  ],
-                );
+                    );
 
-                return Shortcuts(
-                  shortcuts: <ShortcutActivator, Intent>{
-                    const SingleActivator(LogicalKeyboardKey.escape):
-                        const _BackIntent(),
-                    const SingleActivator(LogicalKeyboardKey.enter):
-                        const _SubmitIntent(),
-                    const SingleActivator(LogicalKeyboardKey.numpadEnter):
-                        const _SubmitIntent(),
-                  },
-                  child: Actions(
-                    actions: <Type, Action<Intent>>{
-                      _BackIntent: CallbackAction<_BackIntent>(
-                        onInvoke: (_) {
-                          Navigator.of(context).maybePop();
-                          return null;
+                    return Shortcuts(
+                      shortcuts: <ShortcutActivator, Intent>{
+                        const SingleActivator(LogicalKeyboardKey.escape):
+                            const _BackIntent(),
+                        const SingleActivator(LogicalKeyboardKey.enter):
+                            const _SubmitIntent(),
+                        const SingleActivator(LogicalKeyboardKey.numpadEnter):
+                            const _SubmitIntent(),
+                      },
+                      child: Actions(
+                        actions: <Type, Action<Intent>>{
+                          _BackIntent: CallbackAction<_BackIntent>(
+                            onInvoke: (_) {
+                              Navigator.of(context).maybePop();
+                              return null;
+                            },
+                          ),
+                          _SubmitIntent: CallbackAction<_SubmitIntent>(
+                            onInvoke: (_) {
+                              submitAction?.call();
+                              return null;
+                            },
+                          ),
                         },
+                        child: Focus(
+                          autofocus: true,
+                          child: content,
+                        ),
                       ),
-                      _SubmitIntent: CallbackAction<_SubmitIntent>(
-                        onInvoke: (_) {
-                          submitAction?.call();
-                          return null;
-                        },
-                      ),
-                    },
-                    child: Focus(
-                      autofocus: true,
-                      child: content,
-                    ),
-                  ),
-                );
+                    );
               },
             );
           },
