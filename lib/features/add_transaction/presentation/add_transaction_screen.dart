@@ -557,344 +557,378 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           )
                       : null;
 
-                  panelChild = Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Transaction type',
-                        style: textTheme.titleMedium?.copyWith(
-                          color: Colors.white,
+
+                  final formColumnChildren = <Widget>[
+                    Text(
+                      'Transaction type',
+                      style: textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SegmentedButton<_TransactionType>(
+                      segments: const [
+                        ButtonSegment(
+                          value: _TransactionType.expense,
+                          label: Text('Expense'),
+                          icon: Icon(Icons.south_east),
+                        ),
+                        ButtonSegment(
+                          value: _TransactionType.income,
+                          label: Text('Income'),
+                          icon: Icon(Icons.north_east),
+                        ),
+                      ],
+                      selected: {_type},
+                      onSelectionChanged: (selection) {
+                        setState(() => _type = selection.first);
+                      },
+                      style: SegmentedButton.styleFrom(
+                        backgroundColor: Colors.white.withOpacity(0.08),
+                        foregroundColor: Colors.white.withOpacity(0.72),
+                        selectedForegroundColor: Colors.white,
+                        selectedBackgroundColor:
+                            MoneyBaseColors.purple.withOpacity(0.65),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        textStyle: textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      SegmentedButton<_TransactionType>(
-                        segments: const [
-                          ButtonSegment(
-                            value: _TransactionType.expense,
-                            label: Text('Expense'),
-                            icon: Icon(Icons.south_east),
+                    ),
+                    const SizedBox(height: 32),
+                    _GlassField(
+                      label: 'Date',
+                      onTap: () => _pickDate(context),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _formattedDate,
+                              style: textTheme.titleMedium?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
-                          ButtonSegment(
-                            value: _TransactionType.income,
-                            label: Text('Income'),
-                            icon: Icon(Icons.north_east),
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            color: Colors.white.withOpacity(0.7),
                           ),
                         ],
-                        selected: {_type},
-                        onSelectionChanged: (selection) {
-                          setState(() => _type = selection.first);
-                        },
-                        style: SegmentedButton.styleFrom(
-                          backgroundColor: Colors.white.withOpacity(0.08),
-                          foregroundColor: Colors.white.withOpacity(0.72),
-                          selectedForegroundColor: Colors.white,
-                          selectedBackgroundColor:
-                              MoneyBaseColors.purple.withOpacity(0.65),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 14,
-                          ),
-                          textStyle: textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
                       ),
-                      const SizedBox(height: 32),
-                      _GlassField(
-                        label: 'Date',
-                        onTap: () => _pickDate(context),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                _formattedDate,
-                                style: textTheme.titleMedium?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            Icon(
-                              Icons.calendar_today_outlined,
-                              color: Colors.white.withOpacity(0.7),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      _GlassField(
-                        label: 'Note',
-                        child: TextField(
-                          controller: _noteController,
-                          style: textTheme.titleMedium?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          decoration: InputDecoration.collapsed(
-                            hintText: 'Enter a note',
-                            hintStyle: textTheme.titleMedium?.copyWith(
-                              color: Colors.white.withOpacity(0.6),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      _GlassField(
-                        label: 'Amount',
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                currencyPrefix,
-                                style: textTheme.titleMedium?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: TextField(
-                                controller: _amountController,
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                  decimal: true,
-                                ),
-                                style: textTheme.headlineSmall?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                decoration: InputDecoration.collapsed(
-                                  hintText: 'Enter amount',
-                                  hintStyle: textTheme.headlineSmall?.copyWith(
-                                    color: Colors.white.withOpacity(0.4),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-                      Text(
-                        'Category',
+                    ),
+                    const SizedBox(height: 20),
+                    _GlassField(
+                      label: 'Note',
+                      child: TextField(
+                        controller: _noteController,
                         style: textTheme.titleMedium?.copyWith(
                           color: Colors.white,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        decoration: InputDecoration.collapsed(
+                          hintText: 'Enter a note',
+                          hintStyle: textTheme.titleMedium?.copyWith(
+                            color: Colors.white.withOpacity(0.6),
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      if (missingCategories)
-                        const _InlineNotice(
-                          message:
-                              'Create a category to organise this transaction.',
-                        ),
-                      if (!missingCategories) ...[
-                        _GlassField(
-                          label: 'Choose category',
-                          onTap: () => _showCategoryPicker(
-                            context,
-                            categories,
+                    ),
+                    const SizedBox(height: 20),
+                    _GlassField(
+                      label: 'Amount',
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              currencyPrefix,
+                              style: textTheme.titleMedium?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ),
-                          backgroundColor: selectedCategory != null
-                              ? Colors.transparent
-                              : null,
-                          borderColor: selectedCategory != null
-                              ? Colors.transparent
-                              : null,
-                          child: selectedCategory != null
-                              ? _CategorySummaryChip(category: selectedCategory)
-                              : Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        'Select a category',
-                                        style:
-                                            textTheme.titleMedium?.copyWith(
-                                          color:
-                                              Colors.white.withOpacity(0.85),
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: TextField(
+                              controller: _amountController,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                decimal: true,
+                              ),
+                              style: textTheme.headlineSmall?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              decoration: InputDecoration.collapsed(
+                                hintText: 'Enter amount',
+                                hintStyle: textTheme.headlineSmall?.copyWith(
+                                  color: Colors.white.withOpacity(0.4),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                  ];
+
+                  final categoryAndWalletChildren = <Widget>[
+                    Text(
+                      'Category',
+                      style: textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (missingCategories)
+                      const _InlineNotice(
+                        message:
+                            'Create a category to organise this transaction.',
+                      ),
+                    if (!missingCategories) ...[
+                      _GlassField(
+                        label: 'Choose category',
+                        onTap: () => _showCategoryPicker(
+                          context,
+                          categories,
+                        ),
+                        backgroundColor: selectedCategory != null
+                            ? Colors.transparent
+                            : null,
+                        borderColor: selectedCategory != null
+                            ? Colors.transparent
+                            : null,
+                        child: selectedCategory != null
+                            ? _CategorySummaryChip(category: selectedCategory)
+                            : Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      'Select a category',
+                                      style: textTheme.titleMedium?.copyWith(
+                                        color: Colors.white.withOpacity(0.85),
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                    Icon(
-                                      Icons.chevron_right,
-                                      color: Colors.white.withOpacity(0.75),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                  Icon(
+                                    Icons.chevron_right,
+                                    color: Colors.white.withOpacity(0.75),
+                                  ),
+                                ],
+                              ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    Row(
+                      children: [
+                        TextButton.icon(
+                          onPressed: () => _openCategoryDialog(
+                            context,
+                            user.uid,
+                            categories,
+                          ),
+                          icon: const Icon(Icons.add, size: 18),
+                          label: const Text('Add category'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white,
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                      ],
-                      Row(
-                        children: [
+                        if (!missingCategories && selectedCategory != null) ...[
+                          const SizedBox(width: 12),
                           TextButton.icon(
                             onPressed: () => _openCategoryDialog(
                               context,
                               user.uid,
                               categories,
+                              category: selectedCategory,
                             ),
-                            icon: const Icon(Icons.add, size: 18),
-                            label: const Text('Add category'),
+                            icon: const Icon(Icons.edit_outlined, size: 18),
+                            label: const Text('Edit selected'),
                             style: TextButton.styleFrom(
-                              foregroundColor: Colors.white,
+                              foregroundColor: Colors.white.withOpacity(0.85),
                             ),
                           ),
-                          if (!missingCategories && selectedCategory != null) ...[
-                            const SizedBox(width: 12),
-                            TextButton.icon(
-                              onPressed: () => _openCategoryDialog(
-                                context,
-                                user.uid,
-                                categories,
-                                category: selectedCategory,
-                              ),
-                              icon: const Icon(Icons.edit_outlined, size: 18),
-                              label: const Text('Edit selected'),
-                              style: TextButton.styleFrom(
-                                foregroundColor: Colors.white.withOpacity(0.85),
-                              ),
-                            ),
-                          ],
                         ],
-                      ),
-                      const SizedBox(height: 32),
-                      Text(
-                        'Wallets',
-                        style: textTheme.titleMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      if (!missingWallets) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          'Drag wallets to reposition them, or long press to edit or remove.',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: Colors.white.withOpacity(0.6),
-                          ),
-                        ),
                       ],
-                      const SizedBox(height: 16),
-                      if (missingWallets)
-                        const _InlineNotice(
-                          message:
-                              'Add a wallet to track where the money moves.',
+                    ),
+                    const SizedBox(height: 32),
+                    Text(
+                      'Wallets',
+                      style: textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (!missingWallets) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Drag wallets to reposition them, or long press to edit or remove.',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: Colors.white.withOpacity(0.6),
                         ),
-                      if (missingWallets) const SizedBox(height: 12),
-                      SizedBox(
-                        height: 220,
-                        child: ReorderableListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          padding: EdgeInsets.zero,
-                          itemCount: wallets.length + 1,
-                          onReorder: (oldIndex, newIndex) {
-                            final placeholderIndex = wallets.length;
-                            if (oldIndex == placeholderIndex) {
-                              return;
-                            }
-                            final targetIndex = newIndex > placeholderIndex
-                                ? placeholderIndex
-                                : newIndex;
-                            _handleReorderWallets(
-                              oldIndex,
-                              targetIndex,
-                              wallets,
-                              user.uid,
-                            );
-                          },
-                          proxyDecorator: (child, index, animation) => Material(
-                            color: Colors.transparent,
-                            child: FadeTransition(
-                              opacity: CurvedAnimation(
-                                parent: animation,
-                                curve: Curves.easeInOut,
-                              ),
-                              child: child,
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+                    if (missingWallets)
+                      const _InlineNotice(
+                        message: 'Add a wallet to track where the money moves.',
+                      ),
+                    if (missingWallets) const SizedBox(height: 12),
+                    SizedBox(
+                      height: 220,
+                      child: ReorderableListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: EdgeInsets.zero,
+                        itemCount: wallets.length + 1,
+                        onReorder: (oldIndex, newIndex) {
+                          final placeholderIndex = wallets.length;
+                          if (oldIndex == placeholderIndex) {
+                            return;
+                          }
+                          final targetIndex = newIndex > placeholderIndex
+                              ? placeholderIndex
+                              : newIndex;
+                          _handleReorderWallets(
+                            oldIndex,
+                            targetIndex,
+                            wallets,
+                            user.uid,
+                          );
+                        },
+                        proxyDecorator: (child, index, animation) => Material(
+                          color: Colors.transparent,
+                          child: FadeTransition(
+                            opacity: CurvedAnimation(
+                              parent: animation,
+                              curve: Curves.easeInOut,
                             ),
+                            child: child,
                           ),
-                          itemBuilder: (context, index) {
-                            if (index == wallets.length) {
-                              return Padding(
-                                key: const ValueKey('__add_wallet__'),
-                                padding: EdgeInsets.only(
-                                  right: 0,
-                                ),
-                                child: _AddWalletCard(
-                                  onTap: () => _openWalletDialog(
-                                    context,
-                                    user.uid,
-                                  ),
-                                ),
-                              );
-                            }
-
-                            final wallet = wallets[index];
+                        ),
+                        itemBuilder: (context, index) {
+                          if (index == wallets.length) {
                             return Padding(
-                              key: ValueKey(wallet.id),
+                              key: const ValueKey('__add_wallet__'),
                               padding: EdgeInsets.only(
-                                right: 16,
+                                right: 0,
                               ),
-                              child: _WalletCard(
-                                wallet: wallet,
-                                selected: wallet.id == _selectedWalletId,
-                                onTap: () =>
-                                    setState(() => _selectedWalletId = wallet.id),
-                                onLongPress: () => _openWalletDialog(
+                              child: _AddWalletCard(
+                                onTap: () => _openWalletDialog(
                                   context,
                                   user.uid,
-                                  wallet: wallet,
                                 ),
                               ),
                             );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 36),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: FilledButton(
-                              style: FilledButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 18),
-                                backgroundColor: MoneyBaseColors.purple,
-                                foregroundColor: Colors.white,
-                                textStyle: textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(24),
-                                ),
+                          }
+
+                          final wallet = wallets[index];
+                          return Padding(
+                            key: ValueKey(wallet.id),
+                            padding: EdgeInsets.only(
+                              right: 16,
+                            ),
+                            child: _WalletCard(
+                              wallet: wallet,
+                              selected: wallet.id == _selectedWalletId,
+                              onTap: () =>
+                                  setState(() => _selectedWalletId = wallet.id),
+                              onLongPress: () => _openWalletDialog(
+                                context,
+                                user.uid,
+                                wallet: wallet,
                               ),
-                              onPressed: submitAction,
-                              child: _submitting
-                                  ? const SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.5,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : const Text('Submit'),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ];
+
+                  final submitRow = Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            backgroundColor: MoneyBaseColors.purple,
+                            foregroundColor: Colors.white,
+                            textStyle: textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
                             ),
                           ),
-                        ],
+                          onPressed: submitAction,
+                          child: _submitting
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text('Submit'),
+                        ),
                       ),
                     ],
                   );
-                }
+
+                  if (layout.isWide) {
+                    panelChild = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: formColumnChildren,
+                              ),
+                            ),
+                            const SizedBox(width: 32),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: categoryAndWalletChildren,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 36),
+                        submitRow,
+                      ],
+                    );
+                  } else {
+                    panelChild = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ...formColumnChildren,
+                        ...categoryAndWalletChildren,
+                        const SizedBox(height: 36),
+                        submitRow,
+                      ],
+                    );
+                  }
 
                 final content = Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
