@@ -528,6 +528,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
                 Widget panelChild;
                 VoidCallback? submitAction;
+                Wallet? heroWallet;
+                Category? heroCategory;
                 if (errorMessage != null) {
                   panelChild = _InlineNotice(
                     message:
@@ -567,10 +569,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   final pendingAmount = parsedAmount != null
                       ? parsedAmount.abs()
                       : null;
-                  final heroWallet = selectedWallet;
-                  final heroCategory = missingCategories
-                      ? null
-                      : selectedCategory;
+                  heroWallet = selectedWallet;
+                  heroCategory = missingCategories ? null : selectedCategory;
 
                   submitAction = canSubmit && !_submitting
                       ? () => _handleSubmit(
