@@ -910,100 +910,102 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                 final horizontalPadding = isWide ? 48.0 : 16.0;
                 final verticalPadding = isWide ? 32.0 : 16.0;
 
-                return SingleChildScrollView(
-                  padding: EdgeInsets.fromLTRB(
-                    horizontalPadding,
-                    verticalPadding,
-                    horizontalPadding,
-                    verticalPadding + 72,
-                  ),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 960),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: double.infinity,
-                            padding: EdgeInsets.symmetric(
-                              horizontal: isWide ? 36 : 20,
-                              vertical: isWide ? 28 : 20,
-                            ),
-                            decoration: BoxDecoration(
-                              color: colors.surfaceBackground,
-                              border: Border.all(color: colors.surfaceBorder),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  resolved.name.isEmpty
-                                      ? 'Shopping list'
-                                      : resolved.name,
-                                  style: textTheme.headlineSmall?.copyWith(
-                                    color: colors.primaryText,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: [
-                                    _ListMetadataChip(
-                                      icon: Icons.category_outlined,
-                                      label: resolved.type.label,
-                                      color: colors.primaryAccent,
+                return SelectionArea(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(
+                      horizontalPadding,
+                      verticalPadding,
+                      horizontalPadding,
+                      verticalPadding + 72,
+                    ),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 960),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isWide ? 36 : 20,
+                                vertical: isWide ? 28 : 20,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colors.surfaceBackground,
+                                border: Border.all(color: colors.surfaceBorder),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    resolved.name.isEmpty
+                                        ? 'Shopping list'
+                                        : resolved.name,
+                                    style: textTheme.headlineSmall?.copyWith(
+                                      color: colors.primaryText,
+                                      fontWeight: FontWeight.w700,
                                     ),
-                                    if (resolved.currency.isNotEmpty)
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
                                       _ListMetadataChip(
-                                        icon: Icons.attach_money,
-                                        label: resolved.currency.toUpperCase(),
-                                        color: colors.secondaryAccent,
+                                        icon: Icons.category_outlined,
+                                        label: resolved.type.label,
+                                        color: colors.primaryAccent,
                                       ),
-                                    _ListMetadataChip(
-                                      icon: Icons.calendar_today_outlined,
-                                      label: 'Created ${_formatDate(resolved.createdAt)}',
-                                      color: colors.info,
+                                      if (resolved.currency.isNotEmpty)
+                                        _ListMetadataChip(
+                                          icon: Icons.attach_money,
+                                          label: resolved.currency.toUpperCase(),
+                                          color: colors.secondaryAccent,
+                                        ),
+                                      _ListMetadataChip(
+                                        icon: Icons.calendar_today_outlined,
+                                        label: 'Created ${_formatDate(resolved.createdAt)}',
+                                        color: colors.info,
+                                      ),
+                                    ],
+                                  ),
+                                  if (notes.isNotEmpty) ...[
+                                    const SizedBox(height: 16),
+                                    Divider(
+                                      color: colors.surfaceBorder,
+                                      height: 1,
+                                      thickness: 1,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      notes,
+                                      style: textTheme.bodyMedium?.copyWith(
+                                        color: colors.mutedText,
+                                      ),
                                     ),
                                   ],
-                                ),
-                                if (notes.isNotEmpty) ...[
-                                  const SizedBox(height: 16),
-                                  Divider(
-                                    color: colors.surfaceBorder,
-                                    height: 1,
-                                    thickness: 1,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    notes,
-                                    style: textTheme.bodyMedium?.copyWith(
-                                      color: colors.mutedText,
-                                    ),
-                                  ),
                                 ],
-                              ],
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 20),
-                          Container(
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: colors.surfaceBackground,
-                              border: Border.all(color: colors.surfaceBorder),
+                            const SizedBox(height: 20),
+                            Container(
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: colors.surfaceBackground,
+                                border: Border.all(color: colors.surfaceBorder),
+                              ),
+                              child: _ShoppingListItemsView(
+                                userId: widget.userId,
+                                list: resolved,
+                                repository: _repository,
+                                onAddItem: _handleAddItem,
+                                onEditItem: _handleEditItem,
+                                onDeleteItem: _handleDeleteItem,
+                                onToggleItem: _handleToggleItem,
+                              ),
                             ),
-                            child: _ShoppingListItemsView(
-                              userId: widget.userId,
-                              list: resolved,
-                              repository: _repository,
-                              onAddItem: _handleAddItem,
-                              onEditItem: _handleEditItem,
-                              onDeleteItem: _handleDeleteItem,
-                              onToggleItem: _handleToggleItem,
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -1015,35 +1017,38 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
 
         Widget body;
         if (error != null) {
-          body = Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(
-                'Unable to load this list: $error',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: colors.mutedText,
+          body = SelectionArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'Unable to load this list: $error',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: colors.mutedText,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
               ),
             ),
           );
         } else if (list == null) {
-          body = Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(
-                'This shopping list is no longer available.',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: colors.mutedText,
+          body = SelectionArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'This shopping list is no longer available.',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: colors.mutedText,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
               ),
             ),
           );
         } else {
           body = buildContent(list);
         }
-        body = SelectionArea(child: body);
 
         final titleList = list ?? widget.initialList;
 
