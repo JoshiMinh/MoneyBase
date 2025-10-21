@@ -96,7 +96,7 @@ class _MoneyBaseAppState extends State<MoneyBaseApp> {
                 initialRoute: kIsWeb
                     ? null
                     : authenticated
-                        ? '/home'
+                        ? '/'
                         : '/auth',
                 onGenerateRoute: (settings) =>
                     _onGenerateRoute(settings, authenticated ? user : null),
@@ -110,17 +110,12 @@ class _MoneyBaseAppState extends State<MoneyBaseApp> {
 
   Route<dynamic> _onGenerateRoute(RouteSettings settings, User? user) {
     final isAuthenticated = user != null;
-    final isMobileApp = !kIsWeb &&
-        (defaultTargetPlatform == TargetPlatform.android ||
-            defaultTargetPlatform == TargetPlatform.iOS);
     var name = settings.name ?? '/';
 
-    if (isMobileApp && name == '/') {
-      name = isAuthenticated ? '/home' : '/auth';
-    } else if (!isAuthenticated && name != '/' && name != '/auth') {
+    if (!isAuthenticated && name != '/' && name != '/auth') {
       name = '/auth';
     } else if (isAuthenticated && name == '/auth') {
-      name = '/home';
+      name = '/';
     }
 
     if (isAuthenticated && name.startsWith('/shopping/list/')) {
@@ -156,20 +151,17 @@ class _MoneyBaseAppState extends State<MoneyBaseApp> {
       case '/':
         return _buildPageRoute(
           routeSettings,
-          const IntroScreen(),
+          isAuthenticated
+              ? AppShell(onLogout: _onLogout, page: AppShellPage.home)
+              : const IntroScreen(),
         );
       case '/auth':
         return _buildPageRoute(
           routeSettings,
           AuthScreen(
             onLoginSuccess: () =>
-                _navigatorKey.currentState?.pushReplacementNamed('/home'),
+                _navigatorKey.currentState?.pushReplacementNamed('/'),
           ),
-        );
-      case '/home':
-        return _buildPageRoute(
-          routeSettings,
-          AppShell(onLogout: _onLogout, page: AppShellPage.home),
         );
       case '/budgets':
         return _buildPageRoute(

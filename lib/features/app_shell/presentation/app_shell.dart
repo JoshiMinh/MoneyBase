@@ -313,7 +313,7 @@ class _AppShellState extends State<AppShell> {
 }
 
 class _AppShellRoutes {
-  static const home = '/home';
+  static const home = '/';
   static const budgets = '/budgets';
   static const shopping = '/shopping';
   static const settings = '/settings';

@@ -248,35 +248,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           );
         }
 
-        final quickStats = <Widget>[
-          _QuickStatPill(
-            icon:
-                _remindersEnabled ? Icons.notifications_active : Icons.notifications_off_outlined,
-            label: 'Reminders',
-            value:
-                _remindersEnabled ? 'Daily at $reminderLabel' : 'Disabled on web',
-            accent: colors.secondaryAccent,
-          ),
-          _QuickStatPill(
-            icon: controller.darkMode
-                ? Icons.dark_mode_rounded
-                : Icons.light_mode_outlined,
-            label: 'Theme',
-            value: controller.darkMode ? 'Dark mode' : 'Light mode',
-            accent: colors.primaryAccent,
-          ),
-        ];
-        if (user != null) {
-          quickStats.add(
-            const _QuickStatPill(
-              icon: Icons.cloud_done_outlined,
-              label: 'Sync',
-              value: 'Cloud backup active',
-              accent: MoneyBaseColors.blue,
-            ),
-          );
-        }
-
         final headerActions = <Widget>[];
         if (widget.onLogout != null && user != null) {
           headerActions.add(
@@ -314,14 +285,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 20),
               profileHeader,
-              if (quickStats.isNotEmpty) ...[
-                const SizedBox(height: 24),
-                Wrap(
-                  spacing: 16,
-                  runSpacing: 16,
-                  children: quickStats,
-                ),
-              ],
               if (headerActions.isNotEmpty) ...[
                 const SizedBox(height: 24),
                 Wrap(
@@ -476,16 +439,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
             SizedBox(height: sectionSpacing),
             dataToolsPanel,
             SizedBox(height: sectionSpacing),
-            TextButton(
-              onPressed: _openLandingPage,
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.zero,
-                foregroundColor: colors.primaryAccent,
-                textStyle: textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
+            Center(
+              child: TextButton(
+                onPressed: _openLandingPage,
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  foregroundColor: colors.primaryAccent,
+                  textStyle: textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
+                child: const Text('About MoneyBase'),
               ),
-              child: const Text('Visit moneybase.app →'),
             ),
           ],
         );
@@ -613,7 +578,6 @@ class _DataActionTile extends StatelessWidget {
     final textTheme = theme.textTheme;
     final colors = context.moneyBaseColors;
     final accent = colors.primaryAccent;
-    final isDisabled = onPressed == null;
     final effectiveOnPressed = (loading || onPressed == null) ? null : onPressed;
 
     final button = FilledButton(
@@ -656,7 +620,6 @@ class _DataActionTile extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: accent.withOpacity(0.16),
-        border: Border.all(color: accent.withOpacity(0.32)),
       ),
       child: Icon(icon, color: accent, size: 26),
     );
@@ -716,13 +679,10 @@ class _DataActionTile extends StatelessWidget {
           );
         }
 
-        final borderColor = colors.surfaceBorder.withOpacity(isDisabled ? 0.7 : 1);
-
         return DecoratedBox(
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceVariant,
             borderRadius: MoneyBaseShapeTokens.borderRadiusLarge,
-            border: Border.all(color: borderColor),
           ),
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -1043,60 +1003,6 @@ class _SettingsSectionHeader extends StatelessWidget {
   }
 }
 
-class _QuickStatPill extends StatelessWidget {
-  const _QuickStatPill({
-    required this.icon,
-    required this.label,
-    required this.value,
-    this.accent,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color? accent;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.moneyBaseColors;
-    final textTheme = Theme.of(context).textTheme;
-    final resolvedAccent = accent ?? colors.primaryAccent;
-
-    return DecoratedBox(
-      decoration: _SettingsBadgeDecoration(context),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 14, 20, 14),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _SettingsIconBadge(icon: icon, accent: resolvedAccent),
-            const SizedBox(width: 14),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: textTheme.labelMedium?.copyWith(
-                    color: colors.mutedText,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  value,
-                  style: textTheme.titleSmall?.copyWith(
-                    color: colors.primaryText,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _SettingsIconBadge extends StatelessWidget {
   const _SettingsIconBadge({
     required this.icon,
@@ -1110,7 +1016,7 @@ class _SettingsIconBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: accent.withOpacity(0.12),
+        color: accent.withOpacity(0.14),
         borderRadius: MoneyBaseShapeTokens.borderRadiusMedium,
       ),
       child: SizedBox(
@@ -1130,11 +1036,8 @@ class _SettingsBadgeDecoration extends BoxDecoration {
           color: Theme.of(context)
               .colorScheme
               .surfaceVariant
-              .withOpacity(0.72),
+              .withOpacity(0.68),
           borderRadius: borderRadius ?? MoneyBaseShapeTokens.borderRadiusExtraLarge,
-          border: Border.all(
-            color: context.moneyBaseColors.surfaceBorder.withOpacity(0.9),
-          ),
         );
 }
 
