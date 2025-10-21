@@ -68,10 +68,12 @@ class MoneyBaseScaffold extends StatelessWidget {
               return Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(maxWidth: maxContentWidth),
-                  child: SingleChildScrollView(
-                    controller: scrollController,
-                    padding: padding,
-                    child: builder(context, layout),
+                  child: SelectionArea(
+                    child: SingleChildScrollView(
+                      controller: scrollController,
+                      padding: padding,
+                      child: builder(context, layout),
+                    ),
                   ),
                 ),
               );

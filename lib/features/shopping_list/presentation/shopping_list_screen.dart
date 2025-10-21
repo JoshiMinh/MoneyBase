@@ -910,100 +910,102 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
                 final horizontalPadding = isWide ? 48.0 : 16.0;
                 final verticalPadding = isWide ? 32.0 : 16.0;
 
-                return SingleChildScrollView(
-                  padding: EdgeInsets.fromLTRB(
-                    horizontalPadding,
-                    verticalPadding,
-                    horizontalPadding,
-                    verticalPadding + 72,
-                  ),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 960),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: double.infinity,
-                            padding: EdgeInsets.symmetric(
-                              horizontal: isWide ? 36 : 20,
-                              vertical: isWide ? 28 : 20,
-                            ),
-                            decoration: BoxDecoration(
-                              color: colors.surfaceBackground,
-                              border: Border.all(color: colors.surfaceBorder),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  resolved.name.isEmpty
-                                      ? 'Shopping list'
-                                      : resolved.name,
-                                  style: textTheme.headlineSmall?.copyWith(
-                                    color: colors.primaryText,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: [
-                                    _ListMetadataChip(
-                                      icon: Icons.category_outlined,
-                                      label: resolved.type.label,
-                                      color: colors.primaryAccent,
+                return SelectionArea(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(
+                      horizontalPadding,
+                      verticalPadding,
+                      horizontalPadding,
+                      verticalPadding + 72,
+                    ),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 960),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isWide ? 36 : 20,
+                                vertical: isWide ? 28 : 20,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colors.surfaceBackground,
+                                border: Border.all(color: colors.surfaceBorder),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    resolved.name.isEmpty
+                                        ? 'Shopping list'
+                                        : resolved.name,
+                                    style: textTheme.headlineSmall?.copyWith(
+                                      color: colors.primaryText,
+                                      fontWeight: FontWeight.w700,
                                     ),
-                                    if (resolved.currency.isNotEmpty)
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
                                       _ListMetadataChip(
-                                        icon: Icons.attach_money,
-                                        label: resolved.currency.toUpperCase(),
-                                        color: colors.secondaryAccent,
+                                        icon: Icons.category_outlined,
+                                        label: resolved.type.label,
+                                        color: colors.primaryAccent,
                                       ),
-                                    _ListMetadataChip(
-                                      icon: Icons.calendar_today_outlined,
-                                      label: 'Created ${_formatDate(resolved.createdAt)}',
-                                      color: colors.info,
+                                      if (resolved.currency.isNotEmpty)
+                                        _ListMetadataChip(
+                                          icon: Icons.attach_money,
+                                          label: resolved.currency.toUpperCase(),
+                                          color: colors.secondaryAccent,
+                                        ),
+                                      _ListMetadataChip(
+                                        icon: Icons.calendar_today_outlined,
+                                        label: 'Created ${_formatDate(resolved.createdAt)}',
+                                        color: colors.info,
+                                      ),
+                                    ],
+                                  ),
+                                  if (notes.isNotEmpty) ...[
+                                    const SizedBox(height: 16),
+                                    Divider(
+                                      color: colors.surfaceBorder,
+                                      height: 1,
+                                      thickness: 1,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      notes,
+                                      style: textTheme.bodyMedium?.copyWith(
+                                        color: colors.mutedText,
+                                      ),
                                     ),
                                   ],
-                                ),
-                                if (notes.isNotEmpty) ...[
-                                  const SizedBox(height: 16),
-                                  Divider(
-                                    color: colors.surfaceBorder,
-                                    height: 1,
-                                    thickness: 1,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    notes,
-                                    style: textTheme.bodyMedium?.copyWith(
-                                      color: colors.mutedText,
-                                    ),
-                                  ),
                                 ],
-                              ],
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 20),
-                          Container(
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: colors.surfaceBackground,
-                              border: Border.all(color: colors.surfaceBorder),
+                            const SizedBox(height: 20),
+                            Container(
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: colors.surfaceBackground,
+                                border: Border.all(color: colors.surfaceBorder),
+                              ),
+                              child: _ShoppingListItemsView(
+                                userId: widget.userId,
+                                list: resolved,
+                                repository: _repository,
+                                onAddItem: _handleAddItem,
+                                onEditItem: _handleEditItem,
+                                onDeleteItem: _handleDeleteItem,
+                                onToggleItem: _handleToggleItem,
+                              ),
                             ),
-                            child: _ShoppingListItemsView(
-                              userId: widget.userId,
-                              list: resolved,
-                              repository: _repository,
-                              onAddItem: _handleAddItem,
-                              onEditItem: _handleEditItem,
-                              onDeleteItem: _handleDeleteItem,
-                              onToggleItem: _handleToggleItem,
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -1015,28 +1017,32 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
 
         Widget body;
         if (error != null) {
-          body = Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(
-                'Unable to load this list: $error',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: colors.mutedText,
+          body = SelectionArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'Unable to load this list: $error',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: colors.mutedText,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
               ),
             ),
           );
         } else if (list == null) {
-          body = Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(
-                'This shopping list is no longer available.',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: colors.mutedText,
+          body = SelectionArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'This shopping list is no longer available.',
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: colors.mutedText,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
               ),
             ),
           );
@@ -1128,7 +1134,7 @@ class _ListMetadataChip extends StatelessWidget {
 
 enum _ListAction { edit, delete }
 
-class _ShoppingListItemsView extends StatelessWidget {
+class _ShoppingListItemsView extends StatefulWidget {
   const _ShoppingListItemsView({
     required this.userId,
     required this.list,
@@ -1147,6 +1153,154 @@ class _ShoppingListItemsView extends StatelessWidget {
   final void Function(ShoppingList, ShoppingItem) onDeleteItem;
   final void Function(ShoppingList, ShoppingItem, bool) onToggleItem;
 
+  @override
+  State<_ShoppingListItemsView> createState() => _ShoppingListItemsViewState();
+}
+
+class _ShoppingListItemsViewState extends State<_ShoppingListItemsView> {
+  late final TextEditingController _searchController;
+  late final FocusNode _searchFocusNode;
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+    _searchFocusNode = FocusNode();
+  }
+  @override
+  void didUpdateWidget(covariant _ShoppingListItemsView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.list.id != widget.list.id) {
+      _searchController.clear();
+      if (_searchQuery.isNotEmpty) {
+        setState(() {
+          _searchQuery = '';
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _handleSearchChanged(String value) {
+    setState(() {
+      _searchQuery = value;
+    });
+  }
+
+  void _handleClearSearch() {
+    if (_searchQuery.isEmpty) {
+      return;
+    }
+    _searchController.clear();
+    _handleSearchChanged('');
+    _searchFocusNode.requestFocus();
+  }
+
+  bool _matchesQuery(ShoppingItem item, String normalizedQuery) {
+    if (normalizedQuery.isEmpty) return true;
+
+    bool contains(String? value) {
+      if (value == null || value.isEmpty) return false;
+      return value.toLowerCase().contains(normalizedQuery);
+    }
+
+    final price = item.price;
+    final searchFields = <String?>[
+      item.title,
+      item.currency,
+      item.priority.label,
+      item.priority.labelTitleCase,
+      item.iconEmoji,
+      item.iconUrl,
+      item.id,
+      if (price > 0) price.toStringAsFixed(2),
+      if (price > 0) price.toString(),
+      if (item.purchaseDate != null) _formatDate(item.purchaseDate!),
+      if (item.expiryDate != null) _formatDate(item.expiryDate!),
+      if (item.bought) 'purchased',
+      if (!item.bought) 'pending',
+    ];
+
+    for (final field in searchFields) {
+      if (contains(field)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  List<ShoppingItem> _filterItems(
+    List<ShoppingItem> items,
+    ShoppingListType listType,
+    String query,
+  ) {
+    final normalizedQuery = query.trim().toLowerCase();
+    if (normalizedQuery.isEmpty) return items;
+
+    if (listType == ShoppingListType.shopping) {
+      final itemsById = {for (final item in items) item.id: item};
+      final childrenByParent = <String, List<ShoppingItem>>{};
+
+      for (final item in items) {
+        final parentId = item.parentItemRef?.id;
+        if (parentId == null) continue;
+        childrenByParent.putIfAbsent(parentId, () => <ShoppingItem>[]).add(item);
+      }
+
+      final includedIds = <String>{};
+
+      void includeWithFamily(ShoppingItem item) {
+        if (!includedIds.add(item.id)) {
+          return;
+        }
+
+        final parentId = item.parentItemRef?.id;
+        if (parentId != null) {
+          final parent = itemsById[parentId];
+          if (parent != null) {
+            includeWithFamily(parent);
+          }
+        }
+
+        void includeDescendants(String itemId) {
+          final children = childrenByParent[itemId];
+          if (children == null) return;
+          for (final child in children) {
+            if (includedIds.add(child.id)) {
+              includeDescendants(child.id);
+            }
+          }
+        }
+
+        includeDescendants(item.id);
+      }
+
+      for (final item in items) {
+        if (_matchesQuery(item, normalizedQuery)) {
+          includeWithFamily(item);
+        }
+      }
+
+      return [
+        for (final item in items)
+          if (includedIds.contains(item.id)) item,
+      ];
+    }
+
+    return [
+      for (final item in items)
+        if (_matchesQuery(item, normalizedQuery)) item,
+    ];
+  }
+
   List<Widget> _buildGroceryItems(
     List<ShoppingItem> items,
     ShoppingList list,
@@ -1159,9 +1313,9 @@ class _ShoppingListItemsView extends StatelessWidget {
         _ItemTile(
           list: list,
           item: item,
-          onEdit: () => onEditItem(list, item),
-          onDelete: () => onDeleteItem(list, item),
-          onToggle: (value) => onToggleItem(list, item, value),
+          onEdit: () => widget.onEditItem(list, item),
+          onDelete: () => widget.onDeleteItem(list, item),
+          onToggle: (value) => widget.onToggleItem(list, item, value),
           showDividerBelow: index != items.length - 1,
         ),
       );
@@ -1201,9 +1355,9 @@ class _ShoppingListItemsView extends StatelessWidget {
         list: list,
         item: item,
         indent: depth * 24.0,
-        onEdit: () => onEditItem(list, item),
-        onDelete: () => onDeleteItem(list, item),
-        onToggle: (value) => onToggleItem(list, item, value),
+        onEdit: () => widget.onEditItem(list, item),
+        onDelete: () => widget.onDeleteItem(list, item),
+        onToggle: (value) => widget.onToggleItem(list, item, value),
         children: nested,
         showDividerBelow: !isLastSibling,
       );
@@ -1230,19 +1384,25 @@ class _ShoppingListItemsView extends StatelessWidget {
     final onSurface = colors.primaryText;
 
     return StreamBuilder<List<ShoppingItem>>(
-      stream: repository.watchItems(userId, list.id),
+      stream: widget.repository.watchItems(widget.userId, widget.list.id),
       builder: (context, snapshot) {
+        final header = _ItemsHeader(
+          onSurface: onSurface,
+          textTheme: textTheme,
+          onAddItem: () => widget.onAddItem(widget.list),
+          searchController: _searchController,
+          onQueryChanged: _handleSearchChanged,
+          onClearSearch: _handleClearSearch,
+          focusNode: _searchFocusNode,
+        );
+
         if (snapshot.hasError) {
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _ItemsHeader(
-                  onSurface: onSurface,
-                  textTheme: textTheme,
-                  onAddItem: () => onAddItem(list),
-                ),
+                header,
                 const SizedBox(height: 16),
                 Text(
                   'Unable to load items: ${snapshot.error}',
@@ -1256,14 +1416,9 @@ class _ShoppingListItemsView extends StatelessWidget {
         }
 
         final items = snapshot.data ?? const <ShoppingItem>[];
-        final currentList = list;
-        final listType = currentList.type;
-
-        final header = _ItemsHeader(
-          onSurface: onSurface,
-          textTheme: textTheme,
-          onAddItem: () => onAddItem(currentList),
-        );
+        final listType = widget.list.type;
+        final filteredItems = _filterItems(items, listType, _searchQuery);
+        final hasQuery = _searchQuery.trim().isNotEmpty;
 
         if (items.isEmpty) {
           return Padding(
@@ -1304,10 +1459,65 @@ class _ShoppingListItemsView extends StatelessWidget {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 20),
-                      FilledButton.icon(
-                        onPressed: () => onAddItem(currentList),
-                        icon: const Icon(Icons.add_shopping_cart_outlined),
-                        label: const Text('Start adding items'),
+                      SelectionContainer.disabled(
+                        child: FilledButton.icon(
+                          onPressed: () => widget.onAddItem(widget.list),
+                          icon: const Icon(Icons.add_shopping_cart_outlined),
+                          label: const Text('Start adding items'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        if (filteredItems.isEmpty && hasQuery) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                header,
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+                  decoration: BoxDecoration(
+                    color: colors.surfaceBackground.withOpacity(0.6),
+                    border: Border.all(color: colors.surfaceBorder),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.search_off_outlined,
+                        size: 32,
+                        color: colors.mutedText,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No items match your search.',
+                        style: textTheme.titleMedium?.copyWith(color: onSurface),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Try a different keyword or clear the search to see all items.',
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: colors.mutedText,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 20),
+                      SelectionContainer.disabled(
+                        child: TextButton.icon(
+                          onPressed: _handleClearSearch,
+                          icon: const Icon(Icons.clear),
+                          label: const Text('Clear search'),
+                        ),
                       ),
                     ],
                   ),
@@ -1318,8 +1528,8 @@ class _ShoppingListItemsView extends StatelessWidget {
         }
 
         final itemWidgets = listType == ShoppingListType.shopping
-            ? _buildShoppingItems(items, currentList)
-            : _buildGroceryItems(items, currentList);
+            ? _buildShoppingItems(filteredItems, widget.list)
+            : _buildGroceryItems(filteredItems, widget.list);
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -1333,6 +1543,7 @@ class _ShoppingListItemsView extends StatelessWidget {
                 height: 1,
                 thickness: 1,
               ),
+              const SizedBox(height: 12),
               ...itemWidgets,
             ],
           ),
@@ -1347,29 +1558,66 @@ class _ItemsHeader extends StatelessWidget {
     required this.onSurface,
     required this.textTheme,
     required this.onAddItem,
+    required this.searchController,
+    required this.onQueryChanged,
+    required this.onClearSearch,
+    required this.focusNode,
   });
 
   final Color onSurface;
   final TextTheme textTheme;
   final VoidCallback onAddItem;
+  final TextEditingController searchController;
+  final ValueChanged<String> onQueryChanged;
+  final VoidCallback onClearSearch;
+  final FocusNode focusNode;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final hasQuery = searchController.text.trim().isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Text(
-            'Items',
-            style: textTheme.titleMedium?.copyWith(
-              color: onSurface,
-              fontWeight: FontWeight.w600,
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Items',
+                style: textTheme.titleMedium?.copyWith(
+                  color: onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            SelectionContainer.disabled(
+              child: FilledButton.icon(
+                onPressed: onAddItem,
+                icon: const Icon(Icons.add_shopping_cart_outlined),
+                label: const Text('Add item'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SelectionContainer.disabled(
+          child: TextField(
+            controller: searchController,
+            focusNode: focusNode,
+            onChanged: onQueryChanged,
+            textInputAction: TextInputAction.search,
+            decoration: InputDecoration(
+              hintText: 'Search items',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: hasQuery
+                  ? IconButton(
+                      tooltip: 'Clear search',
+                      onPressed: onClearSearch,
+                      icon: const Icon(Icons.clear),
+                    )
+                  : null,
             ),
           ),
-        ),
-        FilledButton.icon(
-          onPressed: onAddItem,
-          icon: const Icon(Icons.add_shopping_cart_outlined),
-          label: const Text('Add item'),
         ),
       ],
     );
@@ -1483,28 +1731,30 @@ class _ItemTile extends StatelessWidget {
       if (hasIconUrl) {
         final radius = BorderRadius.circular(4);
         final sanitizedUrl = iconUrl!.trim();
-        return Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: radius,
-            onTap: () => _showImagePreview(context, sanitizedUrl),
-            child: Ink(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: colors.surfaceBackground,
-                borderRadius: radius,
-              ),
-              child: ClipRRect(
-                borderRadius: radius,
-                child: Image.network(
-                  sanitizedUrl,
-                  width: 44,
-                  height: 44,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Icon(
-                    Icons.image_not_supported_outlined,
-                    color: colors.primaryAccent,
+        return SelectionContainer.disabled(
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: radius,
+              onTap: () => _showImagePreview(context, sanitizedUrl),
+              child: Ink(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: colors.surfaceBackground,
+                  borderRadius: radius,
+                ),
+                child: ClipRRect(
+                  borderRadius: radius,
+                  child: Image.network(
+                    sanitizedUrl,
+                    width: 44,
+                    height: 44,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Icon(
+                      Icons.image_not_supported_outlined,
+                      color: colors.primaryAccent,
+                    ),
                   ),
                 ),
               ),
@@ -1550,10 +1800,12 @@ class _ItemTile extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Checkbox(
-                value: item.bought,
-                onChanged: (value) => onToggle(value ?? false),
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              SelectionContainer.disabled(
+                child: Checkbox(
+                  value: item.bought,
+                  onChanged: (value) => onToggle(value ?? false),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
               ),
               const SizedBox(width: 12),
               buildIcon(),
@@ -1588,28 +1840,30 @@ class _ItemTile extends StatelessWidget {
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-                            PopupMenuButton<_ItemAction>(
-                              padding: EdgeInsets.zero,
-                              onSelected: (action) {
-                                switch (action) {
-                                  case _ItemAction.edit:
-                                    onEdit();
-                                    break;
-                                  case _ItemAction.delete:
-                                    onDelete();
-                                    break;
-                                }
-                              },
-                              itemBuilder: (context) => const [
-                                PopupMenuItem(
-                                  value: _ItemAction.edit,
-                                  child: Text('Edit'),
-                                ),
-                                PopupMenuItem(
-                                  value: _ItemAction.delete,
-                                  child: Text('Delete'),
-                                ),
-                              ],
+                            SelectionContainer.disabled(
+                              child: PopupMenuButton<_ItemAction>(
+                                padding: EdgeInsets.zero,
+                                onSelected: (action) {
+                                  switch (action) {
+                                    case _ItemAction.edit:
+                                      onEdit();
+                                      break;
+                                    case _ItemAction.delete:
+                                      onDelete();
+                                      break;
+                                  }
+                                },
+                                itemBuilder: (context) => const [
+                                  PopupMenuItem(
+                                    value: _ItemAction.edit,
+                                    child: Text('Edit'),
+                                  ),
+                                  PopupMenuItem(
+                                    value: _ItemAction.delete,
+                                    child: Text('Delete'),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),

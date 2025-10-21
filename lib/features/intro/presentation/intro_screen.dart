@@ -169,7 +169,7 @@ class _IntroContent extends StatelessWidget {
               runSpacing: 16,
               children: [
                 FilledButton.icon(
-                  onPressed: () => _open(context, '/home'),
+                  onPressed: () => _open(context, '/'),
                   icon: const Icon(Icons.dashboard_customize_rounded),
                   label: const Text('Enter MoneyBase'),
                   style: FilledButton.styleFrom(
