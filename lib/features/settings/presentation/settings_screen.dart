@@ -509,45 +509,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         );
 
-        if (layout.isWide) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Settings',
-                style: textTheme.headlineMedium?.copyWith(
-                  color: colors.primaryText,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Personalise MoneyBase on the web so it mirrors the Android build.',
-                style: textTheme.bodyLarge?.copyWith(color: colors.mutedText),
-              ),
-              const SizedBox(height: 32),
-              heroPanel,
-              const SizedBox(height: 32),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        preferencesPanel,
-                        const SizedBox(height: 24),
-                        dataToolsPanel,
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 24),
-                  Expanded(child: supportPanel),
-                ],
-              ),
-            ],
-          );
-        }
+        final sectionSpacing = layout.isWide ? 28.0 : 24.0;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -566,11 +528,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 32),
             heroPanel,
-            const SizedBox(height: 24),
+            SizedBox(height: sectionSpacing),
             preferencesPanel,
-            const SizedBox(height: 24),
+            SizedBox(height: sectionSpacing),
             dataToolsPanel,
-            const SizedBox(height: 24),
+            SizedBox(height: sectionSpacing),
             supportPanel,
           ],
         );
