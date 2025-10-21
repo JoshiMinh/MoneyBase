@@ -1840,30 +1840,29 @@ class _ItemTile extends StatelessWidget {
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              SelectionContainer.disabled(
-                                child: PopupMenuButton<_ItemAction>(
-                                  padding: EdgeInsets.zero,
-                                  onSelected: (action) {
-                                    switch (action) {
-                                      case _ItemAction.edit:
-                                        onEdit();
-                                        break;
-                                      case _ItemAction.delete:
-                                        onDelete();
-                                        break;
-                                    }
-                                  },
-                                  itemBuilder: (context) => const [
-                                    PopupMenuItem(
-                                      value: _ItemAction.edit,
-                                      child: Text('Edit'),
-                                    ),
-                                    PopupMenuItem(
-                                      value: _ItemAction.delete,
-                                      child: Text('Delete'),
-                                    ),
-                                  ],
-                                ),
+                            SelectionContainer.disabled(
+                              child: PopupMenuButton<_ItemAction>(
+                                padding: EdgeInsets.zero,
+                                onSelected: (action) {
+                                  switch (action) {
+                                    case _ItemAction.edit:
+                                      onEdit();
+                                      break;
+                                    case _ItemAction.delete:
+                                      onDelete();
+                                      break;
+                                  }
+                                },
+                                itemBuilder: (context) => const [
+                                  PopupMenuItem(
+                                    value: _ItemAction.edit,
+                                    child: Text('Edit'),
+                                  ),
+                                  PopupMenuItem(
+                                    value: _ItemAction.delete,
+                                    child: Text('Delete'),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
