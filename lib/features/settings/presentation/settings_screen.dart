@@ -1005,22 +1005,18 @@ class _SettingsSectionHeader extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                colors.primaryAccent.withOpacity(0.32),
-                colors.secondaryAccent.withOpacity(0.18),
-              ],
-            ),
-            border: Border.all(color: colors.primaryAccent.withOpacity(0.4)),
+        DecoratedBox(
+          decoration: _SettingsBadgeDecoration(
+            context,
+            borderRadius: MoneyBaseShapeTokens.borderRadiusExtraLarge,
           ),
-          child: Icon(icon, color: colors.primaryAccent),
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            child: Center(
+              child: _SettingsIconBadge(icon: icon, accent: colors.primaryAccent),
+            ),
+          ),
         ),
         const SizedBox(width: 16),
         Expanded(
@@ -1066,48 +1062,80 @@ class _QuickStatPill extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final resolvedAccent = accent ?? colors.primaryAccent;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            resolvedAccent.withOpacity(0.26),
-            resolvedAccent.withOpacity(0.12),
+    return DecoratedBox(
+      decoration: _SettingsBadgeDecoration(context),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 14, 20, 14),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _SettingsIconBadge(icon: icon, accent: resolvedAccent),
+            const SizedBox(width: 14),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: textTheme.labelMedium?.copyWith(
+                    color: colors.mutedText,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  value,
+                  style: textTheme.titleSmall?.copyWith(
+                    color: colors.primaryText,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
-        border: Border.all(color: resolvedAccent.withOpacity(0.36)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: resolvedAccent, size: 20),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: textTheme.labelMedium?.copyWith(
-                  color: colors.mutedText,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Text(
-                value,
-                style: textTheme.titleSmall?.copyWith(
-                  color: colors.primaryText,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }
+}
+
+class _SettingsIconBadge extends StatelessWidget {
+  const _SettingsIconBadge({
+    required this.icon,
+    required this.accent,
+  });
+
+  final IconData icon;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: accent.withOpacity(0.12),
+        borderRadius: MoneyBaseShapeTokens.borderRadiusMedium,
+      ),
+      child: SizedBox(
+        width: 28,
+        height: 28,
+        child: Icon(icon, color: accent, size: 18),
+      ),
+    );
+  }
+}
+
+class _SettingsBadgeDecoration extends BoxDecoration {
+  _SettingsBadgeDecoration(
+    BuildContext context, {
+    BorderRadius? borderRadius,
+  }) : super(
+          color: Theme.of(context)
+              .colorScheme
+              .surfaceVariant
+              .withOpacity(0.72),
+          borderRadius: borderRadius ?? MoneyBaseShapeTokens.borderRadiusExtraLarge,
+          border: Border.all(
+            color: context.moneyBaseColors.surfaceBorder.withOpacity(0.9),
+          ),
+        );
 }
 
 class _SettingsHintBanner extends StatelessWidget {
