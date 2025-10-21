@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/theme/theme.dart';
 import '../../../app/theme/app_colors.dart';
@@ -175,43 +176,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _copyUserIdToClipboard(BuildContext context, String userId) async {
-    await Clipboard.setData(ClipboardData(text: userId));
-    if (!mounted) {
-      return;
-    }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Account ID copied to clipboard.')),
-    );
-  }
+  Future<void> _openLandingPage() async {
+    const landingUrl = 'https://moneybase.app';
+    final uri = Uri.parse(landingUrl);
 
-  Future<void> _copySupportEmail(BuildContext context) async {
-    const supportEmail = 'support@moneybase.app';
-    await Clipboard.setData(const ClipboardData(text: supportEmail));
-    if (!mounted) {
-      return;
-    }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Support email copied to clipboard.')),
+    final launched = await launchUrl(
+      uri,
+      mode: LaunchMode.platformDefault,
+      webOnlyWindowName: '_blank',
     );
-  }
 
-  void _showAboutMoneyBase() {
-    showAboutDialog(
-      context: context,
-      applicationName: 'MoneyBase',
-      applicationVersion: 'Web preview',
-      applicationIcon: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.asset(
-          'assets/icon.png',
-          width: 48,
-          height: 48,
-          fit: BoxFit.cover,
-        ),
-      ),
-      applicationLegalese: 'Crafted for the MoneyBase budgeting suite.',
-    );
+    if (!launched) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open moneybase.app.')),
+      );
+    }
   }
 
   @override
@@ -469,46 +451,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         );
 
-        final supportPanel = MoneyBaseFrostedPanel(
-          padding: EdgeInsets.symmetric(
-            horizontal: layout.isWide ? 32 : 24,
-            vertical: layout.isWide ? 32 : 24,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const _SettingsSectionHeader(
-                icon: Icons.support_agent_outlined,
-                title: 'Support & extras',
-                subtitle: 'Get help and learn more about the MoneyBase experience.',
-              ),
-              const SizedBox(height: 24),
-              _SupportActionTile(
-                icon: Icons.email_outlined,
-                title: 'Contact support',
-                subtitle: 'Copy support@moneybase.app and share details with the team.',
-                onTap: () => _copySupportEmail(context),
-              ),
-              const SizedBox(height: 12),
-              _SupportActionTile(
-                icon: Icons.info_outline,
-                title: 'About MoneyBase',
-                subtitle: 'Review the project story and licences.',
-                onTap: _showAboutMoneyBase,
-              ),
-              if (user != null) ...[
-                const SizedBox(height: 12),
-                _SupportActionTile(
-                  icon: Icons.copy_all_outlined,
-                  title: 'Copy account ID',
-                  subtitle: 'Share this identifier when contacting support about sync issues.',
-                  onTap: () => _copyUserIdToClipboard(context, user.uid),
-                ),
-              ],
-            ],
-          ),
-        );
-
         final sectionSpacing = layout.isWide ? 28.0 : 24.0;
 
         return Column(
@@ -533,7 +475,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
             SizedBox(height: sectionSpacing),
             dataToolsPanel,
             SizedBox(height: sectionSpacing),
-            supportPanel,
+            TextButton(
+              onPressed: _openLandingPage,
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                foregroundColor: colors.primaryAccent,
+                textStyle: textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              child: const Text('Visit moneybase.app →'),
+            ),
           ],
         );
       },
@@ -663,96 +615,133 @@ class _DataActionTile extends StatelessWidget {
     final isDisabled = onPressed == null;
     final effectiveOnPressed = (loading || onPressed == null) ? null : onPressed;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 260),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            colors.surfaceBackground.withOpacity(0.9),
-            colors.surfaceBackground.withOpacity(0.72),
-          ],
-        ),
-        border: Border.all(color: accent.withOpacity(isDisabled ? 0.18 : 0.32)),
-        boxShadow: [
-          BoxShadow(
-            color: colors.surfaceShadow,
-            blurRadius: 28,
-            offset: const Offset(0, 18),
-          ),
-        ],
+    final button = FilledButton(
+      onPressed: effectiveOnPressed,
+      style: FilledButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+        backgroundColor: accent,
+        foregroundColor: Colors.white,
+        disabledBackgroundColor: colors.surfaceBorder.withOpacity(0.6),
+        disabledForegroundColor: colors.mutedText,
+        minimumSize: const Size(140, 48),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: accent.withOpacity(0.16),
-              border: Border.all(color: accent.withOpacity(0.32)),
-            ),
-            child: Icon(icon, color: accent, size: 26),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 200),
+        child: loading
+            ? const SizedBox(
+                key: ValueKey('loading'),
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.4,
+                  color: Colors.white,
+                ),
+              )
+            : Row(
+                key: const ValueKey('label'),
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(buttonLabel),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.arrow_outward_rounded, size: 18),
+                ],
+              ),
+      ),
+    );
+
+    final iconBadge = Container(
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: accent.withOpacity(0.16),
+        border: Border.all(color: accent.withOpacity(0.32)),
+      ),
+      child: Icon(icon, color: accent, size: 26),
+    );
+
+    final descriptionColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: textTheme.titleMedium?.copyWith(
+            color: colors.primaryText,
+            fontWeight: FontWeight.w600,
           ),
-          const SizedBox(width: 18),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: textTheme.titleMedium?.copyWith(
-                    color: colors.primaryText,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  subtitle,
-                  style: textTheme.bodyMedium?.copyWith(color: colors.mutedText),
-                ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          subtitle,
+          style: textTheme.bodyMedium?.copyWith(color: colors.mutedText),
+        ),
+      ],
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 560;
+
+        Widget content;
+        if (isCompact) {
+          content = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  iconBadge,
+                  const SizedBox(width: 18),
+                  Expanded(child: descriptionColumn),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: button,
+              ),
+            ],
+          );
+        } else {
+          content = Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              iconBadge,
+              const SizedBox(width: 18),
+              Expanded(child: descriptionColumn),
+              const SizedBox(width: 18),
+              button,
+            ],
+          );
+        }
+
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 260),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(28),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                colors.surfaceBackground.withOpacity(0.9),
+                colors.surfaceBackground.withOpacity(0.72),
               ],
             ),
-          ),
-          const SizedBox(width: 18),
-          FilledButton(
-            onPressed: effectiveOnPressed,
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-              backgroundColor: accent,
-              foregroundColor: Colors.white,
-              disabledBackgroundColor: colors.surfaceBorder.withOpacity(0.6),
-              disabledForegroundColor: colors.mutedText,
+            border: Border.all(
+              color: accent.withOpacity(isDisabled ? 0.18 : 0.32),
             ),
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              child: loading
-                  ? const SizedBox(
-                      key: ValueKey('loading'),
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.4,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Row(
-                      key: const ValueKey('label'),
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(buttonLabel),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.arrow_outward_rounded, size: 18),
-                      ],
-                    ),
-            ),
+            boxShadow: [
+              BoxShadow(
+                color: colors.surfaceShadow,
+                blurRadius: 28,
+                offset: const Offset(0, 18),
+              ),
+            ],
           ),
-        ],
-      ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
+          child: content,
+        );
+      },
     );
   }
 }
@@ -1128,75 +1117,6 @@ class _QuickStatPill extends StatelessWidget {
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SupportActionTile extends StatelessWidget {
-  const _SupportActionTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.moneyBaseColors;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  color: colors.surfaceBackground.withOpacity(0.6),
-                  border: Border.all(color: colors.surfaceBorder.withOpacity(0.8)),
-                ),
-                child: Icon(icon, color: colors.primaryAccent),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: textTheme.titleMedium?.copyWith(
-                        color: colors.primaryText,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: colors.mutedText,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right_rounded, color: colors.mutedText),
-            ],
-          ),
-        ),
       ),
     );
   }
