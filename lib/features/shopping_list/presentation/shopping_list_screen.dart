@@ -1466,8 +1466,6 @@ class _ShoppingListItemsViewState extends State<_ShoppingListItemsView> {
                           label: const Text('Start adding items'),
                         ),
                       ),
-                ),
-              ),
                     ],
                   ),
                 ),
