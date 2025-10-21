@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/theme/theme.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../app/theme/shape_tokens.dart';
 import '../../../core/services/google_sign_in_service.dart';
 import '../../../core/repositories/transaction_repository.dart';
 import '../../../core/utils/csv_utils.dart';
@@ -715,31 +716,18 @@ class _DataActionTile extends StatelessWidget {
           );
         }
 
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 260),
+        final borderColor = colors.surfaceBorder.withOpacity(isDisabled ? 0.7 : 1);
+
+        return DecoratedBox(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(28),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                colors.surfaceBackground.withOpacity(0.9),
-                colors.surfaceBackground.withOpacity(0.72),
-              ],
-            ),
-            border: Border.all(
-              color: accent.withOpacity(isDisabled ? 0.18 : 0.32),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: colors.surfaceShadow,
-                blurRadius: 28,
-                offset: const Offset(0, 18),
-              ),
-            ],
+            color: theme.colorScheme.surfaceVariant,
+            borderRadius: MoneyBaseShapeTokens.borderRadiusLarge,
+            border: Border.all(color: borderColor),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
-          child: content,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: content,
+          ),
         );
       },
     );
