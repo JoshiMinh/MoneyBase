@@ -1447,7 +1447,7 @@ class _ReportCardsSectionState extends State<_ReportCardsSection> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(viewportFraction: 0.9);
+    _pageController = PageController();
   }
 
   @override
