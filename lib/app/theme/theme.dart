@@ -45,8 +45,8 @@ class MoneyBaseThemeColors extends ThemeExtension<MoneyBaseThemeColors> {
     if (darkMode) {
       return MoneyBaseThemeColors(
         backgroundGradient: const [
-          Color(0xFF121212),
-          Color(0xFF121212),
+          Color(0xFF0B172A),
+          Color(0xFF1C2738),
         ],
         surfaceBackground: const Color(0xFF1E1E1E),
         surfaceElevated: const Color(0xFF1E1E1E),
@@ -66,8 +66,8 @@ class MoneyBaseThemeColors extends ThemeExtension<MoneyBaseThemeColors> {
 
     return MoneyBaseThemeColors(
       backgroundGradient: const [
-        Color(0xFFF1F3F5),
-        Color(0xFFF1F3F5),
+        Color(0xFFE6F1FF),
+        Color(0xFFF7FBFF),
       ],
       surfaceBackground: Colors.white,
       surfaceElevated: Colors.white,
