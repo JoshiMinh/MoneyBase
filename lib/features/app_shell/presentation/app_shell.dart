@@ -1,8 +1,7 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:moneybase/app/theme/theme.dart';
 
+import '../../common/presentation/moneybase_shell.dart';
 import '../../home/presentation/ai_assistant_sheet.dart';
 import '../../home/presentation/home_screen.dart';
 import '../../reports/presentation/reports_screen.dart';
@@ -12,7 +11,7 @@ import '../../shopping_list/presentation/shopping_list_screen.dart';
 part 'widgets/desktop_ai_assistant_button.dart';
 part 'widgets/shell_navigation_drawer.dart';
 part 'widgets/shell_navigation_rail.dart';
-part 'widgets/shell_premium_dialog.dart';
+part 'widgets/shell_premium_screen.dart';
 
 enum AppShellPage { home, budgets, shopping, settings }
 

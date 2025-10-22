@@ -268,7 +268,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           );
         }
 
-        final heroPanel = MoneyBaseFrostedPanel(
+        final profilePanel = MoneyBaseFrostedPanel(
           padding: EdgeInsets.symmetric(
             horizontal: layout.isWide ? 40 : 28,
             vertical: layout.isWide ? 36 : 24,
@@ -293,18 +293,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: headerActions,
                 ),
               ],
-            ],
-          ),
-        );
-
-        final preferencesPanel = MoneyBaseFrostedPanel(
-          padding: EdgeInsets.symmetric(
-            horizontal: layout.isWide ? 32 : 24,
-            vertical: layout.isWide ? 32 : 24,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+              const SizedBox(height: 28),
+              Divider(
+                height: 1,
+                color: colors.surfaceBorder.withOpacity(0.6),
+              ),
+              const SizedBox(height: 28),
               const _SettingsSectionHeader(
                 icon: Icons.tune_rounded,
                 title: 'Personal preferences',
@@ -433,9 +427,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: textTheme.bodyLarge?.copyWith(color: colors.mutedText),
             ),
             const SizedBox(height: 32),
-            heroPanel,
-            SizedBox(height: sectionSpacing),
-            preferencesPanel,
+            profilePanel,
             SizedBox(height: sectionSpacing),
             dataToolsPanel,
             SizedBox(height: sectionSpacing),
