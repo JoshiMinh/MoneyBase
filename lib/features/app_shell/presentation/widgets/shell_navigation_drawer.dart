@@ -184,7 +184,7 @@ class _DrawerPremiumButton extends StatelessWidget {
     final accent = themeColors.primaryAccent;
 
     return FilledButton.icon(
-      onPressed: () => _showPremiumDialog(context),
+      onPressed: () => _openPremiumScreen(context),
       icon: const Icon(Icons.workspace_premium_outlined),
       label: const Text('Go Premium'),
       style: FilledButton.styleFrom(

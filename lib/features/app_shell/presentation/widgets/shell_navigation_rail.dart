@@ -447,7 +447,7 @@ class _RailPremiumButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
             splashColor: Colors.white.withOpacity(0.12),
             highlightColor: Colors.white.withOpacity(0.08),
-            onTap: () => _showPremiumDialog(context),
+            onTap: () => _openPremiumScreen(context),
             child: Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: extended ? 16 : 0,

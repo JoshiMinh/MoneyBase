@@ -24,7 +24,7 @@ typedef MoneyBaseScaffoldBuilder = Widget Function(
 );
 
 /// Gradient scaffold used across Android and web surfaces to keep spacing uniform.
-class MoneyBaseScaffold extends StatelessWidget {
+class MoneyBaseScaffold extends StatefulWidget {
   const MoneyBaseScaffold({
     required this.builder,
     this.maxContentWidth = 1080,
@@ -47,33 +47,85 @@ class MoneyBaseScaffold extends StatelessWidget {
   final FloatingActionButtonLocation? floatingActionButtonLocation;
 
   @override
+  State<MoneyBaseScaffold> createState() => _MoneyBaseScaffoldState();
+}
+
+class _MoneyBaseScaffoldState extends State<MoneyBaseScaffold> {
+  final GlobalKey _contentKey = GlobalKey();
+  bool _shouldScroll = true;
+  double? _lastMaxHeight;
+  bool _measurementScheduled = false;
+
+  void _scheduleMeasurement(double maxHeight) {
+    _lastMaxHeight = maxHeight;
+    if (_measurementScheduled) {
+      return;
+    }
+    _measurementScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _measurementScheduled = false;
+      final context = _contentKey.currentContext;
+      if (context == null || !context.mounted) {
+        return;
+      }
+      final renderObject = context.findRenderObject();
+      if (renderObject is! RenderBox || !renderObject.hasSize) {
+        return;
+      }
+      final height = renderObject.size.height;
+      final availableHeight = _lastMaxHeight;
+      if (availableHeight == null) {
+        return;
+      }
+      final needsScroll = height > availableHeight;
+      if (needsScroll != _shouldScroll && mounted) {
+        setState(() {
+          _shouldScroll = needsScroll;
+        });
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      floatingActionButton: floatingActionButton,
-      floatingActionButtonLocation: floatingActionButtonLocation,
+      floatingActionButton: widget.floatingActionButton,
+      floatingActionButtonLocation: widget.floatingActionButtonLocation,
       body: Container(
         decoration: _buildShellDecoration(context),
         child: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final isWide = constraints.maxWidth >= breakpoint;
-              final padding = isWide ? widePadding : narrowPadding;
+              final isWide = constraints.maxWidth >= widget.breakpoint;
+              final padding = isWide ? widget.widePadding : widget.narrowPadding;
               final layout = MoneyBaseLayout(
                 isWide: isWide,
                 contentPadding: padding,
-                maxContentWidth: maxContentWidth,
+                maxContentWidth: widget.maxContentWidth,
               );
+
+              _scheduleMeasurement(constraints.maxHeight);
+
+              final paddedContent = Padding(
+                key: _contentKey,
+                padding: padding,
+                child: widget.builder(context, layout),
+              );
+
+              final child = _shouldScroll
+                  ? SingleChildScrollView(
+                      controller: widget.scrollController,
+                      padding: EdgeInsets.zero,
+                      child: paddedContent,
+                    )
+                  : paddedContent;
 
               return Center(
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: maxContentWidth),
+                  constraints: BoxConstraints(maxWidth: widget.maxContentWidth),
                   child: SelectionArea(
-                    child: SingleChildScrollView(
-                      controller: scrollController,
-                      padding: padding,
-                      child: builder(context, layout),
-                    ),
+                    child: child,
                   ),
                 ),
               );
