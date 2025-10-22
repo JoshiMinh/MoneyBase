@@ -20,10 +20,16 @@ class AuthScreen extends StatelessWidget {
       widePadding: const EdgeInsets.symmetric(horizontal: 56, vertical: 64),
       narrowPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
       builder: (context, layout) {
-        return Align(
-          alignment: Alignment.topCenter,
+        final size = MediaQuery.sizeOf(context);
+        final verticalPadding = layout.contentPadding.vertical;
+        final minHeight = (size.height - verticalPadding).clamp(0.0, double.infinity);
+
+        return Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
+            constraints: BoxConstraints(
+              maxWidth: 440,
+              minHeight: minHeight,
+            ),
             child: _AuthCard(
               onLoginSuccess: onLoginSuccess,
               isWide: layout.isWide,
@@ -50,14 +56,14 @@ class _AuthCardState extends State<_AuthCard> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _keepSignedIn = true;
   bool _isLoading = false;
   String? _errorMessage;
+  bool _obscurePassword = true;
 
   @override
   void initState() {
     super.initState();
-    _applyPersistence(_keepSignedIn);
+    _applyPersistence(true);
   }
 
   @override
@@ -72,109 +78,66 @@ class _AuthCardState extends State<_AuthCard> {
     final theme = Theme.of(context);
     final isLightMode = theme.brightness == Brightness.light;
     final baseTextColor = isLightMode ? Colors.black : Colors.white;
-    final secondaryTextColor = baseTextColor.withOpacity(0.8);
     final colors = context.moneyBaseColors;
 
-    return MoneyBaseFrostedPanel(
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final topSpacing = (screenHeight * 0.3) - 140;
+    final resolvedTopSpacing = topSpacing.isFinite
+        ? topSpacing.clamp(24.0, screenHeight * 0.22)
+        : 24.0;
+
+    return Padding(
       padding: EdgeInsets.symmetric(
-        horizontal: widget.isWide ? 48 : 32,
-        vertical: widget.isWide ? 48 : 36,
+        horizontal: widget.isWide ? 16 : 8,
       ),
-      backgroundOpacity: 0.12,
-      borderOpacity: 0.16,
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x33000000),
-          blurRadius: 36,
-          offset: Offset(0, 28),
-        ),
-      ],
       child: Form(
         key: _formKey,
         autovalidateMode: AutovalidateMode.onUserInteraction,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            SizedBox(height: resolvedTopSpacing),
+            Column(
               children: [
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(24),
-                    color: theme.colorScheme.primary.withOpacity(0.12),
-                    border: Border.all(
-                      color: theme.colorScheme.primary.withOpacity(0.32),
-                    ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(18),
-                      child: Image.asset(
-                        'assets/icon.png',
-                        width: 44,
-                        height: 44,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Image.asset(
+                    'assets/icon.png',
+                    width: 72,
+                    height: 72,
+                    fit: BoxFit.cover,
                   ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Welcome back',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          color: baseTextColor,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.4,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Access dashboards, budgets, and shared spaces.',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: colors.mutedText,
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
+                const SizedBox(height: 16),
+                Text(
+                  'MoneyBase',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                    color: baseTextColor,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                color: theme.colorScheme.surface.withOpacity(0.08),
-                border: Border.all(color: theme.colorScheme.outlineVariant),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.verified_user_rounded,
-                    size: 18,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Multi-factor sign-in is available under Settings → Security.',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: colors.mutedText,
-                      ),
-                    ),
-                  ),
-                ],
+            SizedBox(height: screenHeight * 0.04),
+            Text(
+              'Start tracking your finance!',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: baseTextColor,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
+            Text(
+              'Log in to access your budgets, reports, and shared spaces.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colors.mutedText,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 24),
             if (_errorMessage != null) ...[
               Container(
                 width: double.infinity,
@@ -205,14 +168,6 @@ class _AuthCardState extends State<_AuthCard> {
               ),
               const SizedBox(height: 20),
             ],
-            _ThirdPartyButton(
-              label: 'Continue with Google',
-              icon: Icons.account_circle,
-              onPressed: _isLoading ? null : _signInWithGoogle,
-            ),
-            const SizedBox(height: 20),
-            const _DividerWithText(text: 'or continue with email'),
-            const SizedBox(height: 20),
             TextFormField(
               controller: _emailController,
               enabled: !_isLoading,
@@ -225,33 +180,20 @@ class _AuthCardState extends State<_AuthCard> {
             TextFormField(
               controller: _passwordController,
               enabled: !_isLoading,
-              decoration: const InputDecoration(labelText: 'Password'),
-              obscureText: true,
-              autofillHints: const [AutofillHints.password],
-              validator: _validatePassword,
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Checkbox(
-                  value: _keepSignedIn,
-                  onChanged: _isLoading ? null : _togglePersistence,
-                  activeColor: theme.colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Keep me signed in',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: secondaryTextColor,
-                    ),
+              decoration: InputDecoration(
+                labelText: 'Password',
+                suffixIcon: IconButton(
+                  onPressed: _togglePasswordVisibility,
+                  icon: Icon(
+                    _obscurePassword
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
                   ),
                 ),
-                TextButton(
-                  onPressed: _isLoading ? null : _sendPasswordReset,
-                  child: const Text('Forgot password?'),
-                ),
-              ],
+              ),
+              obscureText: _obscurePassword,
+              autofillHints: const [AutofillHints.password],
+              validator: _validatePassword,
             ),
             const SizedBox(height: 24),
             FilledButton(
@@ -271,36 +213,60 @@ class _AuthCardState extends State<_AuthCard> {
                       width: 22,
                       child: CircularProgressIndicator(strokeWidth: 2.6),
                     )
-                  : const Text('Sign in'),
+                  : const Text('Log In'),
             ),
             const SizedBox(height: 16),
-            OutlinedButton(
-              onPressed: _isLoading ? null : _registerWithEmail,
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextButton(
+                  onPressed: _isLoading ? null : _registerWithEmail,
+                  child: const Text('Sign Up'),
                 ),
-                side: BorderSide(
-                  color: theme.colorScheme.primary.withOpacity(0.48),
-                  width: 1.4,
+                const SizedBox(width: 12),
+                Text(
+                  '·',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: colors.mutedText,
+                  ),
                 ),
-                foregroundColor: theme.colorScheme.primary,
-              ),
-              child: const Text('Create a MoneyBase account'),
+                const SizedBox(width: 12),
+                TextButton(
+                  onPressed: _isLoading ? null : _sendPasswordReset,
+                  child: const Text('Forgot password?'),
+                ),
+              ],
             ),
+            const SizedBox(height: 32),
+            const _DividerWithText(text: 'or'),
             const SizedBox(height: 24),
-            Text(
-              'By continuing you agree to the MoneyBase Terms of Service and acknowledge our Privacy Policy.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colors.mutedText,
-                height: 1.4,
+            _ThirdPartyButton(
+              label: 'Continue with Google',
+              assetPath: 'assets/images/google.png',
+              onPressed: _isLoading ? null : _signInWithGoogle,
+            ),
+            SizedBox(height: screenHeight * 0.08),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: Text(
+                'MoneyBase 2025 copyright',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: colors.mutedText,
+                  letterSpacing: 0.2,
+                ),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  void _togglePasswordVisibility() {
+    setState(() {
+      _obscurePassword = !_obscurePassword;
+    });
   }
 
   Future<void> _signInWithEmail() async {
@@ -505,12 +471,6 @@ class _AuthCardState extends State<_AuthCard> {
     }
   }
 
-  Future<void> _togglePersistence(bool? value) async {
-    if (value == null) return;
-    setState(() => _keepSignedIn = value);
-    await _applyPersistence(value);
-  }
-
   String? _validateEmail(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Enter your email address.';
@@ -548,34 +508,39 @@ class _AuthCardState extends State<_AuthCard> {
 class _ThirdPartyButton extends StatelessWidget {
   const _ThirdPartyButton({
     required this.label,
-    required this.icon,
+    required this.assetPath,
     required this.onPressed,
   });
 
   final String label;
-  final IconData icon;
+  final String assetPath;
   final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isLightMode = theme.brightness == Brightness.light;
-    final foregroundColor = isLightMode ? Colors.black : Colors.white;
+    final backgroundColor = Colors.black.withOpacity(isLightMode ? 0.85 : 0.9);
 
-    return OutlinedButton(
+    return FilledButton(
       onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
+      style: FilledButton.styleFrom(
         minimumSize: const Size.fromHeight(52),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        side: BorderSide(color: foregroundColor.withOpacity(0.3)),
-        foregroundColor: foregroundColor,
+        backgroundColor: backgroundColor,
+        foregroundColor: Colors.white,
         textStyle: theme.textTheme.titleMedium,
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: theme.colorScheme.primary),
-          const SizedBox(width: 12),
+          Image.asset(
+            assetPath,
+            width: 22,
+            height: 22,
+            fit: BoxFit.contain,
+          ),
+          const SizedBox(width: 14),
           Text(label),
         ],
       ),
