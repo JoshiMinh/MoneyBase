@@ -47,3 +47,5 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 android/OLD/gradle/wrapper/gradle-wrapper.jar
+.vercel
+.env*.local
