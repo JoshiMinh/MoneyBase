@@ -117,6 +117,23 @@ class ShoppingListRepository {
         );
   }
 
+  Future<List<ShoppingItem>> fetchItems(String userId, String listId) async {
+    final snapshot = await _itemsRef(userId, listId)
+        .orderBy('createdAt', descending: false)
+        .get();
+
+    return snapshot.docs
+        .map(
+          (doc) => ShoppingItem.fromJson({
+            ...doc.data(),
+            'id': doc.id,
+            'userId': userId,
+            'listId': listId,
+          }),
+        )
+        .toList();
+  }
+
   Future<ShoppingItem> addItem(
     String userId,
     String listId,
