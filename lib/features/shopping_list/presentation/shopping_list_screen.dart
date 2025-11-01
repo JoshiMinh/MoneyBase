@@ -1,6 +1,10 @@
+import 'dart:convert';
+
+import 'package:csv/csv.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/constants/currencies.dart';
 import '../../../core/models/shopping_item.dart';
@@ -598,6 +602,66 @@ class ShoppingListDetailScreen extends StatefulWidget {
 class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
   ShoppingListRepository get _repository => widget.repository;
 
+  Future<void> _handleExportList(ShoppingList list) async {
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      final items = await _repository.fetchItems(widget.userId, list.id);
+      final rows = <List<dynamic>>[
+        [
+          'Title',
+          'Bought',
+          'Priority',
+          'Price',
+          'Currency',
+          'Purchase Date',
+          'Expiry Date',
+          'Parent Item',
+        ],
+      ];
+
+      for (final item in items) {
+        rows.add([
+          item.title,
+          item.bought ? 'Yes' : 'No',
+          item.priority.name.toUpperCase(),
+          item.price,
+          item.currency,
+          item.purchaseDate?.toIso8601String() ?? '',
+          item.expiryDate?.toIso8601String() ?? '',
+          item.parentItemRef?.id ?? '',
+        ]);
+      }
+
+      final csv = const ListToCsvConverter().convert(rows);
+      final baseName = list.name.trim().isEmpty ? 'shopping_list' : list.name.trim();
+      final sanitized = baseName.replaceAll(RegExp(r'[^A-Za-z0-9_-]+'), '_');
+      final fileName = sanitized.isEmpty ? 'shopping_list.csv' : '$sanitized.csv';
+
+      final file = XFile.fromData(
+        utf8.encode(csv),
+        mimeType: 'text/csv',
+        name: fileName,
+      );
+
+      await Share.shareXFiles([file]);
+
+      if (!mounted) return;
+
+      final count = items.length;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Exported $count item${count == 1 ? '' : 's'} to CSV.'),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to export list: $error')),
+      );
+    }
+  }
+
   Future<void> _importItemsFromJson(
     BuildContext context,
     ShoppingList list,
@@ -1064,6 +1128,11 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
               actions: list == null
                   ? null
                   : [
+                      IconButton(
+                        tooltip: 'Export CSV',
+                        onPressed: () => _handleExportList(list),
+                        icon: const Icon(Icons.download_outlined),
+                      ),
                       IconButton(
                         tooltip: 'Import JSON',
                         onPressed: () => _importItemsFromJson(context, list),
