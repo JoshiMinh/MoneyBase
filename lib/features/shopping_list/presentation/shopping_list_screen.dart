@@ -607,29 +607,60 @@ class _ShoppingListDetailScreenState extends State<ShoppingListDetailScreen> {
 
     try {
       final items = await _repository.fetchItems(widget.userId, list.id);
+      final metadataRows = <List<dynamic>>[
+        ['List ID', list.id],
+        ['List User ID', list.userId],
+        ['List Name', list.name],
+        ['List Type', list.type.name.toUpperCase()],
+        ['List Currency', list.currency],
+        ['List Notes', list.notes ?? ''],
+        ['List Created At', list.createdAt.toIso8601String()],
+        <dynamic>[],
+      ];
+
       final rows = <List<dynamic>>[
+        ...metadataRows,
         [
+          'Item ID',
           'Title',
-          'Bought',
+          'Status',
           'Priority',
           'Price',
           'Currency',
+          'Icon Emoji',
+          'Icon URL',
+          'Parent Item ID',
+          'Sub Item IDs',
           'Purchase Date',
           'Expiry Date',
-          'Parent Item',
+          'Created At',
+          'Updated At',
+          'User ID',
+          'List ID',
         ],
       ];
 
       for (final item in items) {
+        final statusLabel = item.bought ? 'BOUGHT' : 'PENDING';
+        final subItemIds = item.subItemRefs.map((ref) => ref.id).join(' | ');
+
         rows.add([
+          item.id,
           item.title,
-          item.bought ? 'Yes' : 'No',
+          statusLabel,
           item.priority.name.toUpperCase(),
           item.price,
           item.currency,
+          item.iconEmoji ?? '',
+          item.iconUrl ?? '',
+          item.parentItemRef?.id ?? '',
+          subItemIds,
           item.purchaseDate?.toIso8601String() ?? '',
           item.expiryDate?.toIso8601String() ?? '',
-          item.parentItemRef?.id ?? '',
+          item.createdAt.toIso8601String(),
+          item.updatedAt.toIso8601String(),
+          item.userId,
+          item.listId,
         ]);
       }
 
