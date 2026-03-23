@@ -48,17 +48,12 @@ flutter:
   uses-material-design: true
   assets:
     - .env
-    - assets/icon.png
+    - icon.png
     - assets/images/google.png
 
 flutter_launcher_icons:
   android: true
   ios: true
-  web:
-    generate: true
-    image_path: "icon.png"
-    background_color: "transparent"
-    theme_color: "#000000"
   image_path: "icon.png"
   adaptive_icon_background: "transparent"
   adaptive_icon_foreground: "icon.png"

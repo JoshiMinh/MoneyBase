@@ -17,6 +17,8 @@ migrate_working_dir/
 *.ipr
 *.iws
 .idea/
+out/
+gen/
 
 # The .vscode folder contains launch configuration and tasks you configure in
 # VS Code which you may wish to be included in version control, so this line
@@ -42,10 +44,41 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
+# Icons
+# We keep only root icon.png
+/assets/icon.png
+/moneybase-kotlin-legacy/icon.ico
+
 # Android Studio will place build artifacts here
 /android/app/debug
 /android/app/profile
 /android/app/release
-android/OLD/gradle/wrapper/gradle-wrapper.jar
+/android/local.properties
+/android/key.properties
+/android/app/*.keystore
+/android/app/*.jks
+
+# Gradle
+.gradle/
+build/
+*/build/
+*/*/build/
+gradle-app.setting
+!gradle-wrapper.jar
+
+# Vercel
 .vercel
 .env*.local
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+pubsub-debug.log
+ui-debug.log
+
+# Kotlin Legacy App
+/moneybase-kotlin-legacy/.gradle/
+/moneybase-kotlin-legacy/build/
+/moneybase-kotlin-legacy/app/build/
+/moneybase-kotlin-legacy/local.properties

@@ -115,7 +115,7 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
       setState(() {
         _isInitializing = false;
         _errorMessage =
-            'Add GEMINI_API_KEY to your .env file to enable MoneyBase Assistant.';
+            'Add AI_API_KEY to your .env file to enable MoneyBase Assistant.';
       });
       return;
     }
@@ -712,12 +712,12 @@ class _AiAssistantSheetState extends State<AiAssistantSheet> {
   }
 
   String? _readAssistantApiKey() {
-    final envValue = dotenv.env['GEMINI_API_KEY']?.trim();
+    final envValue = dotenv.env['AI_API_KEY']?.trim();
     if (envValue != null && envValue.isNotEmpty) {
       return envValue;
     }
 
-    const fromEnvironment = String.fromEnvironment('GEMINI_API_KEY');
+    const fromEnvironment = String.fromEnvironment('AI_API_KEY');
     if (fromEnvironment.isNotEmpty) {
       return fromEnvironment;
     }

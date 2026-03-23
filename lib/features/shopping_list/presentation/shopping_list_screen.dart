@@ -13,7 +13,6 @@ import '../../../core/repositories/shopping_list_repository.dart';
 import '../../common/presentation/moneybase_shell.dart';
 import '../../common/presentation/currency_dropdown_field.dart';
 import '../../../app/theme/theme.dart';
-import '../../../core/services/cloudinary_service.dart';
 
 class ShoppingListScreen extends StatefulWidget {
   const ShoppingListScreen({super.key});
