@@ -1,45 +1,39 @@
-<p align="center">
-   <img src="icon.png" alt="MoneyBase Icon" width="100"/>
-</p>
+<div align="center">
+   <img src="icon.png" alt="MoneyBase Icon" width="100" />
 
-<h1 align="center">MoneyBase</h1>
+   # MoneyBase
 
-<p align="center"><b>Smart personal finance & expense tracker powered by AI</b></p>
-
----
+   **MoneyBase** is a smart personal finance and expense tracker powered by AI. Effortlessly manage your budget, track expenses, and gain insights with Google Gemini.
+</div>
 
 ## ✨ Features
 
-- **AI-powered spending insights** (Google Gemini)
-- **Effortless expense tracking** and budget management
-- **Multi-wallet support** with CSV export
-- **Secure cloud sync** via Firebase (Android/iOS)
+- **AI-Powered Insights**: Receive smart spending analysis and personalized budget advice using Google Gemini.
+- **Effortless Tracking**: Log expenses quickly and manage multiple wallets with ease.
+- **Secure Cloud Sync**: Enjoy cross-platform support (Android/iOS) with seamless Firebase integration.
+- **Data Export**: Export your financial data to CSV for external analysis.
 
----
+## 🚀 Quick Start
 
-## 🚀 Getting Started
-
-1. **Copy the environment template:**
+1. **Configure Environment:**
 
       ```bash
       cp .env.example .env
       ```
 
-2. **Install dependencies and run the app:**
+2. **Launch Application:**
 
       ```bash
       flutter pub get
       flutter run
       ```
 
----
-
 ## 📁 Project Structure
 
-| Folder / File                | Description                                   |
-|------------------------------|-----------------------------------------------|
-| `lib/`                       | Flutter application source code               |
-| `moneybase-kotlin-legacy/`   | Original Kotlin implementation (archived)     |
-| `android/`, `ios/`           | Platform-specific configuration               |
+- `lib/`: Main Flutter application source code (Provider + Riverpod).
+- `moneybase-kotlin-legacy/`: Archived original Kotlin implementation.
+- `android/` & `ios/`: Native configuration and platform integration.
 
----
+## ⚖️ License
+
+This project is intended for educational and personal use. No formal license is currently provided.
