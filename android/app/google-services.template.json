@@ -1,33 +1,33 @@
 {
   "project_info": {
-    "project_number": "284259483635",
-    "project_id": "moneybase-bc047",
-    "storage_bucket": "moneybase-bc047.firebasestorage.app"
+    "project_number": "${FIREBASE_PROJECT_NUMBER}",
+    "project_id": "${FIREBASE_PROJECT_ID}",
+    "storage_bucket": "${FIREBASE_STORAGE_BUCKET}"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:284259483635:android:2e81e8bc1d4d4648715c86",
+        "mobilesdk_app_id": "${FIREBASE_APP_ID_ANDROID}",
         "android_client_info": {
           "package_name": "com.thebase.moneybase"
         }
       },
       "oauth_client": [
         {
-          "client_id": "284259483635-geruaub92vfh6k2bvp4n9t700cprj6tt.apps.googleusercontent.com",
+          "client_id": "${FIREBASE_WEB_CLIENT_ID}",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyAlSvIofvMWvZ8L1bzYY8jMQCbEoP5YLjo"
+          "current_key": "${FIREBASE_API_KEY_ANDROID}"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "284259483635-dtrfo9v6coasusc0sfjrk8jd9m4s463o.apps.googleusercontent.com",
+              "client_id": "${FIREBASE_ANDROID_INVITE_ID}",
               "client_type": 3
             }
           ]
@@ -36,14 +36,14 @@
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:284259483635:android:dcbb41da3b4f7a7c715c86",
+        "mobilesdk_app_id": "${FIREBASE_APP_ID_ANDROID_2}",
         "android_client_info": {
           "package_name": "com.thebase.moneybase"
         }
       },
       "oauth_client": [
         {
-          "client_id": "284259483635-72rfja7dnq2jsgf6rdbk9nevrtu2l5ub.apps.googleusercontent.com",
+          "client_id": "${FIREBASE_ANDROID_CLIENT_ID_1}",
           "client_type": 1,
           "android_info": {
             "package_name": "com.thebase.moneybase",
@@ -51,7 +51,7 @@
           }
         },
         {
-          "client_id": "284259483635-elh23k7v2l74i40aiqidg8h3nm0dknr9.apps.googleusercontent.com",
+          "client_id": "${FIREBASE_ANDROID_CLIENT_ID_2}",
           "client_type": 1,
           "android_info": {
             "package_name": "com.thebase.moneybase",
@@ -59,20 +59,20 @@
           }
         },
         {
-          "client_id": "284259483635-geruaub92vfh6k2bvp4n9t700cprj6tt.apps.googleusercontent.com",
+          "client_id": "${FIREBASE_WEB_CLIENT_ID}",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyAlSvIofvMWvZ8L1bzYY8jMQCbEoP5YLjo"
+          "current_key": "${FIREBASE_API_KEY_ANDROID}"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "284259483635-dtrfo9v6coasusc0sfjrk8jd9m4s463o.apps.googleusercontent.com",
+              "client_id": "${FIREBASE_ANDROID_INVITE_ID}",
               "client_type": 3
             }
           ]

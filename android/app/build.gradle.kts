@@ -8,6 +8,47 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+task("generateGoogleServices") {
+    val templateFile = file("google-services.template.json")
+    val outputFile = file("google-services.json")
+    val envFile = file("../../.env")
+
+    inputs.file(templateFile)
+    if (envFile.exists()) {
+        inputs.file(envFile)
+    }
+    outputs.file(outputFile)
+
+    doLast {
+        if (!envFile.exists()) {
+            println("WARNING: .env file not found at ${envFile.absolutePath}. Using template as is.")
+            outputFile.writeText(templateFile.readText())
+            return@doLast
+        }
+
+        val env = mutableMapOf<String, String>()
+        envFile.forEachLine { line ->
+            if (line.isNotBlank() && !line.trimStart().startsWith("#") && line.contains("=")) {
+                val parts = line.split("=", limit = 2)
+                if (parts.size == 2) {
+                    env[parts[0].trim()] = parts[1].trim()
+                }
+            }
+        }
+
+        var content = templateFile.readText()
+        env.forEach { (key, value) ->
+            content = content.replace("\${$key}", value)
+        }
+        outputFile.writeText(content)
+        println("Generated google-services.json from template.")
+    }
+}
+
+tasks.matching { it.name.contains("GoogleServices") }.configureEach {
+    dependsOn("generateGoogleServices")
+}
+
 android {
     namespace = "com.thebase.moneybase"
     compileSdk = flutter.compileSdkVersion
