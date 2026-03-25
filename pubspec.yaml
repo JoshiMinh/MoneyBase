@@ -21,7 +21,7 @@ dependencies:
   flutter_markdown: ^0.7.7+1
   google_generative_ai: ^0.4.7
   speech_to_text: ^7.3.0
-  csv: ^6.0.0
+  csv: ^8.0.0
   http: ^1.2.2
   file_picker: ^10.3.3
   crypto: ^3.0.3
@@ -30,7 +30,7 @@ dependencies:
   flutter_riverpod: ^3.0.3
   share_plus: ^12.0.0
   flutter_carousel_widget: ^3.1.0
-  home_widget: ^0.8.0
+  home_widget: ^0.9.0
   dev: ^1.0.0
   flutter_launcher_icons: ^0.14.4
   flutter_slidable: ^4.0.3
